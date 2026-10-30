@@ -45,7 +45,12 @@ export function StatCard({
       </div>
 
       <div className="mt-3">
-        <p className="text-2xl font-semibold tracking-tight text-slate-900 tabular-nums">
+        <p
+          className={cn(
+            "font-semibold tracking-tight text-slate-900 tabular-nums",
+            value.length > 10 ? "text-lg sm:text-xl" : "text-2xl"
+          )}
+        >
           {value}
         </p>
       </div>

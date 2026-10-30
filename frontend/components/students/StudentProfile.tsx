@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   ArrowLeft,
   BookMarked,
@@ -51,6 +52,8 @@ type ProfileTab =
 export function StudentProfile({ student }: { student: Student }) {
   const [activeTab, setActiveTab] = useState<ProfileTab>("overview");
   const { showToast } = useToast();
+  const pathname = usePathname();
+  const backHref = pathname?.startsWith("/admin") ? "/admin/students" : "/students";
 
   const initials = student.name
     .split(" ")
@@ -73,7 +76,7 @@ export function StudentProfile({ student }: { student: Student }) {
       {/* Breadcrumb */}
       <div className="flex items-center justify-between">
         <Link
-          href="/students"
+          href={backHref}
           className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 transition hover:text-indigo-600"
         >
           <ArrowLeft className="h-4 w-4" />

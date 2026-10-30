@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/ToastProvider";
+import { AuthProvider } from "@/lib/auth";
 import { AppShell } from "@/components/layout/AppShell";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -12,9 +13,9 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "University DataHub | Unified Student Lifecycle & Academic Analytics",
+  title: "University Data Integration System | Admin Portal",
   description:
-    "Modern university data integration platform unifying SIS, LMS, HR/Payroll, Library, and Alumni CRM records.",
+    "Securely connect, manage, and understand university data across SIS, LMS, HR/Payroll, Library, and Alumni CRM in one place.",
 };
 
 export default function RootLayout({
@@ -26,10 +27,11 @@ export default function RootLayout({
     <html lang="en" className={jakarta.variable}>
       <body className="font-sans antialiased">
         <ToastProvider>
-          <AppShell>{children}</AppShell>
+          <AuthProvider>
+            <AppShell>{children}</AppShell>
+          </AuthProvider>
         </ToastProvider>
       </body>
     </html>
   );
 }
-

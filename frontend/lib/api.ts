@@ -1,4 +1,6 @@
 import {
+  ADMIN_DASHBOARD_OVERVIEW,
+  ADMIN_USERS,
   ALUMNI_ANALYTICS,
   ALUMNI_RECORDS,
   COURSES,
@@ -13,9 +15,12 @@ import {
   RECENT_ACTIVITY,
   REPORTS,
   STUDENTS,
+  SYNC_HISTORY_RECORDS,
 } from "@/data/mock-data";
 import {
   ActivityFeedItem,
+  AdminDashboardOverview,
+  AdminUserRecord,
   AlumniRecord,
   CourseCatalogItem,
   DashboardAnalytics,
@@ -27,6 +32,7 @@ import {
   Program,
   ReportItem,
   Student,
+  SyncHistoryRecord,
 } from "@/types";
 
 /**
@@ -337,5 +343,66 @@ export async function getNotifications(): Promise<NotificationItem[]> {
       return NOTIFICATIONS.map((n) => ({ ...n }));
     },
     (data) => Array.isArray(data) && (data.length === 0 || "description" in data[0])
+  );
+}
+
+
+// GET /api/admin/dashboard
+export async function getAdminDashboardOverview(): Promise<AdminDashboardOverview> {
+  return tryLiveOrFallback(
+    () => fetchJson<AdminDashboardOverview>("/admin/dashboard"),
+    async () => {
+      await simulateNetworkDelay(150);
+      return {
+        summary: { ...ADMIN_DASHBOARD_OVERVIEW.summary },
+        dataSources: ADMIN_DASHBOARD_OVERVIEW.dataSources.map((s) => ({ ...s })),
+        lifecycleOverview: ADMIN_DASHBOARD_OVERVIEW.lifecycleOverview.map((s) => ({
+          ...s,
+        })),
+        recentSynchronization: ADMIN_DASHBOARD_OVERVIEW.recentSynchronization.map(
+          (r) => ({ ...r })
+        ),
+        analyticsPreview: {
+          enrollmentTrends: ADMIN_DASHBOARD_OVERVIEW.analyticsPreview.enrollmentTrends.map(
+            (e) => ({ ...e })
+          ),
+          academicPerformance:
+            ADMIN_DASHBOARD_OVERVIEW.analyticsPreview.academicPerformance.map((p) => ({
+              ...p,
+            })),
+          graduationTrends: ADMIN_DASHBOARD_OVERVIEW.analyticsPreview.graduationTrends.map(
+            (g) => ({ ...g })
+          ),
+          studentsAtRisk: ADMIN_DASHBOARD_OVERVIEW.analyticsPreview.studentsAtRisk.map(
+            (r) => ({ ...r })
+          ),
+        },
+      };
+    },
+    (data) => Boolean(data?.summary && Array.isArray(data?.dataSources))
+  );
+}
+
+// GET /api/admin/users
+export async function getAdminUsers(): Promise<AdminUserRecord[]> {
+  return tryLiveOrFallback(
+    () => fetchJson<AdminUserRecord[]>("/admin/users"),
+    async () => {
+      await simulateNetworkDelay(140);
+      return ADMIN_USERS.map((u) => ({ ...u }));
+    },
+    (data) => Array.isArray(data)
+  );
+}
+
+// GET /api/admin/sync-history
+export async function getSyncHistory(): Promise<SyncHistoryRecord[]> {
+  return tryLiveOrFallback(
+    () => fetchJson<SyncHistoryRecord[]>("/admin/sync-history"),
+    async () => {
+      await simulateNetworkDelay(150);
+      return SYNC_HISTORY_RECORDS.map((r) => ({ ...r }));
+    },
+    (data) => Array.isArray(data)
   );
 }

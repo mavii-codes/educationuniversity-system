@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   AlertCircle,
   AlertTriangle,
@@ -27,6 +28,8 @@ import { cn } from "@/lib/utils";
 type FilterTab = "all" | "unread" | "warning" | "alert" | "success";
 
 export default function NotificationsPage() {
+  const pathname = usePathname();
+  const isAdmin = Boolean(pathname?.startsWith("/admin"));
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [filter, setFilter] = useState<FilterTab>("all");
   const [viewState, setViewState] = useState<DemoViewState>("loading");
@@ -231,7 +234,19 @@ export default function NotificationsPage() {
                 </button>
                 {notif.href && (
                   <Link
-                    href={notif.href}
+                    href={
+                      !isAdmin
+                        ? notif.href
+                        : notif.href === "/data-integration" || notif.href === "/integration"
+                        ? "/admin/integrations"
+                        : notif.href === "/academic-analytics" || notif.href === "/analytics"
+                        ? "/admin/analytics"
+                        : notif.href === "/data-sources"
+                        ? "/admin/data-sources"
+                        : notif.href.startsWith("/students")
+                        ? `/admin${notif.href}`
+                        : "/admin/dashboard"
+                    }
                     className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 transition hover:bg-indigo-100"
                   >
                     Inspect

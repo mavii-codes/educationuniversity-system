@@ -294,3 +294,87 @@ export interface DashboardAnalytics {
   }[];
 }
 
+
+export type AdminUserRole =
+  | "System Administrator"
+  | "University Registrar Admin"
+  | "Data Integration Engineer"
+  | "Institutional Data Steward";
+
+export type AdminUserStatus = "Active" | "Inactive" | "Invited";
+
+export interface AdminUserRecord {
+  id: string;
+  name: string;
+  email: string;
+  role: AdminUserRole;
+  department: string;
+  status: AdminUserStatus;
+  mfaEnabled: boolean;
+  lastActive: string;
+}
+
+export interface AdminDataSourceOverviewItem {
+  id: string;
+  code: string;
+  name: string;
+  shortLabel: string;
+  status: DataSourceStatus;
+  lastSync: string;
+  records: number;
+  description: string;
+}
+
+export interface AdminLifecycleStageStat {
+  stage: "Enrollment" | "Learning" | "Graduation" | "Alumni";
+  count: number;
+  subtitle: string;
+  sourceLabel: string;
+}
+
+export interface RecentSyncRow {
+  id: string;
+  dataSource: string;
+  fullName: string;
+  lastSync: string;
+  records: number;
+  status: DataSourceStatus;
+}
+
+export interface SyncHistoryRecord {
+  id: string;
+  dataSource: string;
+  fullName: string;
+  syncMode: "Scheduled Incremental" | "Manual Full Sync" | "Schema Verification";
+  lastSync: string;
+  records: number;
+  duration: string;
+  status: DataSourceStatus;
+  notes: string;
+}
+
+export interface AdminDashboardOverview {
+  summary: {
+    totalStudents: number;
+    totalStudentsSubtext: string;
+    activeStudents: number;
+    activeStudentsSubtext: string;
+    graduatingStudents: number;
+    graduatingStudentsSubtext: string;
+    alumni: number;
+    alumniSubtext: string;
+    connectedDataSources: string;
+    connectedDataSourcesSubtext: string;
+    lastSuccessfulSync: string;
+    lastSuccessfulSyncSubtext: string;
+  };
+  dataSources: AdminDataSourceOverviewItem[];
+  lifecycleOverview: AdminLifecycleStageStat[];
+  recentSynchronization: RecentSyncRow[];
+  analyticsPreview: {
+    enrollmentTrends: { term: string; enrolled: number; newIntake: number }[];
+    academicPerformance: { term: string; avgScore: number; avgGpa: number }[];
+    graduationTrends: { year: string; graduates: number; employedRate: number }[];
+    studentsAtRisk: { category: string; students: number; percentage: number; color: string }[];
+  };
+}

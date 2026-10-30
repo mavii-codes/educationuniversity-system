@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   AlertTriangle,
   ArrowRight,
@@ -35,6 +36,8 @@ import {
 import { formatNumber } from "@/lib/utils";
 
 export default function AcademicAnalyticsPage() {
+  const pathname = usePathname();
+  const studentsBase = pathname?.startsWith("/admin") ? "/admin/students" : "/students";
   const [programs, setPrograms] = useState<Program[]>([]);
   const [atRiskStudents, setAtRiskStudents] = useState<Student[]>([]);
   const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null);
@@ -371,7 +374,7 @@ export default function AcademicAnalyticsPage() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <Link
-                          href={`/students/${student.id}`}
+                          href={`${studentsBase}/${student.id}`}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
                         >
                           View Profile

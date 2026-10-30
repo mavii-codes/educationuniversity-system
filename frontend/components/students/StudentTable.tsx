@@ -1,7 +1,10 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ArrowRight } from "lucide-react";
-import { RiskLevel, Student, StudentStatus } from "@/types/university";
+import { RiskLevel, Student, StudentStatus } from "@/types";
 import { Badge, BadgeVariant } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +37,9 @@ export function getRiskVariant(risk: RiskLevel): BadgeVariant {
 }
 
 export function StudentTable({ students }: StudentTableProps) {
+  const pathname = usePathname();
+  const studentsBase = pathname?.startsWith("/admin") ? "/admin/students" : "/students";
+
   return (
     <div>
       {/* Desktop Table */}
@@ -76,7 +82,7 @@ export function StudentTable({ students }: StudentTableProps) {
                         </div>
                         <div className="min-w-0">
                           <Link
-                            href={`/students/${student.id}`}
+                            href={`${studentsBase}/${student.id}`}
                             className="block truncate font-semibold text-slate-900 transition hover:text-indigo-600"
                           >
                             {student.name}
@@ -134,7 +140,7 @@ export function StudentTable({ students }: StudentTableProps) {
                     </td>
                     <td className="whitespace-nowrap px-5 py-4 text-right">
                       <Link
-                        href={`/students/${student.id}`}
+                        href={`${studentsBase}/${student.id}`}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
                       >
                         View Student
@@ -190,7 +196,7 @@ export function StudentTable({ students }: StudentTableProps) {
 
             <div className="mt-3.5 flex justify-end">
               <Link
-                href={`/students/${student.id}`}
+                href={`${studentsBase}/${student.id}`}
                 className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-indigo-700"
               >
                 View Student

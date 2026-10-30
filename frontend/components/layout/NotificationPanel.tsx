@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   AlertCircle,
   AlertTriangle,
@@ -9,7 +10,7 @@ import {
   CheckCircle2,
   Info,
 } from "lucide-react";
-import { NotificationItem } from "@/types/university";
+import { NotificationItem } from "@/types";
 import { cn } from "@/lib/utils";
 
 interface NotificationPanelProps {
@@ -19,12 +20,28 @@ interface NotificationPanelProps {
   onClose: () => void;
 }
 
+function resolveNotificationHref(href: string | undefined, isAdminRoute: boolean): string | undefined {
+  if (!href) return undefined;
+  if (!isAdminRoute) return href;
+  if (href.startsWith("/admin")) return href;
+  if (href === "/data-integration" || href === "/integration") return "/admin/integrations";
+  if (href === "/academic-analytics" || href === "/analytics") return "/admin/analytics";
+  if (href === "/student-lifecycle" || href === "/lifecycle") return "/admin/lifecycle";
+  if (href === "/data-sources") return "/admin/data-sources";
+  if (href.startsWith("/students")) return `/admin${href}`;
+  if (href === "/reports") return "/admin/reports";
+  if (href === "/notifications") return "/admin/notifications";
+  return "/admin/notifications";
+}
+
 export function NotificationPanel({
   notifications,
   onMarkAllRead,
   onSelectNotification,
   onClose,
 }: NotificationPanelProps) {
+  const pathname = usePathname();
+  const isAdminRoute = Boolean(pathname?.startsWith("/admin"));
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const getIcon = (type: NotificationItem["type"]) => {
@@ -41,7 +58,7 @@ export function NotificationPanel({
   };
 
   return (
-    <div className="absolute right-0 top-full z-40 mt-2 w-80 sm:w-96 overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xl ring-1 ring-slate-900/5">
+    <div className="absolute right-0 top-full z-40 mt-2 w-80 overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xl ring-1 ring-slate-900/5 sm:w-96">
       <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3.5">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold text-slate-900">Notifications</h3>
@@ -65,6 +82,7 @@ export function NotificationPanel({
 
       <div className="max-h-96 divide-y divide-slate-100 overflow-y-auto">
         {notifications.map((item) => {
+          const targetHref = resolveNotificationHref(item.href, isAdminRoute);
           const content = (
             <div
               onClick={() => {
@@ -113,8 +131,8 @@ export function NotificationPanel({
             </div>
           );
 
-          return item.href ? (
-            <Link key={item.id} href={item.href}>
+          return targetHref ? (
+            <Link key={item.id} href={targetHref}>
               {content}
             </Link>
           ) : (
@@ -125,7 +143,7 @@ export function NotificationPanel({
 
       <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-2.5 text-center">
         <Link
-          href="/notifications"
+          href={isAdminRoute ? "/admin/notifications" : "/notifications"}
           onClick={onClose}
           className="text-xs font-medium text-slate-600 transition hover:text-indigo-600"
         >
@@ -135,4 +153,3 @@ export function NotificationPanel({
     </div>
   );
 }
-
