@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+.next/
+**/.next/
+out/
+dist/
+**/dist/
+
+# TypeScript build info
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# Environment variables & secrets (keep .env.example tracked!)
+.env
+.env.local
+.env.*.local
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+backend/.env
+backend/.env.local
+backend/.env.*.local
+
+# Logs & OS files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+Thumbs.db
+
+# Ignore stale root src tab if locked open in editor
+/src/
