@@ -1,20 +1,19 @@
 import React from "react";
-import { LoginBrandingPanel } from "@/components/login/LoginBrandingPanel";
+import {
+  LoginBrandingPanel,
+  LoginSubtleBackground,
+} from "@/components/login/LoginBrandingPanel";
 import { LoginFormCard } from "@/components/login/LoginFormCard";
 
 export default function AdminLoginPage() {
   return (
-    <div className="min-h-screen bg-[#F8FAFC] lg:grid lg:grid-cols-12">
-      {/* Left Branding & Architectural Visual */}
-      <div className="lg:col-span-6 xl:col-span-6">
-        <LoginBrandingPanel />
-      </div>
+    <div className="relative flex min-h-screen flex-col items-center justify-center bg-[#F8FAFC] px-4 py-12 sm:px-6 lg:px-8">
+      <LoginSubtleBackground />
 
-      {/* Right Sign-In Card */}
-      <div className="flex items-center justify-center px-4 py-10 sm:px-6 lg:col-span-6 lg:px-10 xl:col-span-6">
+      <div className="relative z-10 flex w-full max-w-[440px] flex-col items-center">
+        <LoginBrandingPanel />
         <LoginFormCard />
       </div>
     </div>
   );
 }
-

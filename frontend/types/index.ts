@@ -378,3 +378,31 @@ export interface AdminDashboardOverview {
     studentsAtRisk: { category: string; students: number; percentage: number; color: string }[];
   };
 }
+
+export type PortalAuthorizedRole = "Administrator" | "Registrar";
+
+export interface IntegratedAlumniRecord {
+  id: string;
+  studentId: string;
+  fullName: string;
+  programCode: string;
+  program: string;
+  department: string;
+  batch: string;
+  graduationDate: string;
+  status: "Alumni";
+  source: "Alumni CRM";
+  email?: string;
+  contactNumber?: string;
+  enrollmentYear: string;
+}
+
+export interface AlumniCrmSourceInfo {
+  dataSource: "Alumni CRM";
+  integrationMethod: "API / ETL / ELT";
+  connectionStatus: DataSourceStatus;
+  lastSynchronization: string;
+  recordsSynchronized: number;
+   graduationBatchesCount: number;
+  programsRepresentedCount: number;
+}

@@ -60,3 +60,21 @@ export interface AlumniModel {
   location: string;
 }
 
+
+export type AuthorizedRole = "Administrator" | "Registrar";
+
+export interface IntegratedAlumniModel {
+  id: string;
+  studentId: string;
+  fullName: string;
+  programCode: string;
+  program: string;
+  department: string;
+  batch: string;
+  graduationDate: string;
+  status: "Alumni";
+  source: "Alumni CRM";
+  email?: string;
+  contactNumber?: string;
+  enrollmentYear: string;
+}

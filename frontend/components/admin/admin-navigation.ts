@@ -1,4 +1,5 @@
 import {
+  Award,
   BarChart3,
   Bell,
   Database,
@@ -47,6 +48,11 @@ export const ADMIN_NAVIGATION_GROUPS: AdminNavGroup[] = [
         label: "Student Lifecycle",
         href: "/admin/lifecycle",
         icon: Milestone,
+      },
+      {
+        label: "Alumni",
+        href: "/admin/alumni",
+        icon: Award,
       },
     ],
   },
@@ -139,6 +145,13 @@ export function getAdminPageMeta(pathname: string): {
       subtitle: "Progression tracking from Enrollment through Learning, Graduation, and Alumni",
     };
   }
+  if (pathname === "/admin/alumni") {
+    return {
+      title: "Alumni",
+      subtitle:
+        "View and manage integrated alumni records from the university's Alumni CRM.",
+    };
+  }
   if (pathname === "/admin/data-sources") {
     return {
       title: "Data Sources",
@@ -192,4 +205,3 @@ export function getAdminPageMeta(pathname: string): {
     subtitle: "Admin Portal",
   };
 }
-

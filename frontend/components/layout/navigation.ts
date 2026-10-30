@@ -168,7 +168,8 @@ export function getPageMeta(pathname: string): { title: string; subtitle: string
   if (pathname === "/alumni") {
     return {
       title: "Alumni",
-      subtitle: "Graduate career outcomes, industry placement, and directory",
+      subtitle:
+        "View and manage integrated alumni records from the university's Alumni CRM.",
     };
   }
   if (pathname === "/reports") {

@@ -2,10 +2,12 @@ import {
   ADMIN_DASHBOARD_OVERVIEW,
   ADMIN_USERS,
   ALUMNI_ANALYTICS,
+  ALUMNI_CRM_SOURCE_INFO,
   ALUMNI_RECORDS,
   COURSES,
   DASHBOARD_ANALYTICS,
   DATA_SOURCES,
+  INTEGRATED_ALUMNI_RECORDS,
   INTEGRATION_LOGS,
   INTEGRATION_SUMMARY,
   LIFECYCLE_OVERVIEW_STATS,
@@ -21,10 +23,12 @@ import {
   ActivityFeedItem,
   AdminDashboardOverview,
   AdminUserRecord,
+  AlumniCrmSourceInfo,
   AlumniRecord,
   CourseCatalogItem,
   DashboardAnalytics,
   DataSource,
+  IntegratedAlumniRecord,
   IntegrationSummary,
   IntegrationSyncLog,
   LifecycleStage,
@@ -404,5 +408,42 @@ export async function getSyncHistory(): Promise<SyncHistoryRecord[]> {
       return SYNC_HISTORY_RECORDS.map((r) => ({ ...r }));
     },
     (data) => Array.isArray(data)
+  );
+}
+
+
+// GET /api/alumni/integrated
+export async function getIntegratedAlumni(): Promise<{
+  sourceInfo: AlumniCrmSourceInfo;
+  records: IntegratedAlumniRecord[];
+}> {
+  return tryLiveOrFallback(
+    () =>
+      fetchJson<{
+        sourceInfo: AlumniCrmSourceInfo;
+        records: IntegratedAlumniRecord[];
+      }>("/alumni/integrated"),
+    async () => {
+      await simulateNetworkDelay(150);
+      return {
+        sourceInfo: { ...ALUMNI_CRM_SOURCE_INFO },
+        records: INTEGRATED_ALUMNI_RECORDS.map((r) => ({ ...r })),
+      };
+    },
+    (data) => Boolean(data?.sourceInfo && Array.isArray(data?.records))
+  );
+}
+
+// POST /api/alumni/sync
+export async function syncAlumniCrm(): Promise<{ lastSynchronization: string }> {
+  return tryLiveOrFallback(
+    () =>
+      fetchJson<{ lastSynchronization: string }>("/alumni/sync", {
+        method: "POST",
+      }),
+    async () => {
+      await simulateNetworkDelay(800);
+      return { lastSynchronization: "Just now" };
+    }
   );
 }

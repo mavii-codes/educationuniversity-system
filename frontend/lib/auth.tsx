@@ -8,13 +8,14 @@ import React, {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
+import { PortalAuthorizedRole } from "@/types";
 import { API_CONFIG } from "./api";
 
 export interface AdminSessionUser {
   id: string;
   name: string;
   email: string;
-  role: "Administrator";
+  role: PortalAuthorizedRole;
   department: string;
   lastLogin: string;
 }
@@ -29,7 +30,9 @@ interface AuthContextValue {
   user: AdminSessionUser | null;
   isAuthenticated: boolean;
   isInitializing: boolean;
-  signIn: (params: SignInParams) => Promise<{ ok: boolean; error?: string }>;
+  signIn: (
+    params: SignInParams
+  ) => Promise<{ ok: boolean; role?: PortalAuthorizedRole; error?: string }>;
   signOut: () => void;
 }
 
@@ -44,6 +47,11 @@ const DEV_MOCK_ADMIN_ID = "admin-001";
 const DEV_MOCK_PASSWORD =
   process.env.NEXT_PUBLIC_DEV_ADMIN_PASSWORD || "Admin123!";
 
+const DEV_REGISTRAR_EMAIL = "registrar@university.edu";
+const DEV_REGISTRAR_ID = "reg-001";
+const DEV_REGISTRAR_PASSWORD =
+  process.env.NEXT_PUBLIC_DEV_REGISTRAR_PASSWORD || "Registrar123!";
+
 const DEFAULT_ADMIN_USER: AdminSessionUser = {
   id: "ADM-2026-001",
   name: "Administrator",
@@ -51,6 +59,15 @@ const DEFAULT_ADMIN_USER: AdminSessionUser = {
   role: "Administrator",
   department: "Office of Institutional Data & Systems",
   lastLogin: "Today, 9:45 AM",
+};
+
+const DEFAULT_REGISTRAR_USER: AdminSessionUser = {
+  id: "REG-2026-001",
+  name: "University Registrar",
+  email: "registrar@university.edu",
+  role: "Registrar",
+  department: "Office of the University Registrar",
+  lastLogin: "Today, 9:50 AM",
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -83,7 +100,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       identifier,
       password,
       rememberMe,
-    }: SignInParams): Promise<{ ok: boolean; error?: string }> => {
+    }: SignInParams): Promise<{
+      ok: boolean;
+      role?: PortalAuthorizedRole;
+      error?: string;
+    }> => {
       const normalized = identifier.trim().toLowerCase();
 
       // Prepared for future Express + JWT + PostgreSQL endpoint
@@ -103,7 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               : window.sessionStorage;
             storage.setItem(STORAGE_KEY, JSON.stringify(sessionUser));
             setUser(sessionUser);
-            return { ok: true };
+            return { ok: true, role: sessionUser.role };
           }
         } catch {
           // Fall back to mock authentication when backend auth route is not yet online
@@ -113,11 +134,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Realistic network latency for Sign In transition
       await new Promise((resolve) => setTimeout(resolve, 750));
 
-      const isValidUser =
-        normalized === DEV_MOCK_EMAIL || normalized === DEV_MOCK_ADMIN_ID;
-      const isValidPassword = password === DEV_MOCK_PASSWORD;
+      const isAdminMatch =
+        (normalized === DEV_MOCK_EMAIL || normalized === DEV_MOCK_ADMIN_ID) &&
+        password === DEV_MOCK_PASSWORD;
 
-      if (!isValidUser || !isValidPassword) {
+      const isRegistrarMatch =
+        (normalized === DEV_REGISTRAR_EMAIL ||
+          normalized === DEV_REGISTRAR_ID) &&
+        password === DEV_REGISTRAR_PASSWORD;
+
+      if (!isAdminMatch && !isRegistrarMatch) {
         return {
           ok: false,
           error:
@@ -125,8 +151,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
       }
 
+      const baseProfile = isRegistrarMatch
+        ? DEFAULT_REGISTRAR_USER
+        : DEFAULT_ADMIN_USER;
+
       const sessionUser: AdminSessionUser = {
-        ...DEFAULT_ADMIN_USER,
+        ...baseProfile,
         lastLogin: "Just now",
       };
 
@@ -142,7 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setUser(sessionUser);
-      return { ok: true };
+      return { ok: true, role: sessionUser.role };
     },
     []
   );
@@ -180,4 +210,3 @@ export function useAuth() {
   }
   return ctx;
 }
-

@@ -1,20 +1,36 @@
 import { NextFunction, Request, Response } from "express";
+import { AuthorizedRole } from "../models";
 
 /**
  * Placeholder authentication / RBAC middleware foundation.
- * Ready to verify JWT or institutional SSO session tokens in a later phase.
+ * Ready to verify JWT or institutional SSO session tokens in production.
  */
 export function optionalAuthContext(
   req: Request,
-  _res: Response,
+  res: Response,
   next: NextFunction
 ): void {
-  res.locals_placeholder(req);
+  const roleHeader = req.header("x-user-role") as AuthorizedRole | undefined;
+  res.locals.userRole = roleHeader || "Administrator";
   next();
 }
 
-function res_locals_noop(_req: Request) {
-  // Reserved for future req.user role attachment
-}
-const res = { locals_placeholder: res_locals_noop };
+export function requireRoles(...allowedRoles: AuthorizedRole[]) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const role =
+      (req.header("x-user-role") as AuthorizedRole | undefined) ||
+      (res.locals.userRole as AuthorizedRole | undefined) ||
+      "Administrator";
 
+    if (!allowedRoles.includes(role)) {
+      res.status(403).json({
+        error: "Forbidden",
+        message: "You do not have permission to access this resource.",
+      });
+      return;
+    }
+
+    res.locals.userRole = role;
+    next();
+  };
+}

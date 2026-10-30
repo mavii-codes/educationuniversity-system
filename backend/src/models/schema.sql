@@ -60,3 +60,21 @@ CREATE TABLE IF NOT EXISTS alumni_records (
   location VARCHAR(120)
 );
 
+
+-- External Alumni CRM ETL / ELT synchronized mirror table
+CREATE TABLE IF NOT EXISTS integrated_alumni_crm (
+  id VARCHAR(32) PRIMARY KEY,
+  student_id VARCHAR(32) NOT NULL,
+  full_name VARCHAR(160) NOT NULL,
+  program_code VARCHAR(16) NOT NULL,
+  program_name VARCHAR(160) NOT NULL,
+  department VARCHAR(160) NOT NULL,
+  batch VARCHAR(16) NOT NULL,
+  graduation_date VARCHAR(48) NOT NULL,
+  status VARCHAR(24) NOT NULL DEFAULT 'Alumni',
+  source VARCHAR(48) NOT NULL DEFAULT 'Alumni CRM',
+  email VARCHAR(160),
+  contact_number VARCHAR(48),
+  enrollment_year VARCHAR(16),
+  synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

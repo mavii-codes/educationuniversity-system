@@ -30,6 +30,7 @@ const ADMIN_QUICK_LINKS = [
   { label: "Integrations Pipeline", href: "/admin/integrations" },
   { label: "Sync History", href: "/admin/sync-history" },
   { label: "Academic Analytics", href: "/admin/analytics" },
+  { label: "Alumni Outcomes & Directory", href: "/admin/alumni" },
   { label: "Reports", href: "/admin/reports" },
   { label: "User Management", href: "/admin/users" },
   { label: "Notifications", href: "/admin/notifications" },

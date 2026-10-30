@@ -62,7 +62,9 @@ export function LoginFormCard() {
       return;
     }
 
-    router.push("/admin/dashboard");
+    router.push(
+      result.role === "Registrar" ? "/registrar/alumni" : "/admin/dashboard"
+    );
   };
 
   const handleUseDemoCredentials = () => {
@@ -74,10 +76,10 @@ export function LoginFormCard() {
   };
 
   return (
-    <div className="w-full max-w-md">
-      <div className="rounded-2xl border border-slate-200/90 bg-white p-7 sm:p-9 shadow-card">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
+    <div className="w-full max-w-[440px]">
+      <div className="rounded-2xl border border-slate-200/90 bg-white p-7 shadow-card sm:p-9">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
             Welcome back
           </h2>
           <p className="mt-1.5 text-sm text-slate-500">
@@ -92,7 +94,7 @@ export function LoginFormCard() {
             className="mt-5 flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50/80 p-3.5 text-xs text-rose-700"
           >
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
-            <span className="leading-relaxed font-medium">{formError}</span>
+            <span className="font-medium leading-relaxed">{formError}</span>
           </div>
         )}
 
@@ -240,4 +242,3 @@ export function LoginFormCard() {
     </div>
   );
 }
-
