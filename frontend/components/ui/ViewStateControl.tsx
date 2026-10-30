@@ -17,55 +17,24 @@ export function ViewStateControl({
   onChange,
   onRefresh,
 }: ViewStateControlProps) {
+  if (!onRefresh) return null;
+
+  const isLoading = current === "loading";
+
   return (
-    <div className="inline-flex items-center gap-1 rounded-lg border border-slate-200/80 bg-white p-1 text-xs shadow-sm">
-      <button
-        type="button"
-        onClick={() => onChange("ready")}
-        className={cn(
-          "rounded-md px-2.5 py-1 font-medium transition",
-          current === "ready"
-            ? "bg-indigo-50 text-indigo-700"
-            : "text-slate-500 hover:text-slate-800"
-        )}
-      >
-        Live View
-      </button>
-      <button
-        type="button"
-        onClick={() => onChange("loading")}
-        className={cn(
-          "rounded-md px-2.5 py-1 font-medium transition",
-          current === "loading"
-            ? "bg-indigo-50 text-indigo-700"
-            : "text-slate-500 hover:text-slate-800"
-        )}
-      >
-        Loading
-      </button>
-      <button
-        type="button"
-        onClick={() => onChange("error")}
-        className={cn(
-          "rounded-md px-2.5 py-1 font-medium transition",
-          current === "error"
-            ? "bg-rose-50 text-rose-700"
-            : "text-slate-500 hover:text-slate-800"
-        )}
-      >
-        Error
-      </button>
-      {onRefresh && (
-        <button
-          type="button"
-          onClick={onRefresh}
-          title="Refresh data"
-          className="ml-0.5 rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-        >
-          <RefreshCw className="h-3.5 w-3.5" />
-        </button>
-      )}
-    </div>
+    <button
+      type="button"
+      onClick={() => {
+        if (current === "error") onChange("ready");
+        onRefresh();
+      }}
+      disabled={isLoading}
+      className="inline-flex items-center gap-2 rounded-lg border border-slate-200/90 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 disabled:opacity-60"
+    >
+      <RefreshCw
+        className={cn("h-3.5 w-3.5 text-slate-500", isLoading && "animate-spin")}
+      />
+      <span>{isLoading ? "Refreshing..." : "Refresh"}</span>
+    </button>
   );
 }
-

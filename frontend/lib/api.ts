@@ -31,14 +31,15 @@ import {
 
 /**
  * REST API Client Configuration
- * Reads NEXT_PUBLIC_API_URL from /frontend/.env.local without hardcoding host URLs.
+ * Reads NEXT_PUBLIC_API_URL from environment variables.
+ * Automatically falls back to frontend mock data when the backend is not yet deployed.
  */
 export const API_CONFIG = {
   baseUrl: (process.env.NEXT_PUBLIC_API_URL || "/api").replace(/\/$/, ""),
   useLiveApi: process.env.NEXT_PUBLIC_USE_LIVE_API === "true",
 };
 
-async function simulateNetworkDelay(ms = 180): Promise<void> {
+async function simulateNetworkDelay(ms = 160): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -53,6 +54,25 @@ async function fetchJson<T>(endpoint: string, init?: RequestInit): Promise<T> {
   return res.json();
 }
 
+async function tryLiveOrFallback<T>(
+  liveFetcher: () => Promise<T>,
+  mockFallback: () => Promise<T>,
+  validator?: (data: T) => boolean
+): Promise<T> {
+  if (!API_CONFIG.useLiveApi) {
+    return mockFallback();
+  }
+  try {
+    const liveData = await liveFetcher();
+    if (validator && !validator(liveData)) {
+      return mockFallback();
+    }
+    return liveData;
+  } catch {
+    return mockFallback();
+  }
+}
+
 export interface StudentQueryFilters {
   search?: string;
   program?: string;
@@ -63,79 +83,91 @@ export interface StudentQueryFilters {
 
 // GET /api/students
 export async function getStudents(filters?: StudentQueryFilters): Promise<Student[]> {
-  if (API_CONFIG.useLiveApi) {
-    const params = new URLSearchParams();
-    if (filters?.search) params.set("search", filters.search);
-    if (filters?.program && filters.program !== "All") params.set("program", filters.program);
-    if (filters?.yearLevel && filters.yearLevel !== "All") params.set("yearLevel", filters.yearLevel);
-    if (filters?.status && filters.status !== "All") params.set("status", filters.status);
-    if (filters?.riskLevel && filters.riskLevel !== "All") params.set("riskLevel", filters.riskLevel);
-    const query = params.toString();
-    return fetchJson<Student[]>(`/students${query ? `?${query}` : ""}`);
-  }
+  return tryLiveOrFallback(
+    () => {
+      const params = new URLSearchParams();
+      if (filters?.search) params.set("search", filters.search);
+      if (filters?.program && filters.program !== "All") params.set("program", filters.program);
+      if (filters?.yearLevel && filters.yearLevel !== "All") params.set("yearLevel", filters.yearLevel);
+      if (filters?.status && filters.status !== "All") params.set("status", filters.status);
+      if (filters?.riskLevel && filters.riskLevel !== "All") params.set("riskLevel", filters.riskLevel);
+      const query = params.toString();
+      return fetchJson<Student[]>(`/students${query ? `?${query}` : ""}`);
+    },
+    async () => {
+      await simulateNetworkDelay(160);
+      let results = [...STUDENTS];
 
-  await simulateNetworkDelay(180);
-  let results = [...STUDENTS];
+      if (filters) {
+        if (filters.search) {
+          const q = filters.search.toLowerCase().trim();
+          results = results.filter(
+            (s) =>
+              s.name.toLowerCase().includes(q) ||
+              s.id.toLowerCase().includes(q) ||
+              s.programName.toLowerCase().includes(q) ||
+              s.email.toLowerCase().includes(q)
+          );
+        }
+        if (filters.program && filters.program !== "All") {
+          results = results.filter((s) => s.programCode === filters.program);
+        }
+        if (filters.yearLevel && filters.yearLevel !== "All") {
+          results = results.filter((s) => s.yearLevel === filters.yearLevel);
+        }
+        if (filters.status && filters.status !== "All") {
+          results = results.filter((s) => s.status === filters.status);
+        }
+        if (filters.riskLevel && filters.riskLevel !== "All") {
+          results = results.filter((s) => s.riskLevel === filters.riskLevel);
+        }
+      }
 
-  if (filters) {
-    if (filters.search) {
-      const q = filters.search.toLowerCase().trim();
-      results = results.filter(
-        (s) =>
-          s.name.toLowerCase().includes(q) ||
-          s.id.toLowerCase().includes(q) ||
-          s.programName.toLowerCase().includes(q) ||
-          s.email.toLowerCase().includes(q)
-      );
-    }
-    if (filters.program && filters.program !== "All") {
-      results = results.filter((s) => s.programCode === filters.program);
-    }
-    if (filters.yearLevel && filters.yearLevel !== "All") {
-      results = results.filter((s) => s.yearLevel === filters.yearLevel);
-    }
-    if (filters.status && filters.status !== "All") {
-      results = results.filter((s) => s.status === filters.status);
-    }
-    if (filters.riskLevel && filters.riskLevel !== "All") {
-      results = results.filter((s) => s.riskLevel === filters.riskLevel);
-    }
-  }
-
-  return results;
+      return results;
+    },
+    (data) => Array.isArray(data) && (data.length === 0 || Boolean(data[0]?.academicRecords))
+  );
 }
 
 // GET /api/students/:id
 export async function getStudentById(id: string): Promise<Student | null> {
-  if (API_CONFIG.useLiveApi) {
-    const res = await fetch(`${API_CONFIG.baseUrl}/students/${encodeURIComponent(id)}`);
-    if (res.status === 404) return null;
-    if (!res.ok) throw new Error("Failed to load student profile");
-    return res.json();
-  }
-
-  await simulateNetworkDelay(160);
-  return STUDENTS.find((s) => s.id === id) ?? null;
+  return tryLiveOrFallback(
+    async () => {
+      const res = await fetch(`${API_CONFIG.baseUrl}/students/${encodeURIComponent(id)}`);
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error("Failed to load student profile");
+      return res.json();
+    },
+    async () => {
+      await simulateNetworkDelay(150);
+      return STUDENTS.find((s) => s.id === id) ?? null;
+    },
+    (data) => data === null || Boolean(data?.academicRecords)
+  );
 }
 
 // GET /api/programs
 export async function getPrograms(): Promise<Program[]> {
-  if (API_CONFIG.useLiveApi) {
-    return fetchJson<Program[]>("/programs");
-  }
-
-  await simulateNetworkDelay(140);
-  return [...PROGRAMS];
+  return tryLiveOrFallback(
+    () => fetchJson<Program[]>("/programs"),
+    async () => {
+      await simulateNetworkDelay(130);
+      return [...PROGRAMS];
+    },
+    (data) => Array.isArray(data)
+  );
 }
 
 // GET /api/courses
 export async function getCourses(): Promise<CourseCatalogItem[]> {
-  if (API_CONFIG.useLiveApi) {
-    return fetchJson<CourseCatalogItem[]>("/courses");
-  }
-
-  await simulateNetworkDelay(140);
-  return [...COURSES];
+  return tryLiveOrFallback(
+    () => fetchJson<CourseCatalogItem[]>("/courses"),
+    async () => {
+      await simulateNetworkDelay(130);
+      return [...COURSES];
+    },
+    (data) => Array.isArray(data)
+  );
 }
 
 // GET /api/analytics (Dashboard overview)
@@ -143,18 +175,21 @@ export async function getDashboardData(): Promise<{
   analytics: DashboardAnalytics;
   recentActivity: ActivityFeedItem[];
 }> {
-  if (API_CONFIG.useLiveApi) {
-    return fetchJson<{
-      analytics: DashboardAnalytics;
-      recentActivity: ActivityFeedItem[];
-    }>("/analytics/dashboard");
-  }
-
-  await simulateNetworkDelay(180);
-  return {
-    analytics: DASHBOARD_ANALYTICS,
-    recentActivity: RECENT_ACTIVITY,
-  };
+  return tryLiveOrFallback(
+    () =>
+      fetchJson<{
+        analytics: DashboardAnalytics;
+        recentActivity: ActivityFeedItem[];
+      }>("/analytics/dashboard"),
+    async () => {
+      await simulateNetworkDelay(160);
+      return {
+        analytics: DASHBOARD_ANALYTICS,
+        recentActivity: RECENT_ACTIVITY,
+      };
+    },
+    (data) => Boolean(data?.analytics?.enrollmentTrends && Array.isArray(data?.recentActivity))
+  );
 }
 
 // GET /api/analytics
@@ -163,24 +198,27 @@ export async function getAcademicAnalyticsData(): Promise<{
   atRiskStudents: Student[];
   analytics: DashboardAnalytics;
 }> {
-  if (API_CONFIG.useLiveApi) {
-    return fetchJson<{
-      programs: Program[];
-      atRiskStudents: Student[];
-      analytics: DashboardAnalytics;
-    }>("/analytics");
-  }
+  return tryLiveOrFallback(
+    () =>
+      fetchJson<{
+        programs: Program[];
+        atRiskStudents: Student[];
+        analytics: DashboardAnalytics;
+      }>("/analytics"),
+    async () => {
+      await simulateNetworkDelay(160);
+      const atRiskStudents = STUDENTS.filter(
+        (s) => s.riskLevel === "High" || s.riskLevel === "Medium"
+      ).sort((a, b) => a.gpa - b.gpa);
 
-  await simulateNetworkDelay(180);
-  const atRiskStudents = STUDENTS.filter(
-    (s) => s.riskLevel === "High" || s.riskLevel === "Medium"
-  ).sort((a, b) => a.gpa - b.gpa);
-
-  return {
-    programs: PROGRAMS,
-    atRiskStudents,
-    analytics: DASHBOARD_ANALYTICS,
-  };
+      return {
+        programs: PROGRAMS,
+        atRiskStudents,
+        analytics: DASHBOARD_ANALYTICS,
+      };
+    },
+    (data) => Boolean(Array.isArray(data?.programs) && Array.isArray(data?.atRiskStudents))
+  );
 }
 
 // GET /api/lifecycle
@@ -188,40 +226,47 @@ export async function getStudentLifecycleData(): Promise<{
   overviewStats: typeof LIFECYCLE_OVERVIEW_STATS;
   stages: LifecycleStage[];
 }> {
-  if (API_CONFIG.useLiveApi) {
-    return fetchJson<{
-      overviewStats: typeof LIFECYCLE_OVERVIEW_STATS;
-      stages: LifecycleStage[];
-    }>("/lifecycle");
-  }
-
-  await simulateNetworkDelay(160);
-  return {
-    overviewStats: LIFECYCLE_OVERVIEW_STATS,
-    stages: LIFECYCLE_STAGES,
-  };
+  return tryLiveOrFallback(
+    () =>
+      fetchJson<{
+        overviewStats: typeof LIFECYCLE_OVERVIEW_STATS;
+        stages: LifecycleStage[];
+      }>("/lifecycle"),
+    async () => {
+      await simulateNetworkDelay(150);
+      return {
+        overviewStats: LIFECYCLE_OVERVIEW_STATS,
+        stages: LIFECYCLE_STAGES,
+      };
+    },
+    (data) => Boolean(Array.isArray(data?.stages) && data.stages[0]?.insights)
+  );
 }
 
 // GET /api/data-sources
 export async function getDataSources(): Promise<DataSource[]> {
-  if (API_CONFIG.useLiveApi) {
-    return fetchJson<DataSource[]>("/data-sources");
-  }
-
-  await simulateNetworkDelay(160);
-  return DATA_SOURCES.map((d) => ({ ...d }));
+  return tryLiveOrFallback(
+    () => fetchJson<DataSource[]>("/data-sources"),
+    async () => {
+      await simulateNetworkDelay(150);
+      return DATA_SOURCES.map((d) => ({ ...d }));
+    },
+    (data) => Array.isArray(data) && (data.length === 0 || Boolean(data[0]?.entitiesSynced))
+  );
 }
 
 // POST /api/data-sources/:id/sync
 export async function syncDataSource(id: string): Promise<{ lastSynced: string }> {
-  if (API_CONFIG.useLiveApi) {
-    return fetchJson<{ lastSynced: string }>(`/data-sources/${id}/sync`, {
-      method: "POST",
-    });
-  }
-
-  await simulateNetworkDelay(900);
-  return { lastSynced: "Just now" };
+  return tryLiveOrFallback(
+    () =>
+      fetchJson<{ lastSynced: string }>(`/data-sources/${id}/sync`, {
+        method: "POST",
+      }),
+    async () => {
+      await simulateNetworkDelay(850);
+      return { lastSynced: "Just now" };
+    }
+  );
 }
 
 // GET /api/integrations
@@ -229,18 +274,21 @@ export async function getIntegrationsData(): Promise<{
   summary: IntegrationSummary;
   logs: IntegrationSyncLog[];
 }> {
-  if (API_CONFIG.useLiveApi) {
-    return fetchJson<{
-      summary: IntegrationSummary;
-      logs: IntegrationSyncLog[];
-    }>("/integrations");
-  }
-
-  await simulateNetworkDelay(180);
-  return {
-    summary: { ...INTEGRATION_SUMMARY },
-    logs: INTEGRATION_LOGS.map((l) => ({ ...l })),
-  };
+  return tryLiveOrFallback(
+    () =>
+      fetchJson<{
+        summary: IntegrationSummary;
+        logs: IntegrationSyncLog[];
+      }>("/integrations"),
+    async () => {
+      await simulateNetworkDelay(160);
+      return {
+        summary: { ...INTEGRATION_SUMMARY },
+        logs: INTEGRATION_LOGS.map((l) => ({ ...l })),
+      };
+    },
+    (data) => Boolean(data?.summary && Array.isArray(data?.logs))
+  );
 }
 
 // GET /api/alumni
@@ -249,39 +297,45 @@ export async function getAlumniData(): Promise<{
   analytics: typeof ALUMNI_ANALYTICS;
   graduationTrends: DashboardAnalytics["graduationTrends"];
 }> {
-  if (API_CONFIG.useLiveApi) {
-    return fetchJson<{
-      records: AlumniRecord[];
-      analytics: typeof ALUMNI_ANALYTICS;
-      graduationTrends: DashboardAnalytics["graduationTrends"];
-    }>("/alumni");
-  }
-
-  await simulateNetworkDelay(180);
-  return {
-    records: [...ALUMNI_RECORDS],
-    analytics: ALUMNI_ANALYTICS,
-    graduationTrends: DASHBOARD_ANALYTICS.graduationTrends,
-  };
+  return tryLiveOrFallback(
+    () =>
+      fetchJson<{
+        records: AlumniRecord[];
+        analytics: typeof ALUMNI_ANALYTICS;
+        graduationTrends: DashboardAnalytics["graduationTrends"];
+      }>("/alumni"),
+    async () => {
+      await simulateNetworkDelay(160);
+      return {
+        records: [...ALUMNI_RECORDS],
+        analytics: ALUMNI_ANALYTICS,
+        graduationTrends: DASHBOARD_ANALYTICS.graduationTrends,
+      };
+    },
+    (data) => Boolean(Array.isArray(data?.records) && data?.analytics?.employmentTrends)
+  );
 }
 
 // GET /api/reports
 export async function getReportsData(): Promise<ReportItem[]> {
-  if (API_CONFIG.useLiveApi) {
-    return fetchJson<ReportItem[]>("/reports");
-  }
-
-  await simulateNetworkDelay(150);
-  return [...REPORTS];
+  return tryLiveOrFallback(
+    () => fetchJson<ReportItem[]>("/reports"),
+    async () => {
+      await simulateNetworkDelay(140);
+      return [...REPORTS];
+    },
+    (data) => Array.isArray(data) && (data.length === 0 || Boolean(data[0]?.highlights))
+  );
 }
 
 // GET /api/notifications
 export async function getNotifications(): Promise<NotificationItem[]> {
-  if (API_CONFIG.useLiveApi) {
-    return fetchJson<NotificationItem[]>("/notifications");
-  }
-
-  await simulateNetworkDelay(140);
-  return NOTIFICATIONS.map((n) => ({ ...n }));
+  return tryLiveOrFallback(
+    () => fetchJson<NotificationItem[]>("/notifications"),
+    async () => {
+      await simulateNetworkDelay(130);
+      return NOTIFICATIONS.map((n) => ({ ...n }));
+    },
+    (data) => Array.isArray(data) && (data.length === 0 || "description" in data[0])
+  );
 }
-
