@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle,
-  ArrowRight,
   BookOpen,
   CheckCircle2,
   Eye,
@@ -15,27 +14,26 @@ import {
   Lock,
   Mail,
   User,
-  UserPlus,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
-type StudentMode = "signin" | "register";
+type AuthMode = "signin" | "register";
 
 export function StudentLoginFormCard() {
   const router = useRouter();
   const { signIn, registerStudent } = useAuth();
 
-  const [mode, setMode] = useState<StudentMode>("signin");
+  const [mode, setMode] = useState<AuthMode>("signin");
 
-  // Sign In fields
-  const [identifier, setIdentifier] = useState("student@university.edu");
-  const [password, setPassword] = useState("Student123!");
+  // Sign In state
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Student Register fields
+  // Student Registration state
   const [regName, setRegName] = useState("");
   const [regStudentId, setRegStudentId] = useState("");
   const [regEmail, setRegEmail] = useState("");
@@ -45,7 +43,7 @@ export function StudentLoginFormCard() {
   const [regShowPassword, setRegShowPassword] = useState(false);
   const [regSuccessMsg, setRegSuccessMsg] = useState("");
 
-  // Validation errors
+  // Validation & Error states
   const [identifierError, setIdentifierError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [formError, setFormError] = useState("");
@@ -57,16 +55,16 @@ export function StudentLoginFormCard() {
     setFormError("");
     setRegSuccessMsg("");
 
-    let hasValidationError = false;
+    let hasError = false;
     if (!identifier.trim()) {
-      setIdentifierError("Please enter your Student ID or institutional email.");
-      hasValidationError = true;
+      setIdentifierError("Please enter your Student ID or university email.");
+      hasError = true;
     }
     if (!password) {
       setPasswordError("Please enter your password.");
-      hasValidationError = true;
+      hasError = true;
     }
-    if (hasValidationError) return;
+    if (hasError) return;
 
     setIsSubmitting(true);
     const result = await signIn({
@@ -77,9 +75,11 @@ export function StudentLoginFormCard() {
     });
 
     if (!result.ok) {
+      // Integrated, polished, user-friendly error message
       setFormError(
-        result.error ||
-          "Invalid credentials. Please verify your Student ID and password."
+        result.error?.includes("Administrative")
+          ? result.error
+          : "Unable to sign in. Please check your Student ID or university email and password, then try again."
       );
       setIsSubmitting(false);
       return;
@@ -99,17 +99,17 @@ export function StudentLoginFormCard() {
       !regEmail.trim() ||
       !regPassword
     ) {
-      setFormError("All registration fields are required.");
+      setFormError("Please fill in all required registration fields.");
       return;
     }
 
     if (!regEmail.includes("@")) {
-      setFormError("Please provide a valid institutional email address.");
+      setFormError("Please enter a valid university email address.");
       return;
     }
 
     if (regPassword.length < 6) {
-      setFormError("Password must be at least 6 characters.");
+      setFormError("Password must be at least 6 characters in length.");
       return;
     }
 
@@ -125,12 +125,14 @@ export function StudentLoginFormCard() {
     });
 
     if (!res.ok) {
-      setFormError(res.error || "Failed to register student account.");
+      setFormError(
+        res.error || "Unable to complete registration. Please try again."
+      );
       setIsSubmitting(false);
       return;
     }
 
-    // Automatically sign in the registered student
+    // Auto sign-in upon successful registration
     const signRes = await signIn({
       identifier: regStudentId.trim(),
       password: regPassword,
@@ -144,118 +146,73 @@ export function StudentLoginFormCard() {
       setIsSubmitting(false);
       setMode("signin");
       setIdentifier(regStudentId.trim());
-      setRegSuccessMsg("Account registered successfully! Please sign in.");
+      setRegSuccessMsg("Account registered successfully! Please sign in with your credentials.");
     }
   };
 
-  const handleUseDemo = () => {
-    setFormError("");
-    setRegSuccessMsg("");
-    setIdentifierError("");
-    setPasswordError("");
-    setMode("signin");
-    setIdentifier("student@university.edu");
-    setPassword("Student123!");
-  };
-
   return (
-    <div className="w-full max-w-[460px]">
-      <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-card sm:p-8">
-        {/* Student Portal Badge Header */}
-        <div className="flex flex-col items-center text-center">
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-200">
-            <BookOpen className="h-3.5 w-3.5" />
+    <div className="w-full max-w-[420px] transition-all duration-300">
+      <div className="rounded-3xl border border-slate-200/90 bg-white/95 p-7 sm:p-9 shadow-[0_12px_40px_-8px_rgba(15,23,42,0.08),0_1px_3px_0_rgba(15,23,42,0.03)] backdrop-blur-md">
+        {/* Top Portal Badge */}
+        <div className="flex flex-col items-start">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-indigo-100 bg-indigo-50/80 px-3 py-1 text-xs font-semibold text-indigo-700">
+            <BookOpen className="h-3.5 w-3.5 text-indigo-600" />
             <span>Student Library Portal</span>
           </div>
 
-          <h2 className="mt-3 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-            {mode === "signin" ? "Student / Member Sign In" : "Register Student Card"}
-          </h2>
-          <p className="mt-1 text-xs text-slate-500 max-w-sm">
+          <h3 className="mt-3.5 text-2xl font-bold tracking-tight text-slate-900 sm:text-[26px]">
+            {mode === "signin" ? "Welcome back" : "Create an account"}
+          </h3>
+          <p className="mt-1 text-xs sm:text-sm text-slate-500 leading-relaxed">
             {mode === "signin"
-              ? "Access university catalog, request book loans, track reservations, and view fines."
-              : "Create a digital borrower profile with your University Student ID."}
+              ? "Sign in to access your university library."
+              : "Register your student card to borrow books and access digital catalogs."}
           </p>
         </div>
 
-        {/* Mode Switcher: Sign In vs Create Account */}
-        <div className="mt-5 flex rounded-xl bg-slate-100 p-1">
-          <button
-            type="button"
-            onClick={() => {
-              setMode("signin");
-              setFormError("");
-            }}
-            className={cn(
-              "flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold transition-all",
-              mode === "signin"
-                ? "bg-white text-indigo-700 shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
-            )}
-          >
-            <BookOpen className="h-3.5 w-3.5" />
-            <span>Sign In</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMode("register");
-              setFormError("");
-            }}
-            className={cn(
-              "flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold transition-all",
-              mode === "register"
-                ? "bg-white text-indigo-700 shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
-            )}
-          >
-            <UserPlus className="h-3.5 w-3.5" />
-            <span>Create Account</span>
-          </button>
-        </div>
-
-        {/* Quick Demo Fill (Student) */}
-        {mode === "signin" && (
-          <div className="mt-4 flex items-center justify-center gap-2">
-            <span className="text-[11px] font-medium text-slate-400">Quick Test:</span>
-            <button
-              type="button"
-              onClick={handleUseDemo}
-              className="rounded-lg border border-indigo-200 bg-indigo-50/70 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-100 transition"
-            >
-              Fill Student Demo (student@university.edu)
-            </button>
-          </div>
-        )}
-
-        {/* Global Error Banner */}
+        {/* Integrated Clean Error Alert */}
         {formError && (
-          <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50/80 p-3 text-xs text-rose-800">
+          <div
+            role="alert"
+            className="mt-5 flex items-start gap-2.5 rounded-xl border border-rose-200/90 bg-rose-50/90 p-3.5 text-xs text-rose-900 animate-in fade-in-0 duration-200"
+          >
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
-            <div className="flex-1 leading-relaxed">{formError}</div>
+            <div className="flex-1 leading-relaxed">
+              <span className="font-semibold block text-rose-950">
+                Unable to sign in
+              </span>
+              <span>{formError}</span>
+            </div>
           </div>
         )}
 
-        {/* Global Success Banner */}
+        {/* Integrated Success Banner */}
         {regSuccessMsg && (
-          <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50/80 p-3 text-xs text-emerald-800">
+          <div className="mt-5 flex items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50/90 p-3.5 text-xs text-emerald-900 animate-in fade-in-0 duration-200">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-            <div className="flex-1 leading-relaxed">{regSuccessMsg}</div>
+            <div className="flex-1 leading-relaxed font-medium">
+              {regSuccessMsg}
+            </div>
           </div>
         )}
 
-        {/* Mode: Sign In Form */}
+        {/* Sign In Mode */}
         {mode === "signin" && (
-          <form onSubmit={handleSignInSubmit} noValidate className="mt-5 space-y-4">
+          <form
+            onSubmit={handleSignInSubmit}
+            noValidate
+            className="mt-6 space-y-4"
+          >
+            {/* Student ID / University Email */}
             <div>
               <label
                 htmlFor="student-identifier"
                 className="block text-xs font-semibold text-slate-700"
               >
-                Student ID / University Email
+                Student ID or University Email
               </label>
               <div className="relative mt-1.5">
-                <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <User className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   id="student-identifier"
                   type="text"
@@ -264,13 +221,14 @@ export function StudentLoginFormCard() {
                   onChange={(e) => {
                     setIdentifier(e.target.value);
                     if (identifierError) setIdentifierError("");
+                    if (formError) setFormError("");
                   }}
-                  placeholder="2024-042 or student@university.edu"
+                  placeholder="Enter your student ID or university email"
                   className={cn(
-                    "h-10 w-full rounded-xl border bg-white pl-10 pr-3.5 text-xs text-slate-900 placeholder:text-slate-400 transition focus:outline-none focus:ring-2",
+                    "h-11 w-full rounded-xl border bg-slate-50/50 pl-10 pr-3.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 transition-all focus:bg-white focus:outline-none focus:ring-4",
                     identifierError
-                      ? "border-rose-300 focus:border-rose-400 focus:ring-rose-500/15"
-                      : "border-slate-200 focus:border-indigo-400 focus:ring-indigo-500/15"
+                      ? "border-rose-300 focus:border-rose-400 focus:ring-rose-500/10"
+                      : "border-slate-200/90 focus:border-indigo-500 focus:ring-indigo-500/10"
                   )}
                 />
               </div>
@@ -281,6 +239,7 @@ export function StudentLoginFormCard() {
               )}
             </div>
 
+            {/* Password */}
             <div>
               <div className="flex items-center justify-between">
                 <label
@@ -291,7 +250,7 @@ export function StudentLoginFormCard() {
                 </label>
                 <Link
                   href="/forgot-password"
-                  className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-700"
+                  className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition"
                 >
                   Forgot password?
                 </Link>
@@ -306,19 +265,21 @@ export function StudentLoginFormCard() {
                   onChange={(e) => {
                     setPassword(e.target.value);
                     if (passwordError) setPasswordError("");
+                    if (formError) setFormError("");
                   }}
-                  placeholder="Enter your student password"
+                  placeholder="Enter your password"
                   className={cn(
-                    "h-10 w-full rounded-xl border bg-white pl-10 pr-10 text-xs text-slate-900 placeholder:text-slate-400 transition focus:outline-none focus:ring-2",
+                    "h-11 w-full rounded-xl border bg-slate-50/50 pl-10 pr-10 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 transition-all focus:bg-white focus:outline-none focus:ring-4",
                     passwordError
-                      ? "border-rose-300 focus:border-rose-400 focus:ring-rose-500/15"
-                      : "border-slate-200 focus:border-indigo-400 focus:ring-indigo-500/15"
+                      ? "border-rose-300 focus:border-rose-400 focus:ring-rose-500/10"
+                      : "border-slate-200/90 focus:border-indigo-500 focus:ring-indigo-500/10"
                   )}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:text-slate-600 transition"
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4" />
@@ -334,13 +295,14 @@ export function StudentLoginFormCard() {
               )}
             </div>
 
-            <div className="flex items-center">
+            {/* Remember Me Checkbox */}
+            <div className="flex items-center pt-0.5">
               <input
                 id="student-remember"
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/20"
+                className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/20 cursor-pointer"
               />
               <label
                 htmlFor="student-remember"
@@ -350,10 +312,11 @@ export function StudentLoginFormCard() {
               </label>
             </div>
 
+            {/* Primary Sign In Button */}
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-75"
+              className="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 text-sm font-semibold text-white shadow-sm shadow-indigo-600/25 transition-all duration-150 hover:bg-indigo-700 active:scale-[0.99] disabled:opacity-75 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (
                 <>
@@ -361,18 +324,36 @@ export function StudentLoginFormCard() {
                   <span>Signing in...</span>
                 </>
               ) : (
-                <span>Sign In as Student</span>
+                <span>Sign In</span>
               )}
             </button>
+
+            {/* Secondary Create Account Link */}
+            <div className="pt-3 text-center">
+              <p className="text-xs text-slate-600">
+                New to the library portal?{" "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("register");
+                    setFormError("");
+                    setRegSuccessMsg("");
+                  }}
+                  className="font-semibold text-indigo-600 hover:text-indigo-800 transition"
+                >
+                  Create an account
+                </button>
+              </p>
+            </div>
           </form>
         )}
 
-        {/* Mode: Student Registration Form */}
+        {/* Register Mode */}
         {mode === "register" && (
           <form
             onSubmit={handleRegisterSubmit}
             noValidate
-            className="mt-5 space-y-3.5"
+            className="mt-6 space-y-3.5"
           >
             <div>
               <label
@@ -387,7 +368,7 @@ export function StudentLoginFormCard() {
                 value={regName}
                 onChange={(e) => setRegName(e.target.value)}
                 placeholder="e.g. Maria Clara Santos"
-                className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-900 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/15"
+                className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 text-xs text-slate-900 transition focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/15"
               />
             </div>
 
@@ -405,7 +386,7 @@ export function StudentLoginFormCard() {
                   value={regStudentId}
                   onChange={(e) => setRegStudentId(e.target.value)}
                   placeholder="2024-042"
-                  className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-mono text-slate-900 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/15"
+                  className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 text-xs font-mono text-slate-900 transition focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/15"
                 />
               </div>
 
@@ -420,7 +401,7 @@ export function StudentLoginFormCard() {
                   id="reg-year"
                   value={regYearLevel}
                   onChange={(e) => setRegYearLevel(e.target.value)}
-                  className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-900 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/15"
+                  className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 text-xs text-slate-900 transition focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/15"
                 >
                   <option value="1st Year">1st Year</option>
                   <option value="2nd Year">2nd Year</option>
@@ -429,23 +410,6 @@ export function StudentLoginFormCard() {
                   <option value="Graduate">Graduate</option>
                 </select>
               </div>
-            </div>
-
-            <div>
-              <label
-                htmlFor="reg-email"
-                className="block text-xs font-semibold text-slate-700"
-              >
-                Institutional Email
-              </label>
-              <input
-                id="reg-email"
-                type="email"
-                value={regEmail}
-                onChange={(e) => setRegEmail(e.target.value)}
-                placeholder="student@university.edu"
-                className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-900 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/15"
-              />
             </div>
 
             <div>
@@ -459,7 +423,7 @@ export function StudentLoginFormCard() {
                 id="reg-program"
                 value={regProgram}
                 onChange={(e) => setRegProgram(e.target.value)}
-                className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-900 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/15"
+                className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 text-xs text-slate-900 transition focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/15"
               >
                 <option value="BS Information Technology">
                   BS Information Technology
@@ -477,6 +441,23 @@ export function StudentLoginFormCard() {
 
             <div>
               <label
+                htmlFor="reg-email"
+                className="block text-xs font-semibold text-slate-700"
+              >
+                Institutional Email
+              </label>
+              <input
+                id="reg-email"
+                type="email"
+                value={regEmail}
+                onChange={(e) => setRegEmail(e.target.value)}
+                placeholder="student@university.edu"
+                className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 text-xs text-slate-900 transition focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/15"
+              />
+            </div>
+
+            <div>
+              <label
                 htmlFor="reg-password"
                 className="block text-xs font-semibold text-slate-700"
               >
@@ -489,12 +470,12 @@ export function StudentLoginFormCard() {
                   value={regPassword}
                   onChange={(e) => setRegPassword(e.target.value)}
                   placeholder="Minimum 6 characters"
-                  className="h-9 w-full rounded-xl border border-slate-200 bg-white pl-3 pr-10 text-xs text-slate-900 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/15"
+                  className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-3 pr-10 text-xs text-slate-900 transition focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/15"
                 />
                 <button
                   type="button"
                   onClick={() => setRegShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
                 >
                   {regShowPassword ? (
                     <EyeOff className="h-3.5 w-3.5" />
@@ -508,33 +489,36 @@ export function StudentLoginFormCard() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-75"
+              className="mt-1 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 text-sm font-semibold text-white shadow-sm shadow-indigo-600/25 transition-all duration-150 hover:bg-indigo-700 active:scale-[0.99] disabled:opacity-75 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Registering Account...</span>
+                  <span>Registering...</span>
                 </>
               ) : (
-                <span>Register Student Account</span>
+                <span>Create Account</span>
               )}
             </button>
+
+            <div className="pt-2 text-center">
+              <p className="text-xs text-slate-600">
+                Already have a student account?{" "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("signin");
+                    setFormError("");
+                    setRegSuccessMsg("");
+                  }}
+                  className="font-semibold text-indigo-600 hover:text-indigo-800 transition"
+                >
+                  Sign In
+                </button>
+              </p>
+            </div>
           </form>
         )}
-
-        {/* Clear Portal Separator Footnote to Administrator Login */}
-        <div className="mt-6 border-t border-slate-100 pt-4 text-center">
-          <p className="text-[11px] text-slate-500">
-            University Administrator or Librarian?
-          </p>
-          <Link
-            href="/admin/login"
-            className="mt-1 inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition"
-          >
-            <span>Go to Administrator / Librarian Login</span>
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        </div>
       </div>
     </div>
   );
