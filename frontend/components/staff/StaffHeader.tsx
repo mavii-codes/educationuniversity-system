@@ -106,3 +106,4 @@ export function StaffHeader({ onOpenMobileMenu }: StaffHeaderProps) {
     </header>
   );
 }
+

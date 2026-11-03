@@ -273,11 +273,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const isLibrarianMatch =
         (normalized === DEV_LIBRARIAN_EMAIL ||
           normalized === "staff@university.edu" ||
+          normalized === "registrar@university.edu" ||
           normalized === DEV_LIBRARIAN_ID ||
           normalized === "librarian" ||
-          normalized === "staff") &&
+          normalized === "staff" ||
+          normalized === "registrar") &&
 
-        (password === DEV_LIBRARIAN_PASSWORD || password === "Staff123!");
+        (password === DEV_LIBRARIAN_PASSWORD ||
+          password === "Staff123!" ||
+          password === "Registrar123!");
 
       if (!isAdminMatch && !isLibrarianMatch) {
         return {

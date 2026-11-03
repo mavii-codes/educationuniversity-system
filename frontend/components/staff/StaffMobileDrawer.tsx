@@ -96,3 +96,4 @@ export function StaffMobileDrawer({ open, onClose }: StaffMobileDrawerProps) {
     </div>
   );
 }
+
