@@ -9,7 +9,7 @@ import React, {
 } from "react";
 import { useRouter } from "next/navigation";
 import { PortalAuthorizedRole } from "@/types";
-import { API_CONFIG } from "./api";
+import { API_CONFIG, fetchJson, setSessionExpiredHandler } from "./api";
 
 export interface SessionUser {
   id: string;
@@ -45,6 +45,20 @@ export interface RegisterStudentParams {
   password: string;
 }
 
+type StoredRegisteredStudent = Omit<RegisterStudentParams, "password"> & {
+  id: string;
+  /** Legacy mock records may still contain a plaintext password. */
+  password?: string;
+};
+
+function stripStoredPassword(
+  student: StoredRegisteredStudent
+): StoredRegisteredStudent {
+  const sanitized = { ...student };
+  delete sanitized.password;
+  return sanitized;
+}
+
 interface AuthContextValue {
   user: SessionUser | null;
   isAuthenticated: boolean;
@@ -68,18 +82,15 @@ const REGISTERED_STUDENTS_KEY = "udis_registered_students";
  */
 const DEV_MOCK_EMAIL = "admin@university.edu";
 const DEV_MOCK_ADMIN_ID = "admin-001";
-const DEV_MOCK_PASSWORD =
-  process.env.NEXT_PUBLIC_DEV_ADMIN_PASSWORD || "Admin123!";
+const DEV_MOCK_PASSWORD = "Admin123!";
 
 const DEV_REGISTRAR_EMAIL = "registrar@university.edu";
 const DEV_REGISTRAR_ID = "reg-001";
-const DEV_REGISTRAR_PASSWORD =
-  process.env.NEXT_PUBLIC_DEV_REGISTRAR_PASSWORD || "Registrar123!";
+const DEV_REGISTRAR_PASSWORD = "Registrar123!";
 
 const DEV_STUDENT_EMAIL = "student@university.edu";
 const DEV_STUDENT_ID = "2024-042";
-const DEV_STUDENT_PASSWORD =
-  process.env.NEXT_PUBLIC_DEV_STUDENT_PASSWORD || "Student123!";
+const DEV_STUDENT_PASSWORD = "Student123!";
 
 const DEFAULT_ADMIN_USER: SessionUser = {
   id: "ADM-2026-001",
@@ -142,6 +153,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  useEffect(() => {
+    setSessionExpiredHandler(() => {
+      if (typeof window === "undefined") return;
+
+      // Clear every auth session key this provider owns. Demo registrations
+      // (REGISTERED_STUDENTS_KEY) are intentionally preserved.
+      try {
+        window.localStorage.removeItem(STORAGE_KEY);
+        window.sessionStorage.removeItem(STORAGE_KEY);
+        window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+        window.sessionStorage.removeItem(LEGACY_STORAGE_KEY);
+      } catch {
+        // Ignore storage access errors in restricted browsing modes
+      }
+
+      setUser(null);
+      if (typeof window !== "undefined" && router) {
+        router.replace("/login?session=expired");
+      }
+    });
+
+    return () => setSessionExpiredHandler(null);
+  }, [router]);
+
   const signIn = useCallback(
     async ({
       identifier,
@@ -155,26 +190,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }> => {
       const normalized = identifier.trim().toLowerCase();
 
-      // Prepared for future Express + JWT + PostgreSQL endpoint
+      // Live authentication: the shared client sends cookies (credentials:
+      // "include") and injects the CSRF header for cross-origin Express calls.
       if (API_CONFIG.useLiveApi) {
         try {
-          const res = await fetch(`${API_CONFIG.baseUrl}/auth/login`, {
+          const data = await fetchJson<{
+            user?: SessionUser;
+            csrfToken?: string;
+          }>("/auth/login", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ identifier: normalized, password }),
           });
-          if (res.ok) {
-            const data = await res.json();
-            const sessionUser: SessionUser = data.user || DEFAULT_ADMIN_USER;
-            const storage = rememberMe
-              ? window.localStorage
-              : window.sessionStorage;
-            storage.setItem(STORAGE_KEY, JSON.stringify(sessionUser));
-            setUser(sessionUser);
-            return { ok: true, role: sessionUser.role };
-          }
-        } catch {
-          // Fall back to mock authentication when backend auth route is not yet online
+          const sessionUser: SessionUser = data.user || DEFAULT_ADMIN_USER;
+          const storage = rememberMe
+            ? window.localStorage
+            : window.sessionStorage;
+          storage.setItem(STORAGE_KEY, JSON.stringify(sessionUser));
+          setUser(sessionUser);
+          return { ok: true, role: sessionUser.role };
+        } catch (err) {
+          return {
+            ok: false,
+            error:
+              err instanceof Error
+                ? err.message
+                : "Unable to sign in. Please try again.",
+          };
         }
       }
 
@@ -188,15 +229,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           REGISTERED_STUDENTS_KEY
         );
         if (registeredRaw) {
-          const registeredList = JSON.parse(registeredRaw) as Array<
-            RegisterStudentParams & { id: string }
-          >;
-          const found = registeredList.find(
-            (s) =>
-              (s.email.toLowerCase() === normalized ||
-                s.studentId.toLowerCase() === normalized) &&
-              s.password === password
-          );
+          const registeredList = JSON.parse(
+            registeredRaw
+          ) as StoredRegisteredStudent[];
+          const found = registeredList.find((s) => {
+            const identifierMatches =
+              s.email.toLowerCase() === normalized ||
+              s.studentId.toLowerCase() === normalized;
+            if (!identifierMatches) return false;
+
+            // Demo-only tradeoff: mock registrations never persist passwords.
+            // In mock mode only, any non-empty password is accepted for a
+            // stored account without one; live-API auth never reaches here.
+            if (s.password === undefined) {
+              return !API_CONFIG.useLiveApi && password.length > 0;
+            }
+            return s.password === password;
+          });
           if (found) {
             registeredStudentMatch = {
               id: found.id,
@@ -321,9 +370,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const raw =
           window.localStorage.getItem(REGISTERED_STUDENTS_KEY) || "[]";
-        const current = JSON.parse(raw) as Array<
-          RegisterStudentParams & { id: string }
-        >;
+        const current = (
+          JSON.parse(raw) as StoredRegisteredStudent[]
+        ).map(stripStoredPassword);
 
         const exists = current.some(
           (s) =>
@@ -343,9 +392,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           };
         }
 
-        const newStudent = {
-          ...params,
+        // Persist the demo profile without the plaintext password.
+        const newStudent: StoredRegisteredStudent = {
           id: `STU-${params.studentId.trim()}`,
+          name: params.name,
+          email: params.email,
+          studentId: params.studentId,
+          programCode: params.programCode,
+          programName: params.programName,
+          yearLevel: params.yearLevel,
         };
 
         current.push(newStudent);
@@ -367,6 +422,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(() => {
     const wasAdmin = user?.role === "Administrator" || user?.role === "Registrar";
+
+    // Best-effort backend logout (clears the httpOnly cookie server-side).
+    // Fire-and-forget: never block local sign-out on the network response.
+    if (API_CONFIG.useLiveApi) {
+      void fetchJson<unknown>("/auth/logout", { method: "POST" }).catch(() => {
+        // Ignore network/auth failures; local session cleanup still proceeds.
+      });
+    }
+
     try {
       window.localStorage.removeItem(STORAGE_KEY);
       window.sessionStorage.removeItem(STORAGE_KEY);

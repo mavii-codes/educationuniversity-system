@@ -1,7 +1,11 @@
+import crypto from "node:crypto";
 import path from "node:path";
 import dotenv from "dotenv";
 
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+
+const nodeEnv = process.env.NODE_ENV || "development";
+const isProduction = nodeEnv === "production";
 
 const dbEnabled = process.env.DB_ENABLED === "true";
 const databaseUrl = process.env.DATABASE_URL || "";
@@ -23,22 +27,47 @@ if (
   );
 }
 
-const jwtAccessSecret =
-  process.env.JWT_ACCESS_SECRET ||
-  (process.env.NODE_ENV !== "production"
-    ? "udis_dev_jwt_access_secret_key_2026_education_univ"
-    : "");
-const jwtRefreshSecret =
-  process.env.JWT_REFRESH_SECRET ||
-  (process.env.NODE_ENV !== "production"
-    ? "udis_dev_jwt_refresh_secret_key_2026_education_univ"
-    : "");
+function resolveJwtSecret(name: string, configured: string | undefined): string {
+  if (configured && configured.trim().length > 0) {
+    return configured;
+  }
 
-if (!jwtAccessSecret || !jwtRefreshSecret) {
-  throw new Error(
-    "JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be set in backend/.env."
+  if (isProduction) {
+    throw new Error(`${name} must be configured in the production environment.`);
+  }
+
+  // Never ship a hardcoded, forgeable secret. Development falls back to a
+  // process-scoped random secret, which invalidates sessions on every restart.
+  const ephemeral = crypto.randomBytes(32).toString("hex");
+  console.warn(
+    `[env] ${name} is not set. Generated an ephemeral development secret; ` +
+      "all sessions will be invalidated whenever the server restarts. " +
+      `Set ${name} in backend/.env to keep sessions stable.`
   );
+  return ephemeral;
 }
+
+const jwtAccessSecret = resolveJwtSecret(
+  "JWT_ACCESS_SECRET",
+  process.env.JWT_ACCESS_SECRET
+);
+const jwtRefreshSecret = resolveJwtSecret(
+  "JWT_REFRESH_SECRET",
+  process.env.JWT_REFRESH_SECRET
+);
+
+const DEFAULT_DEV_CORS_ORIGIN = "http://localhost:3000";
+const configuredCorsOrigin = (process.env.CORS_ORIGIN || "").trim();
+
+if (isProduction && !configuredCorsOrigin) {
+  throw new Error("CORS_ORIGIN must be configured in the production environment.");
+}
+
+// Comma-separated allowlist; credentials are never paired with a "*" origin.
+const corsOrigins = (configuredCorsOrigin || DEFAULT_DEV_CORS_ORIGIN)
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 const sameSite = (process.env.COOKIE_SAMESITE || "lax").toLowerCase();
 const cookieSameSite: "lax" | "strict" | "none" =
@@ -57,10 +86,10 @@ function parseDurationMs(value: string | undefined, fallbackMs: number): number 
 const accessTtl = process.env.JWT_ACCESS_TTL || "15m";
 
 export const env = {
-  nodeEnv: process.env.NODE_ENV || "development",
+  nodeEnv,
   port: Number(process.env.PORT) || 5000,
-  corsOrigin: process.env.CORS_ORIGIN || "*",
-  isProduction: (process.env.NODE_ENV || "development") === "production",
+  corsOrigin: corsOrigins,
+  isProduction,
   db: {
     enabled: dbEnabled,
     connectionString: databaseUrl,

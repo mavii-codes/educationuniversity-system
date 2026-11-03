@@ -41,16 +41,22 @@ function resetUrl(token: string): string {
   return url.toString();
 }
 
-export async function requestPasswordReset(email: string): Promise<void> {
+export interface PasswordResetDelivery {
+  /** Only set in development when Resend is unconfigured or delivery fails. */
+  devResetLink?: string;
+}
+
+export async function requestPasswordReset(email: string): Promise<PasswordResetDelivery> {
   if (!env.db.enabled) {
     throw new ApiError(503, "Password reset requires the PostgreSQL database.");
   }
-  if (!env.email.resendApiKey || !env.email.resendFromEmail || !env.email.frontendUrl) {
-    throw new ApiError(503, "Password reset email is not configured.");
-  }
 
   const user = await authRepository.findUserByEmail(email);
-  if (!user || user.status !== "Active") return;
+  if (!user || user.status !== "Active") return {};
+
+  if (!env.email.frontendUrl) {
+    throw new ApiError(503, "Password reset email is not configured.");
+  }
 
   const token = crypto.randomBytes(32).toString("base64url");
   const link = resetUrl(token);
@@ -59,6 +65,16 @@ export async function requestPasswordReset(email: string): Promise<void> {
     tokenHash: hashToken(token),
     expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
   });
+
+  if (!env.email.resendApiKey || !env.email.resendFromEmail) {
+    if (!env.isProduction) {
+      console.warn(
+        `[University DataHub Backend] RESEND not configured. Dev reset link for ${user.email}:\n  ${link}`
+      );
+      return { devResetLink: link };
+    }
+    throw new ApiError(503, "Password reset email is not configured.");
+  }
 
   const resend = new Resend(env.email.resendApiKey);
   const { error } = await resend.emails.send({
@@ -70,8 +86,16 @@ export async function requestPasswordReset(email: string): Promise<void> {
   });
   if (error) {
     console.error("[University DataHub Backend] Resend delivery failed:", error.message);
+    if (!env.isProduction) {
+      console.warn(
+        `[University DataHub Backend] Dev fallback reset link for ${user.email}:\n  ${link}`
+      );
+      return { devResetLink: link };
+    }
     throw new ApiError(502, "Unable to send the password reset email right now.");
   }
+
+  return {};
 }
 
 export async function resetPassword(token: string, password: string): Promise<void> {

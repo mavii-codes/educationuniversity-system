@@ -39,7 +39,15 @@ npm install
 npm run dev
 ```
 
-Configure `frontend/.env.local` using `NEXT_PUBLIC_API_URL` when connecting to the live Express API.
+Configure the Vercel project with these environment variables to connect to the live Express API:
+
+```text
+NEXT_PUBLIC_API_URL=https://your-backend.onrender.com/api
+NEXT_PUBLIC_USE_LIVE_API=true
+```
+
+Redeploy the frontend after changing these values. In live API mode, failed or invalid
+backend responses are surfaced instead of silently replaced with mock data.
 
 ### 2. Backend (`/backend`)
 
@@ -49,7 +57,9 @@ npm install
 npm run dev
 ```
 
-Copy `backend/.env.example` to `backend/.env` to configure `PORT`, `CORS_ORIGIN`, and future PostgreSQL database credentials (`DB_ENABLED`, `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`).
+Configure the Render backend with `PORT`, `NODE_ENV=production`, `CORS_ORIGIN` (the exact Vercel site origin), separate strong `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` values, and PostgreSQL connection settings (`DB_ENABLED=true` and `DATABASE_URL`, or the discrete `DB_*` values). Set `COOKIE_SECURE=true` and `COOKIE_SAMESITE=none` for cross-site cookie authentication. The authenticated `/api/events` Server-Sent Events endpoint broadcasts successful API mutations to connected clients; PostgreSQL `LISTEN/NOTIFY` shares those events across backend instances.
+
+Realtime events refresh other authenticated sessions after successful backend API mutations. Features that still use frontend mock data or browser `localStorage` are not yet shared across users and must be moved to backend APIs before those specific workflows are live.
 
 Apply the schema and seed the demo dataset:
 

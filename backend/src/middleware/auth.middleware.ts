@@ -28,6 +28,9 @@ export function attachAuthContext(
     const context = verifyAccessToken(token);
     if (context) {
       res.locals.user = context;
+      // Track how the principal authenticated so CSRF only applies to
+      // ambient-cookie sessions, not Bearer-token API clients.
+      res.locals.authSource = cookieToken ? "cookie" : "bearer";
     }
   }
 
@@ -79,11 +82,21 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 export function csrfGuard(req: Request, res: Response, next: NextFunction): void {
   const publicAuthMutations = new Set([
     "/api/auth/login",
+    "/api/auth/refresh",
     "/api/auth/forgot-password",
     "/api/auth/reset-password",
+    "/api/auth/logout",
   ]);
   const requestPath = req.originalUrl.split("?")[0];
   if (SAFE_METHODS.has(req.method) || publicAuthMutations.has(requestPath)) {
+    next();
+    return;
+  }
+
+  // CSRF only protects ambient-cookie authentication. Requests authenticated
+  // with a Bearer token (or carrying no cookie session at all) cannot be
+  // forged by a third-party site, so the double-submit check does not apply.
+  if (res.locals.authSource !== "cookie") {
     next();
     return;
   }

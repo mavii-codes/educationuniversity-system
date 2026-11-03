@@ -58,10 +58,26 @@ import {
  */
 export const API_CONFIG = {
   baseUrl: (process.env.NEXT_PUBLIC_API_URL || "/api").replace(/\/$/, ""),
-  useLiveApi: process.env.NEXT_PUBLIC_USE_LIVE_API === "true",
+  useLiveApi:
+    Boolean(process.env.NEXT_PUBLIC_API_URL) &&
+    process.env.NEXT_PUBLIC_USE_LIVE_API !== "false",
 };
 
 const CSRF_COOKIE = "udis_csrf";
+const CLIENT_ID_KEY = "udis_realtime_client_id";
+
+export function getRealtimeClientId(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  let clientId = window.sessionStorage.getItem(CLIENT_ID_KEY);
+  if (!clientId) {
+    clientId =
+      typeof window.crypto?.randomUUID === "function"
+        ? window.crypto.randomUUID()
+        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+    window.sessionStorage.setItem(CLIENT_ID_KEY, clientId);
+  }
+  return clientId;
+}
 
 export function getCsrfToken(): string | undefined {
   if (typeof document === "undefined") return undefined;
@@ -72,6 +88,15 @@ export function getCsrfToken(): string | undefined {
 }
 
 let refreshPromise: Promise<boolean> | null = null;
+
+type SessionExpiredHandler = () => void;
+let sessionExpiredHandler: SessionExpiredHandler | null = null;
+
+export function setSessionExpiredHandler(
+  handler: SessionExpiredHandler | null
+): void {
+  sessionExpiredHandler = handler;
+}
 
 export async function refreshSession(): Promise<boolean> {
   if (refreshPromise) return refreshPromise;
@@ -104,13 +129,15 @@ async function simulateNetworkDelay(ms = 160): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function fetchJson<T>(
+export async function fetchJson<T>(
   endpoint: string,
   init?: RequestInit,
   allowRetry = true
 ): Promise<T> {
   const method = (init?.method || "GET").toUpperCase();
   const headers = new Headers(init?.headers);
+  const clientId = getRealtimeClientId();
+  if (clientId) headers.set("X-Client-Id", clientId);
 
   if (init?.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
@@ -130,6 +157,7 @@ async function fetchJson<T>(
     if (await refreshSession()) {
       return fetchJson<T>(endpoint, init, false);
     }
+    sessionExpiredHandler?.();
   }
 
   if (!res.ok) {
@@ -157,11 +185,12 @@ async function tryLiveOrFallback<T>(
   try {
     const liveData = await liveFetcher();
     if (validator && !validator(liveData)) {
-      return mockFallback();
+      throw new Error("The live API returned data in an unexpected format.");
     }
     return liveData;
-  } catch {
-    return mockFallback();
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "Unknown API error";
+    throw new Error(`Live API request failed; demo data was not used. ${detail}`);
   }
 }
 
@@ -225,7 +254,13 @@ export async function getStudents(filters?: StudentQueryFilters): Promise<Studen
 export async function getStudentById(id: string): Promise<Student | null> {
   return tryLiveOrFallback(
     async () => {
-      const res = await fetch(`${API_CONFIG.baseUrl}/students/${encodeURIComponent(id)}`);
+      const headers = new Headers();
+      const clientId = getRealtimeClientId();
+      if (clientId) headers.set("X-Client-Id", clientId);
+      const res = await fetch(
+        `${API_CONFIG.baseUrl}/students/${encodeURIComponent(id)}`,
+        { credentials: "include", headers }
+      );
       if (res.status === 404) return null;
       if (!res.ok) throw new Error("Failed to load student profile");
       return res.json();
@@ -752,17 +787,13 @@ export async function getLibraryETLLogs(): Promise<LibraryETLLog[]> {
 
 // GET /api/audit-logs
 export async function getAuditLogs(): Promise<AuditLogRecord[]> {
-  return tryLiveOrFallback(
-    async () => {
-      const res = await fetchJson<AuditLogRecord[]>("/audit-logs");
-      return res;
-    },
-    async () => {
-      await simulateNetworkDelay(120);
-      return AUDIT_LOG_RECORDS.map((a) => ({ ...a }));
-    },
-    (data) => Array.isArray(data)
-  );
+  // Audit records must never silently fall back to mock data in live mode:
+  // the page surfaces an explicit "endpoint unavailable" state instead.
+  if (API_CONFIG.useLiveApi) {
+    return fetchJson<AuditLogRecord[]>("/audit-logs");
+  }
+  await simulateNetworkDelay(120);
+  return AUDIT_LOG_RECORDS.map((a) => ({ ...a }));
 }
 
 // GET /api/library/requests

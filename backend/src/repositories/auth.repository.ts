@@ -162,6 +162,90 @@ export async function revokeRefreshToken(
   );
 }
 
+export type RefreshRotationOutcome =
+  | { status: "rotated"; token: RefreshTokenRow; ttlMs: number }
+  | { status: "invalid" }
+  | { status: "reused"; userId: string }
+  | { status: "expired" }
+  | { status: "inactive" };
+
+/**
+ * Atomically rotates a refresh token: the row is locked FOR UPDATE, validated,
+ * revoked, and replaced inside one transaction so parallel refreshes cannot
+ * double-consume the same token.
+ */
+export async function rotateRefreshToken(input: {
+  id: string;
+  tokenHash: string;
+  nextId: string;
+  nextTokenHash: string;
+  defaultTtlMs: number;
+  rememberTtlMs: number;
+  ip?: string;
+  userAgent?: string;
+}): Promise<RefreshRotationOutcome> {
+  return withTransaction<RefreshRotationOutcome>(async (client) => {
+    const result = await client.query<RefreshTokenRow>(
+      `SELECT id, user_id, token_hash, expires_at, revoked_at, replaced_by_token_id, remember
+         FROM refresh_tokens
+        WHERE id = $1
+        FOR UPDATE`,
+      [input.id]
+    );
+    const stored = result.rows[0];
+
+    if (!stored || stored.token_hash !== input.tokenHash) {
+      return { status: "invalid" };
+    }
+
+    if (stored.revoked_at) {
+      // Token reuse after rotation: revoke the entire family while holding the lock.
+      await client.query(
+        `UPDATE refresh_tokens SET revoked_at = NOW()
+          WHERE user_id = $1 AND revoked_at IS NULL`,
+        [stored.user_id]
+      );
+      return { status: "reused", userId: stored.user_id };
+    }
+
+    if (stored.expires_at.getTime() <= Date.now()) {
+      return { status: "expired" };
+    }
+
+    const user = await client.query<{ status: string }>(
+      `SELECT status FROM users WHERE id = $1`,
+      [stored.user_id]
+    );
+    if (!user.rows[0] || user.rows[0].status !== "Active") {
+      return { status: "inactive" };
+    }
+
+    const ttlMs = stored.remember ? input.rememberTtlMs : input.defaultTtlMs;
+
+    await client.query(
+      `UPDATE refresh_tokens
+          SET revoked_at = NOW(), replaced_by_token_id = $2
+        WHERE id = $1 AND revoked_at IS NULL`,
+      [stored.id, input.nextId]
+    );
+    await client.query(
+      `INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at, remember, ip, user_agent)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        input.nextId,
+        stored.user_id,
+        input.nextTokenHash,
+        new Date(Date.now() + ttlMs),
+        stored.remember,
+        input.ip ?? null,
+        input.userAgent?.slice(0, 240) ?? null,
+      ]
+    );
+
+    return { status: "rotated", token: stored, ttlMs };
+  });
+}
+
 export async function revokeAllUserTokens(userId: string): Promise<void> {
   await queryDb(
     `UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = $1 AND revoked_at IS NULL`,

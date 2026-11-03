@@ -8,6 +8,10 @@ import { env } from "../config/env";
 import { ApiError } from "../middleware/error.middleware";
 import { currentUser } from "../middleware/auth.middleware";
 import {
+  clearLoginFailures,
+  loginAttemptKey,
+} from "../middleware/rate-limit.middleware";
+import {
   ACCESS_COOKIE,
   CSRF_COOKIE,
   IssuedSession,
@@ -61,9 +65,10 @@ export class AuthController {
         throw new ApiError(400, "Enter a valid email address.");
       }
 
-      await requestPasswordReset(parsed.data.email);
+      const delivery = await requestPasswordReset(parsed.data.email);
       res.status(202).json({
         message: "If an active account matches that email, a reset link will be sent.",
+        ...(delivery.devResetLink ? { devResetLink: delivery.devResetLink } : {}),
       });
     } catch (error) {
       next(error);

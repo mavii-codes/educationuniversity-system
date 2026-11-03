@@ -21,12 +21,16 @@ export default function AdminAuditLogsPage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>("");
 
   useEffect(() => {
     async function load() {
       try {
         const data = await getAuditLogs();
         setLogs(data);
+      } catch {
+        setLogs([]);
+        setError("Audit logging endpoint is not available in this build");
       } finally {
         setLoading(false);
       }
@@ -97,6 +101,19 @@ export default function AdminAuditLogsPage() {
           </div>
         </div>
       </div>
+
+      {/* Endpoint Unavailable Fallback */}
+      {error && (
+        <div className="rounded-xl border border-slate-200/80 bg-white p-6 text-center shadow-card">
+          <div className="flex flex-col items-center gap-2">
+            <AlertTriangle className="h-8 w-8 text-amber-500" />
+            <h3 className="text-sm font-bold text-slate-900">
+              Audit log unavailable
+            </h3>
+            <p className="text-xs text-slate-600">{error}</p>
+          </div>
+        </div>
+      )}
 
       {/* Search & Filter Bar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

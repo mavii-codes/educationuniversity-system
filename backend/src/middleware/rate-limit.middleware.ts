@@ -7,6 +7,8 @@ type Attempt = {
 
 const WINDOW_MS = 15 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
+// Missing identifiers get their own per-IP bucket, throttled just as hard.
+const ANONYMOUS_MAX_ATTEMPTS = 5;
 const attempts = new Map<string, Attempt>();
 const resetAttempts = new Map<string, Attempt>();
 
@@ -50,6 +52,28 @@ export function passwordResetRateLimit(
   next();
 }
 
+/**
+ * Stable rate-limit key for a login attempt. Empty identifiers use a dedicated
+ * per-IP bucket so anonymous probes do not share one global identifier bucket.
+ */
+export function loginAttemptKey(req: Pick<Request, "ip" | "body">): string {
+  const identifier =
+    typeof req.body?.identifier === "string"
+      ? req.body.identifier.trim().toLowerCase()
+      : "";
+  const ip = req.ip ?? "unknown";
+  return identifier ? `${ip}:${identifier}` : `ip:${ip}`;
+}
+
+/**
+ * Clears the failure counter after a successful login. The limiter increments
+ * on every request so failures are always recorded; this reset is what makes
+ * the bucket effectively count failed attempts only.
+ */
+export function clearLoginFailures(key: string): void {
+  attempts.delete(key);
+}
+
 export function loginRateLimit(
   req: Request,
   res: Response,
@@ -59,7 +83,8 @@ export function loginRateLimit(
     typeof req.body?.identifier === "string"
       ? req.body.identifier.trim().toLowerCase()
       : "";
-  const key = `${req.ip ?? "unknown"}:${identifier}`;
+  const key = loginAttemptKey(req);
+  const maxAttempts = identifier ? MAX_ATTEMPTS : ANONYMOUS_MAX_ATTEMPTS;
   const now = Date.now();
   const attempt = attempts.get(key);
 
@@ -69,7 +94,7 @@ export function loginRateLimit(
     return;
   }
 
-  if (attempt.count >= MAX_ATTEMPTS) {
+  if (attempt.count >= maxAttempts) {
     const retryAfter = Math.ceil((attempt.resetAt - now) / 1000);
     res.setHeader("Retry-After", String(retryAfter));
     res.status(429).json({

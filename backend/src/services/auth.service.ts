@@ -29,8 +29,19 @@ export interface AuthContext {
   name: string;
 }
 
+// Explicit allowlist of the real DB role strings (see db/migrations/003_auth.sql).
+const PORTAL_ROLE_BY_ACCESS_ROLE: Record<string, AuthorizedRole> = {
+  "System Administrator": "Administrator",
+  "University Registrar Admin": "Registrar",
+  // These roles operate the admin/integration consoles, so they keep the
+  // Administrator portal access they had before this allowlist existed.
+  "Data Integration Engineer": "Administrator",
+  "Institutional Data Steward": "Administrator",
+};
+
 export function toPortalRole(accessRole: string): AuthorizedRole {
-  return accessRole === "University Registrar Admin" ? "Registrar" : "Administrator";
+  // Unknown/unrecognized roles fall back to the least-privileged staff portal.
+  return PORTAL_ROLE_BY_ACCESS_ROLE[accessRole] ?? "Registrar";
 }
 
 export function toSessionUser(user: authRepository.UserRow): SessionUser {
@@ -58,13 +69,6 @@ const DUMMY_PASSWORD_HASH = bcrypt.hashSync("udis-invalid-password", 12);
 
 function sha256(value: string): string {
   return crypto.createHash("sha256").update(value).digest("hex");
-}
-
-function safeEqual(left: string, right: string): boolean {
-  const a = Buffer.from(left);
-  const b = Buffer.from(right);
-  if (a.length !== b.length) return false;
-  return crypto.timingSafeEqual(a, b);
 }
 
 function signAccessToken(user: authRepository.UserRow): string {
@@ -243,50 +247,51 @@ export async function refresh(input: {
     throw new ApiError(401, "Invalid session.");
   }
 
-  const stored = await authRepository.findRefreshTokenById(id);
-  if (!stored || !safeEqual(stored.token_hash, sha256(`${id}.${raw}`))) {
-    throw new ApiError(401, "Invalid session.");
-  }
-
-  if (stored.revoked_at) {
-    // Token reuse after rotation: revoke the whole family.
-    await authRepository.revokeAllUserTokens(stored.user_id);
-    await safeAudit(stored.user_id, "auth.refresh_reuse_detected", { tokenId: id });
-    throw new ApiError(401, "Session has been revoked. Please sign in again.");
-  }
-
-  if (stored.expires_at.getTime() <= Date.now()) {
-    throw new ApiError(401, "Session expired. Please sign in again.");
-  }
-
-  const user = await authRepository.findUserById(stored.user_id);
-  if (!user || user.status !== "Active") {
-    throw new ApiError(401, "Account is not active.");
-  }
-
   const nextId = crypto.randomUUID();
   const nextRaw = crypto.randomBytes(48).toString("base64url");
-  const ttlDays = stored.remember
-    ? env.auth.refreshTtlDaysRemember
-    : env.auth.refreshTtlDays;
-  const ttlMs = ttlDays * 24 * 60 * 60 * 1000;
 
-  await authRepository.revokeRefreshToken(stored.id, nextId);
-  await authRepository.createRefreshToken({
-    id: nextId,
-    userId: user.id,
-    tokenHash: sha256(`${nextId}.${nextRaw}`),
-    expiresAt: new Date(Date.now() + ttlMs),
-    remember: stored.remember,
+  // The repository locks the current row FOR UPDATE and revokes + inserts the
+  // replacement inside one transaction, so parallel refreshes cannot both win.
+  const rotation = await authRepository.rotateRefreshToken({
+    id,
+    tokenHash: sha256(`${id}.${raw}`),
+    nextId,
+    nextTokenHash: sha256(`${nextId}.${nextRaw}`),
+    defaultTtlMs: env.auth.refreshTtlDays * 24 * 60 * 60 * 1000,
+    rememberTtlMs: env.auth.refreshTtlDaysRemember * 24 * 60 * 60 * 1000,
     ip: input.ip,
     userAgent: input.userAgent,
   });
+
+  if (rotation.status === "invalid") {
+    throw new ApiError(401, "Invalid session.");
+  }
+
+  if (rotation.status === "reused") {
+    // Token reuse after rotation: the whole family was already revoked.
+    await safeAudit(rotation.userId, "auth.refresh_reuse_detected", { tokenId: id });
+    throw new ApiError(401, "Session has been revoked. Please sign in again.");
+  }
+
+  if (rotation.status === "expired") {
+    throw new ApiError(401, "Session expired. Please sign in again.");
+  }
+
+  if (rotation.status === "inactive") {
+    throw new ApiError(401, "Account is not active.");
+  }
+
+  const user = await authRepository.findUserById(rotation.token.user_id);
+  if (!user || user.status !== "Active") {
+    await authRepository.revokeRefreshToken(nextId);
+    throw new ApiError(401, "Account is not active.");
+  }
 
   return {
     accessToken: signAccessToken(user),
     refreshToken: `${nextId}.${nextRaw}`,
     csrfToken: crypto.randomBytes(24).toString("base64url"),
-    refreshTtlMs: ttlMs,
+    refreshTtlMs: rotation.ttlMs,
     user: toSessionUser(user),
   };
 }

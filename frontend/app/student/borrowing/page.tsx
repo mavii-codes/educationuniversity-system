@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   Clock,
   Layers,
+  Loader2,
   Search,
   XCircle,
 } from "lucide-react";
@@ -22,7 +23,7 @@ import { cn } from "@/lib/utils";
 
 type BorrowingTab = "current" | "requests" | "reservations";
 
-export default function StudentBorrowingPage() {
+function BorrowingContent() {
   const searchParams = useSearchParams();
   const initialTab = (searchParams.get("tab") as BorrowingTab) || "current";
 
@@ -475,5 +476,22 @@ export default function StudentBorrowingPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function StudentBorrowingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-slate-200/90 bg-white p-12 shadow-sm">
+          <div className="flex flex-col items-center gap-3 text-xs font-medium text-slate-500">
+            <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
+            <span>Loading borrowing records...</span>
+          </div>
+        </div>
+      }
+    >
+      <BorrowingContent />
+    </Suspense>
   );
 }

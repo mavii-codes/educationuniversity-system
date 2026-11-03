@@ -18,14 +18,16 @@ function buildPoolConfig(): PoolConfig {
       database: env.db.database,
       user: env.db.user,
       password: env.db.password,
-      ssl: env.db.ssl ? { rejectUnauthorized: false } : false,
+      // TLS certificate validation stays enabled. For a private CA, supply a
+      // PEM bundle via DB_SSL_CA or NODE_EXTRA_CA_CERTS instead of disabling it.
+      ssl: env.db.ssl ? { rejectUnauthorized: true } : false,
     };
   }
 
   return {
     ...base,
     connectionString: env.db.connectionString,
-    ssl: env.db.ssl ? { rejectUnauthorized: false } : undefined,
+    ssl: env.db.ssl ? { rejectUnauthorized: true } : undefined,
   };
 }
 

@@ -17,6 +17,7 @@ import {
   User,
   UserPlus,
 } from "lucide-react";
+import { API_CONFIG } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -57,13 +58,6 @@ export function LoginFormCard() {
     setRegSuccessMsg("");
     setIdentifierError("");
     setPasswordError("");
-    if (tab === "student") {
-      setIdentifier("student@university.edu");
-      setPassword("Student123!");
-    } else {
-      setIdentifier("admin@university.edu");
-      setPassword("Admin123!");
-    }
   };
 
   const handleSignInSubmit = async (e: React.FormEvent) => {
@@ -167,23 +161,6 @@ export function LoginFormCard() {
     }
   };
 
-  const handleUseDemo = (role: "student" | "admin") => {
-    setFormError("");
-    setRegSuccessMsg("");
-    setIdentifierError("");
-    setPasswordError("");
-    if (role === "student") {
-      setActiveTab("student");
-      setStudentMode("signin");
-      setIdentifier("student@university.edu");
-      setPassword("Student123!");
-    } else {
-      setActiveTab("admin");
-      setIdentifier("admin@university.edu");
-      setPassword("Admin123!");
-    }
-  };
-
   return (
     <div className="w-full max-w-[460px]">
       <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-card sm:p-8">
@@ -235,34 +212,20 @@ export function LoginFormCard() {
           </p>
         </div>
 
-        {/* Quick Demo Credential Pills */}
-        <div className="mt-4 flex items-center justify-center gap-2">
-          <span className="text-[11px] font-medium text-slate-400">Quick Test:</span>
-          <button
-            type="button"
-            onClick={() => handleUseDemo("student")}
-            className={cn(
-              "rounded-lg border px-2.5 py-1 text-[11px] font-medium transition-colors",
-              activeTab === "student" && studentMode === "signin"
-                ? "border-indigo-300 bg-indigo-50/70 text-indigo-700"
-                : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
-            )}
-          >
-            Student Demo
-          </button>
-          <button
-            type="button"
-            onClick={() => handleUseDemo("admin")}
-            className={cn(
-              "rounded-lg border px-2.5 py-1 text-[11px] font-medium transition-colors",
-              activeTab === "admin"
-                ? "border-indigo-300 bg-indigo-50/70 text-indigo-700"
-                : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
-            )}
-          >
-            Admin Demo
-          </button>
-        </div>
+        {/* Mock-mode demo hint (hidden entirely against the live API) */}
+        {!API_CONFIG.useLiveApi && (
+          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-[11px] leading-relaxed text-slate-600">
+            <p className="font-semibold text-slate-700">
+              Demo credentials (mock mode)
+            </p>
+            <p className="mt-1 font-mono">
+              Student: student@university.edu / Student123!
+            </p>
+            <p className="font-mono">
+              Administrator: admin@university.edu / Admin123!
+            </p>
+          </div>
+        )}
 
         {/* Success Message Alert */}
         {regSuccessMsg && (

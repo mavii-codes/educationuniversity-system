@@ -25,12 +25,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     pathname === "/" ||
     pathname === "/login" ||
     pathname === "/admin/login" ||
-    pathname === "/register" ||
     pathname === "/forgot-password" ||
     pathname === "/reset-password";
 
   const isAdminPortal = Boolean(pathname?.startsWith("/admin"));
-  const isStudentPortal = Boolean(pathname?.startsWith("/student"));
+  const isStudentPortal =
+    pathname === "/student" || Boolean(pathname?.startsWith("/student/"));
 
   useEffect(() => {
     if (isInitializing) return;

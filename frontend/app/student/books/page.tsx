@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   AlertCircle,
@@ -9,6 +9,7 @@ import {
   Clock,
   Filter,
   Layers,
+  Loader2,
   MapPin,
   Search,
 } from "lucide-react";
@@ -18,7 +19,7 @@ import { BookDetailModal } from "@/components/student/BookDetailModal";
 import { LibraryBook } from "@/types";
 import { cn } from "@/lib/utils";
 
-export default function StudentBrowseBooksPage() {
+function BooksContent() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") || "";
 
@@ -268,6 +269,23 @@ export default function StudentBrowseBooksPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function StudentBrowseBooksPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-slate-200/90 bg-white p-12 shadow-sm">
+          <div className="flex flex-col items-center gap-3 text-xs font-medium text-slate-500">
+            <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
+            <span>Loading book catalog...</span>
+          </div>
+        </div>
+      }
+    >
+      <BooksContent />
+    </Suspense>
   );
 }
 

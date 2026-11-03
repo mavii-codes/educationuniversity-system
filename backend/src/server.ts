@@ -1,10 +1,12 @@
 import app from "./app";
 import { env } from "./config/env";
 import { getDbPool, verifyDatabaseConnection } from "./config/database";
+import { startRealtimeListener, stopRealtimeListener } from "./services/realtime.service";
 
 async function startServer() {
   try {
     const dbStatus = await verifyDatabaseConnection();
+    await startRealtimeListener();
     const server = app.listen(env.port, () => {
       console.log(
         `[University DataHub Backend] Server running on port ${env.port} (${env.nodeEnv})`
@@ -14,6 +16,7 @@ async function startServer() {
 
     const shutdown = async () => {
       console.log("[University DataHub Backend] Shutting down gracefully...");
+      stopRealtimeListener();
       server.close(async () => {
         const pool = getDbPool();
         if (pool) {
@@ -32,4 +35,3 @@ async function startServer() {
 }
 
 startServer();
-

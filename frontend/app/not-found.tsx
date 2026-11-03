@@ -12,13 +12,13 @@ export default function NotFound() {
         Page not found
       </h2>
       <p className="mt-1.5 max-w-md text-sm text-slate-500">
-        We couldn&apos;t find the module or student record you were looking for. Return to the Admin Portal to continue managing university data.
+        We couldn&apos;t find the module or student record you were looking for. Return to the home page to continue.
       </p>
       <Link
-        href="/admin/dashboard"
+        href="/"
         className="mt-6 inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700"
       >
-        Back to Admin Portal
+        Back to Home
       </Link>
     </div>
   );

@@ -5,6 +5,7 @@ import { ToastProvider } from "@/components/ui/ToastProvider";
 import { AuthProvider } from "@/lib/auth";
 import { LibraryStoreProvider } from "@/lib/library-store";
 import { AppShell } from "@/components/layout/AppShell";
+import { RealtimeUpdates } from "@/components/realtime/RealtimeUpdates";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -30,6 +31,7 @@ export default function RootLayout({
         <ToastProvider>
           <AuthProvider>
             <LibraryStoreProvider>
+              <RealtimeUpdates />
               <AppShell>{children}</AppShell>
             </LibraryStoreProvider>
           </AuthProvider>

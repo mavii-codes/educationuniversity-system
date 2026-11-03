@@ -8,6 +8,8 @@ import { verifyDatabaseConnection } from "./config/database";
 import { requestLogger } from "./middleware/logger.middleware";
 import { attachAuthContext, csrfGuard } from "./middleware/auth.middleware";
 import { errorHandler, notFoundHandler } from "./middleware/error.middleware";
+import realtimeRoutes from "./routes/realtime.routes";
+import { publishRealtimeUpdate } from "./services/realtime.service";
 import authRoutes from "./routes/auth.routes";
 import studentRoutes from "./routes/student.routes";
 import analyticsRoutes from "./routes/analytics.routes";
@@ -38,14 +40,29 @@ app.use(cookieParser());
 app.use(requestLogger);
 app.use(attachAuthContext);
 app.use(csrfGuard);
+app.use((req, res, next) => {
+  res.once("finish", () => {
+    const isMutation = !["GET", "HEAD", "OPTIONS"].includes(req.method);
+    const isAuthRequest = req.path.startsWith("/api/auth/");
+    if (isMutation && !isAuthRequest && res.statusCode >= 200 && res.statusCode < 300) {
+      const clientId = req.header("x-client-id");
+      void publishRealtimeUpdate(
+        clientId && /^[a-zA-Z0-9-]{1,64}$/.test(clientId) ? clientId : undefined
+      );
+    }
+  });
+  next();
+});
 
-// API documentation (OpenAPI 3)
-app.use(
-  "/api/docs",
-  express.static(path.resolve(__dirname, "../docs"), {
-    setHeaders: (res) => res.setHeader("Content-Type", "text/yaml; charset=utf-8"),
-  })
-);
+// API documentation (OpenAPI 3) — development only; never exposed in production.
+if (!env.isProduction) {
+  app.use(
+    "/api/docs",
+    express.static(path.resolve(__dirname, "../docs"), {
+      setHeaders: (res) => res.setHeader("Content-Type", "text/yaml; charset=utf-8"),
+    })
+  );
+}
 
 // Health Check Endpoint
 app.get("/api/health", async (_req, res) => {
@@ -70,6 +87,7 @@ app.get("/api/health", async (_req, res) => {
 
 // REST API Routes
 app.use("/api", authRoutes);
+app.use("/api", realtimeRoutes);
 app.use("/api", studentRoutes);
 app.use("/api", analyticsRoutes);
 app.use("/api", integrationRoutes);

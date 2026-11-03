@@ -20,6 +20,7 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [devResetLink, setDevResetLink] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,6 +49,10 @@ export default function ForgotPasswordPage() {
         };
         throw new Error(body.message || "Unable to send the reset link right now.");
       }
+      const body = (await response.json().catch(() => ({}))) as {
+        devResetLink?: string;
+      };
+      setDevResetLink(body.devResetLink || "");
       setSubmitted(true);
     } catch (requestError) {
       setError(
@@ -81,6 +86,23 @@ export default function ForgotPasswordPage() {
                 <strong className="font-semibold text-slate-900">{email}</strong>,
                 a password reset link has been sent.
               </p>
+              {devResetLink && (
+                <div
+                  role="status"
+                  className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-left"
+                >
+                  <p className="text-xs font-semibold text-amber-800">
+                    Dev mode: email service is not configured (or delivery
+                    failed), so the reset link is shown here:
+                  </p>
+                  <a
+                    href={devResetLink}
+                    className="mt-2 block break-all text-xs font-medium text-indigo-600 underline hover:text-indigo-800"
+                  >
+                    {devResetLink}
+                  </a>
+                </div>
+              )}
               <Link
                 href="/login"
                 className="mt-6 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"

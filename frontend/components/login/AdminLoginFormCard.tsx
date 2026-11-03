@@ -13,6 +13,7 @@ import {
   Mail,
   ShieldCheck,
 } from "lucide-react";
+import { API_CONFIG } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -20,8 +21,8 @@ export function AdminLoginFormCard() {
   const router = useRouter();
   const { signIn } = useAuth();
 
-  const [identifier, setIdentifier] = useState("admin@university.edu");
-  const [password, setPassword] = useState("Admin123!");
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -68,19 +69,6 @@ export function AdminLoginFormCard() {
     router.push("/admin/dashboard");
   };
 
-  const handleUseDemo = (role: "admin" | "registrar") => {
-    setFormError("");
-    setIdentifierError("");
-    setPasswordError("");
-    if (role === "admin") {
-      setIdentifier("admin@university.edu");
-      setPassword("Admin123!");
-    } else {
-      setIdentifier("registrar@university.edu");
-      setPassword("Registrar123!");
-    }
-  };
-
   return (
     <div className="w-full max-w-[460px]">
       <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-card sm:p-8">
@@ -100,24 +88,20 @@ export function AdminLoginFormCard() {
           </p>
         </div>
 
-        {/* Quick Demo Fill Buttons */}
-        <div className="mt-5 flex items-center justify-center gap-2">
-          <span className="text-[11px] font-medium text-slate-400">Quick Test:</span>
-          <button
-            type="button"
-            onClick={() => handleUseDemo("admin")}
-            className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100 transition"
-          >
-            Admin Demo
-          </button>
-          <button
-            type="button"
-            onClick={() => handleUseDemo("registrar")}
-            className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100 transition"
-          >
-            Registrar Demo
-          </button>
-        </div>
+        {/* Mock-mode demo hint (hidden entirely against the live API) */}
+        {!API_CONFIG.useLiveApi && (
+          <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-[11px] leading-relaxed text-slate-600">
+            <p className="font-semibold text-slate-700">
+              Demo credentials (mock mode)
+            </p>
+            <p className="mt-1 font-mono">
+              Admin: admin@university.edu / Admin123!
+            </p>
+            <p className="font-mono">
+              Registrar: registrar@university.edu / Registrar123!
+            </p>
+          </div>
+        )}
 
         {/* Global Error Banner */}
         {formError && (
