@@ -12,6 +12,7 @@ import {
   LoginBrandingPanel,
   LoginSubtleBackground,
 } from "@/components/login/LoginBrandingPanel";
+import { API_CONFIG } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 export default function ForgotPasswordPage() {
@@ -34,9 +35,29 @@ export default function ForgotPasswordPage() {
     }
 
     setIsSending(true);
-    await new Promise((resolve) => setTimeout(resolve, 650));
-    setIsSending(false);
-    setSubmitted(true);
+    try {
+      const response = await fetch(`${API_CONFIG.baseUrl}/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as {
+          message?: string;
+        };
+        throw new Error(body.message || "Unable to send the reset link right now.");
+      }
+      setSubmitted(true);
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to reach the server. Please try again."
+      );
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (

@@ -25,7 +25,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     pathname === "/" ||
     pathname === "/login" ||
     pathname === "/register" ||
-    pathname === "/forgot-password";
+    pathname === "/forgot-password" ||
+    pathname === "/reset-password";
 
   const isAdminPortal = Boolean(pathname?.startsWith("/admin"));
   const isStudentPortal = Boolean(pathname?.startsWith("/student"));
@@ -65,9 +66,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (isInitializing || !isAuthenticated || user?.role === "Student") {
       return (
         <div className="flex min-h-screen items-center justify-center bg-[#F8FAFC]">
-          <div className="flex items-center gap-2.5 rounded-xl border border-slate-200/80 bg-white px-4 py-3 text-xs font-medium text-slate-600 shadow-sm">
-            <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
-            <span>Verifying administrator session...</span>
+          <div className="flex flex-col items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-6 py-5 text-center text-xs font-medium text-slate-600 shadow-sm">
+            <div className="flex items-center gap-2.5">
+              <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
+              <span>Verifying administrator session...</span>
+            </div>
+            {!isAuthenticated && !isInitializing && (
+              <Link
+                href="/login"
+                className="mt-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700 underline"
+              >
+                Redirecting to Login (click if delayed)
+              </Link>
+            )}
           </div>
         </div>
       );
@@ -108,9 +119,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     ) {
       return (
         <div className="flex min-h-screen items-center justify-center bg-[#F8FAFC]">
-          <div className="flex items-center gap-2.5 rounded-xl border border-slate-200/80 bg-white px-4 py-3 text-xs font-medium text-slate-600 shadow-sm">
-            <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
-            <span>Verifying student session...</span>
+          <div className="flex flex-col items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-6 py-5 text-center text-xs font-medium text-slate-600 shadow-sm">
+            <div className="flex items-center gap-2.5">
+              <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
+              <span>Verifying student session...</span>
+            </div>
+            {!isAuthenticated && !isInitializing && (
+              <Link
+                href="/login"
+                className="mt-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700 underline"
+              >
+                Redirecting to Login (click if delayed)
+              </Link>
+            )}
           </div>
         </div>
       );

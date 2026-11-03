@@ -1,87 +1,87 @@
-import { DataSourceModel, IntegrationLogModel } from "../models";
-
-const DATA_SOURCES: DataSourceModel[] = [
-  {
-    id: "src-library",
-    code: "LIBRARY",
-    name: "Library Management System",
-    status: "Connected",
-    lastSynced: "Just now",
-    recordCount: 14850,
-  },
-];
-
-const SYNC_LOGS: IntegrationLogModel[] = [
-  {
-    id: "sync-lib-1001",
-    sourceCode: "LIBRARY",
-    sourceName: "Library LMS",
-    recordsProcessed: 14850,
-    duplicatesDetected: 1,
-    failedRecords: 0,
-    status: "Successful",
-    timestamp: "Today, 10:45 AM",
-    notes: "Automated 9-stage ETL: catalog books, borrower accounts, and circulation loans synced.",
-  },
-  {
-    id: "sync-lib-1002",
-    sourceCode: "LIBRARY",
-    sourceName: "Library LMS",
-    recordsProcessed: 3420,
-    duplicatesDetected: 0,
-    failedRecords: 0,
-    status: "Successful",
-    timestamp: "Today, 10:15 AM",
-    notes: "Student borrower records matched with central university student master identities.",
-  },
-];
+import { env } from "../config/env";
+import { seedDataset } from "../data/dataset";
+import {
+  DataSourceModel,
+  IntegrationLogModel,
+  NotificationModel,
+} from "../models";
+import * as integrationRepository from "../repositories/integration.repository";
+import * as authRepository from "../repositories/auth.repository";
 
 export class IntegrationService {
+  private fallbackSources: DataSourceModel[] = seedDataset.dataSources.map((source) => ({
+    ...source,
+  }));
+
   async getDataSources(): Promise<DataSourceModel[]> {
-    return [...DATA_SOURCES];
+    if (env.db.enabled) {
+      return integrationRepository.findAllDataSources();
+    }
+    return this.fallbackSources.map((source) => ({ ...source }));
   }
 
-  async syncDataSource(id: string) {
-    const target = DATA_SOURCES.find((d) => d.id === id);
+  async syncDataSource(id: string, actorUserId?: string) {
+    if (env.db.enabled) {
+      const result = await integrationRepository.performDataSourceSync(id);
+      if (result) {
+        try {
+          await authRepository.writeAudit({
+            actorUserId,
+            action: "integration.sync",
+            entityType: "data_source",
+            entityId: id,
+            metadata: {
+              recordsProcessed: result.recordsProcessed,
+              duration: result.duration,
+              syncHistoryId: result.syncHistoryId,
+            },
+          });
+        } catch {
+          // Audit logging must not fail the sync response.
+        }
+      }
+      return result;
+    }
+
+    const target = this.fallbackSources.find((source) => source.id === id);
     if (!target) return null;
     target.lastSynced = "Just now";
     target.status = "Connected";
+    const now = Date.now();
     return {
       sourceId: id,
       status: target.status,
       lastSynced: target.lastSynced,
+      recordsProcessed: target.recordCount,
+      duration: "0.1s",
+      syncHistoryId: `SH-${now.toString(36).toUpperCase()}`,
+      logId: `SYN-${now.toString(36).toUpperCase()}`,
     };
   }
 
-  async getIntegrationStatus() {
+  async getIntegrationStatus(): Promise<{
+    summary: Record<string, any>;
+    logs: IntegrationLogModel[];
+  }> {
+    if (env.db.enabled) {
+      const [summary, logs] = await Promise.all([
+        integrationRepository.getIntegrationSummary(),
+        integrationRepository.findSyncLogs(),
+      ]);
+      return { summary: summary ?? {}, logs };
+    }
+
     return {
-      summary: {
-        totalRecordsProcessed: 14850,
-        successfulRecords: 14849,
-        failedRecords: 0,
-        duplicateRecords: 1,
-        lastIntegration: "Today, Just now",
-        currentStatus: "Operational",
-      },
-      logs: SYNC_LOGS,
+      summary: seedDataset.integrationSummary,
+      logs: seedDataset.integrationLogs,
     };
   }
 
-  async getNotifications() {
-    return [
-      {
-        id: "notif-1",
-        title: "Library LMS synchronization completed",
-        timestamp: "Just now",
-        type: "success",
-      },
-      {
-        id: "notif-2",
-        title: "Student borrower matching verified",
-        timestamp: "32 minutes ago",
-        type: "info",
-      },
-    ];
+  async getNotifications(): Promise<NotificationModel[]> {
+    if (env.db.enabled) {
+      return integrationRepository.findNotifications();
+    }
+    return seedDataset.notifications;
   }
 }
 

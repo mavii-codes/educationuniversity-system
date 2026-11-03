@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from "express";
+import { env } from "../config/env";
 
 export class ApiError extends Error {
   statusCode: number;
@@ -23,11 +24,19 @@ export function errorHandler(
   _next: NextFunction
 ): void {
   const statusCode = err instanceof ApiError ? err.statusCode : 500;
+  const isServerError = statusCode >= 500;
+
+  if (isServerError) {
+    console.error("[University DataHub Backend] Unhandled error:", err);
+  }
+
   res.status(statusCode).json({
     success: false,
     message:
-      err.message ||
-      "We couldn't complete the request right now. Please try again shortly.",
+      isServerError && env.isProduction
+        ? "We couldn't complete the request right now. Please try again shortly."
+        : err.message ||
+          "We couldn't complete the request right now. Please try again shortly.",
   });
 }
 

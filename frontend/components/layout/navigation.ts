@@ -78,11 +78,6 @@ export const NAVIGATION_GROUPS: NavGroup[] = [
         aliases: ["/academic-analytics"],
         icon: BarChart3,
       },
-      {
-        label: "Alumni",
-        href: "/alumni",
-        icon: Award,
-      },
     ],
   },
   {
@@ -163,13 +158,6 @@ export function getPageMeta(pathname: string): { title: string; subtitle: string
     return {
       title: "Academic Analytics",
       subtitle: "Campus-wide GPA, attendance, retention, and program outcomes",
-    };
-  }
-  if (pathname === "/alumni") {
-    return {
-      title: "Alumni",
-      subtitle:
-        "View and manage integrated alumni records from the university's Alumni CRM.",
     };
   }
   if (pathname === "/reports") {
