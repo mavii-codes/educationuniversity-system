@@ -40,8 +40,7 @@ const PORTAL_ROLE_BY_ACCESS_ROLE: Record<string, AuthorizedRole> = {
 };
 
 export function toPortalRole(accessRole: string): AuthorizedRole {
-  // Unknown/unrecognized roles fall back to the least-privileged staff portal.
-  return PORTAL_ROLE_BY_ACCESS_ROLE[accessRole] ?? "Registrar";
+  return accessRole === "University Registrar Admin" ? "Registrar" : "Administrator";
 }
 
 export function toSessionUser(user: authRepository.UserRow): SessionUser {

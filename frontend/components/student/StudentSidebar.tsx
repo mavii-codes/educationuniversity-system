@@ -142,7 +142,7 @@ export function StudentSidebar() {
         <div className="pt-2">
           <button
             type="button"
-            onClick={signOut}
+            onClick={() => signOut()}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50/80 transition-colors"
           >
             <LogOut className="h-[17px] w-[17px] shrink-0" />
@@ -201,7 +201,7 @@ export function StudentSidebar() {
             </div>
           </button>
           <button
-            onClick={signOut}
+            onClick={() => signOut()}
             title="Logout"
             className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-rose-600 transition"
           >

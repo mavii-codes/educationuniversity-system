@@ -278,7 +278,10 @@ export interface DashboardAnalytics {
 
 
 export type AdminUserRole =
+  | "Head Administrator"
   | "System Administrator"
+  | "Library Staff"
+  | "Librarian"
   | "University Registrar Admin"
   | "Data Integration Engineer"
   | "Institutional Data Steward";
@@ -371,7 +374,7 @@ export interface AdminDashboardOverview {
   };
 }
 
-export type PortalAuthorizedRole = "Administrator" | "Registrar" | "Student";
+export type PortalAuthorizedRole = "Administrator" | "Librarian" | "Student" | "Registrar";
 
 // -------------------------------------------------------------
 // Library Integration Models & ETL Types

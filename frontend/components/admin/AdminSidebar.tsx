@@ -125,7 +125,7 @@ export function AdminSidebar() {
 
           <button
             type="button"
-            onClick={signOut}
+            onClick={() => signOut()}
             title="Logout"
             aria-label="Logout"
             className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
