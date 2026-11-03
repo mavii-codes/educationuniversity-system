@@ -49,18 +49,88 @@ export const API_CONFIG = {
   useLiveApi: process.env.NEXT_PUBLIC_USE_LIVE_API === "true",
 };
 
+const CSRF_COOKIE = "udis_csrf";
+
+export function getCsrfToken(): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const match = document.cookie
+    .split("; ")
+    .find((entry) => entry.startsWith(`${CSRF_COOKIE}=`));
+  return match ? decodeURIComponent(match.slice(CSRF_COOKIE.length + 1)) : undefined;
+}
+
+let refreshPromise: Promise<boolean> | null = null;
+
+export async function refreshSession(): Promise<boolean> {
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    try {
+      const csrfToken = getCsrfToken();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
+
+      const res = await fetch(`${API_CONFIG.baseUrl}/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+        headers,
+      });
+      return res.ok;
+    } catch {
+      return false;
+    } finally {
+      setTimeout(() => {
+        refreshPromise = null;
+      }, 250);
+    }
+  })();
+
+  return refreshPromise;
+}
+
 async function simulateNetworkDelay(ms = 160): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function fetchJson<T>(endpoint: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_CONFIG.baseUrl}${endpoint}`, {
-    headers: { "Content-Type": "application/json" },
-    ...init,
-  });
-  if (!res.ok) {
-    throw new Error(`Request failed (${res.status}) for ${endpoint}`);
+async function fetchJson<T>(
+  endpoint: string,
+  init?: RequestInit,
+  allowRetry = true
+): Promise<T> {
+  const method = (init?.method || "GET").toUpperCase();
+  const headers = new Headers(init?.headers);
+
+  if (init?.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
   }
+  if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
+    const csrfToken = getCsrfToken();
+    if (csrfToken) headers.set("X-CSRF-Token", csrfToken);
+  }
+
+  const res = await fetch(`${API_CONFIG.baseUrl}${endpoint}`, {
+    ...init,
+    headers,
+    credentials: "include",
+  });
+
+  if (res.status === 401 && allowRetry && !endpoint.startsWith("/auth/")) {
+    if (await refreshSession()) {
+      return fetchJson<T>(endpoint, init, false);
+    }
+  }
+
+  if (!res.ok) {
+    let message = `Request failed (${res.status}) for ${endpoint}`;
+    try {
+      const body = (await res.json()) as { message?: string };
+      if (body?.message) message = body.message;
+    } catch {
+      // Ignore non-JSON error bodies.
+    }
+    throw new Error(message);
+  }
+
   return res.json();
 }
 

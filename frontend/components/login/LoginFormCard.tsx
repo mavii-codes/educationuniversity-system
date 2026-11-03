@@ -69,7 +69,7 @@ export function LoginFormCard() {
 
   const handleUseDemoCredentials = () => {
     setIdentifier("admin@university.edu");
-    setPassword("Admin123!");
+    setPassword(process.env.NEXT_PUBLIC_DEV_ADMIN_PASSWORD || "Admin123!");
     setIdentifierError("");
     setPasswordError("");
     setFormError("");

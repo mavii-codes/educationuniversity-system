@@ -9,7 +9,7 @@ import React, {
 } from "react";
 import { useRouter } from "next/navigation";
 import { PortalAuthorizedRole } from "@/types";
-import { API_CONFIG } from "./api";
+import { API_CONFIG, getCsrfToken, refreshSession } from "./api";
 
 export interface AdminSessionUser {
   id: string;
@@ -39,8 +39,8 @@ interface AuthContextValue {
 const STORAGE_KEY = "udis_admin_session";
 
 /**
- * Development mock credentials for frontend authentication demonstration.
- * In production, authentication delegates to POST /api/auth/login (Express + JWT + PostgreSQL).
+ * Mock credentials are only used when NEXT_PUBLIC_USE_LIVE_API is false.
+ * With the live API enabled, authentication is handled by Express + JWT cookies.
  */
 const DEV_MOCK_EMAIL = "admin@university.edu";
 const DEV_MOCK_ADMIN_ID = "admin-001";
@@ -78,21 +78,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    try {
-      const savedLocal = window.localStorage.getItem(STORAGE_KEY);
-      const savedSession = window.sessionStorage.getItem(STORAGE_KEY);
-      const raw = savedLocal || savedSession;
-      if (raw) {
+    let cancelled = false;
+
+    const readStoredSession = (): AdminSessionUser | null => {
+      try {
+        const raw =
+          window.localStorage.getItem(STORAGE_KEY) ||
+          window.sessionStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
         const parsed = JSON.parse(raw) as AdminSessionUser;
-        if (parsed && parsed.email) {
-          setUser(parsed);
-        }
+        return parsed && parsed.email ? parsed : null;
+      } catch {
+        return null;
       }
-    } catch {
-      // Ignore storage parse issues
-    } finally {
-      setIsInitializing(false);
-    }
+    };
+
+    const bootstrap = async () => {
+      if (!API_CONFIG.useLiveApi) {
+        if (!cancelled) setUser(readStoredSession());
+        if (!cancelled) setIsInitializing(false);
+        return;
+      }
+
+      try {
+        let res = await fetch(`${API_CONFIG.baseUrl}/auth/me`, {
+          credentials: "include",
+        });
+
+        if (res.status === 401 && (await refreshSession())) {
+          res = await fetch(`${API_CONFIG.baseUrl}/auth/me`, {
+            credentials: "include",
+          });
+        }
+
+        if (res.ok) {
+          const data = (await res.json()) as { user?: AdminSessionUser };
+          if (!cancelled) setUser(data.user ?? null);
+        } else if (!cancelled) {
+          setUser(null);
+        }
+      } catch {
+        if (!cancelled) setUser(null);
+      } finally {
+        if (!cancelled) setIsInitializing(false);
+      }
+    };
+
+    void bootstrap();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const signIn = useCallback(
@@ -107,31 +142,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }> => {
       const normalized = identifier.trim().toLowerCase();
 
-      // Prepared for future Express + JWT + PostgreSQL endpoint
       if (API_CONFIG.useLiveApi) {
         try {
           const res = await fetch(`${API_CONFIG.baseUrl}/auth/login`, {
             method: "POST",
+            credentials: "include",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ identifier: normalized, password }),
+            body: JSON.stringify({
+              identifier: normalized,
+              password,
+              rememberMe,
+            }),
           });
-          if (res.ok) {
-            const data = await res.json();
-            const sessionUser: AdminSessionUser =
-              data.user || DEFAULT_ADMIN_USER;
-            const storage = rememberMe
-              ? window.localStorage
-              : window.sessionStorage;
-            storage.setItem(STORAGE_KEY, JSON.stringify(sessionUser));
-            setUser(sessionUser);
-            return { ok: true, role: sessionUser.role };
+
+          const data = (await res.json().catch(() => ({}))) as {
+            user?: AdminSessionUser;
+            message?: string;
+          };
+
+          if (!res.ok || !data.user) {
+            return {
+              ok: false,
+              error:
+                data.message ||
+                "Unable to sign in. Please check your credentials and try again.",
+            };
           }
+
+          setUser(data.user);
+          return { ok: true, role: data.user.role };
         } catch {
-          // Fall back to mock authentication when backend auth route is not yet online
+          return {
+            ok: false,
+            error:
+              "Cannot reach the University DataHub API. Make sure the backend is running.",
+          };
         }
       }
 
-      // Realistic network latency for Sign In transition
+      // Mock mode (NEXT_PUBLIC_USE_LIVE_API=false)
       await new Promise((resolve) => setTimeout(resolve, 750));
 
       const isAdminMatch =
@@ -178,6 +227,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const signOut = useCallback(() => {
+    if (API_CONFIG.useLiveApi) {
+      const csrfToken = getCsrfToken();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
+
+      void fetch(`${API_CONFIG.baseUrl}/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+        headers,
+      }).catch(() => undefined);
+    }
+
     try {
       window.localStorage.removeItem(STORAGE_KEY);
       window.sessionStorage.removeItem(STORAGE_KEY);

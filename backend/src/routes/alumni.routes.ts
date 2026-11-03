@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { alumniController } from "../controllers/alumni.controller";
-import { requireRoles } from "../middleware/auth.middleware";
+import { requireAuth, requireRoles } from "../middleware/auth.middleware";
 
 const router = Router();
+router.use(requireAuth);
 
 // GET /api/alumni (legacy compatibility endpoint)
 router.get("/alumni", (req, res, next) =>

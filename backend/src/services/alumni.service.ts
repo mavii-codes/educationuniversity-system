@@ -1,96 +1,47 @@
-import {
-  AlumniModel,
-  AuthorizedRole,
-  IntegratedAlumniModel,
-} from "../models";
+import { env } from "../config/env";
+import { seedDataset } from "../data/dataset";
+import { AuthorizedRole, IntegratedAlumniModel } from "../models";
+import * as alumniRepository from "../repositories/alumni.repository";
+import * as analyticsRepository from "../repositories/analytics.repository";
+import * as authRepository from "../repositories/auth.repository";
 
-const SEED_ALUMNI: AlumniModel[] = [
-  {
-    id: "ALU-2026-014",
-    name: "Patricia Anne Lim",
-    graduationYear: 2026,
-    programCode: "BSIT",
-    programName: "BS Information Technology",
-    employmentStatus: "Employed",
-    currentCompany: "Accenture Philippines",
-    location: "Taguig City, PH",
-  },
-  {
-    id: "ALU-2025-082",
-    name: "Miguel Lorenzo Tan",
-    graduationYear: 2025,
-    programCode: "BSCS",
-    programName: "BS Computer Science",
-    employmentStatus: "Employed",
-    currentCompany: "GCash (Mynt)",
-    location: "Taguig City, PH",
-  },
-];
-
-const INTEGRATED_ALUMNI_SEED: IntegratedAlumniModel[] = [
-  {
-    id: "ALM-001",
-    studentId: "2022-00142",
-    fullName: "Patricia Anne Lim",
-    programCode: "BSIT",
-    program: "BS Information Technology",
-    department: "College of Computing & Information Sciences",
-    batch: "2026",
-    graduationDate: "May 2026",
-    status: "Alumni",
-    source: "Alumni CRM",
-    email: "patricia.lim@alumni.university.edu",
-    contactNumber: "+63 917 482 1104",
-    enrollmentYear: "2022",
-  },
-  {
-    id: "ALM-002",
-    studentId: "2021-00418",
-    fullName: "Camille Rose Villanueva",
-    programCode: "BSBA",
-    program: "BS Business Administration",
-    department: "College of Business & Management",
-    batch: "2025",
-    graduationDate: "June 2025",
-    status: "Alumni",
-    source: "Alumni CRM",
-    email: "camille.villanueva@alumni.university.edu",
-    contactNumber: "+63 918 309 7741",
-    enrollmentYear: "2021",
-  },
-  {
-    id: "ALM-003",
-    studentId: "2021-00289",
-    fullName: "Miguel Lorenzo Tan",
-    programCode: "BSCS",
-    program: "BS Computer Science",
-    department: "College of Computing & Information Sciences",
-    batch: "2025",
-    graduationDate: "June 2025",
-    status: "Alumni",
-    source: "Alumni CRM",
-    email: "miguel.tan@alumni.university.edu",
-    contactNumber: "+63 917 654 2290",
-    enrollmentYear: "2021",
-  },
-];
+const ALUMNI_ANALYTICS_FALLBACK = seedDataset.alumniAnalytics;
 
 export class AlumniService {
   private lastSynchronization = "Today, 10:42 AM";
 
   async getAlumniOverview() {
+    if (env.db.enabled) {
+      const [records, analytics, dashboard] = await Promise.all([
+        alumniRepository.findAlumniRecords(),
+        alumniRepository.getAlumniAnalytics(),
+        analyticsRepository.getSnapshot<{ graduationTrends?: unknown }>("dashboard_analytics"),
+      ]);
+
+      return {
+        records,
+        analytics: analytics ?? ALUMNI_ANALYTICS_FALLBACK,
+        graduationTrends: dashboard?.graduationTrends ?? [],
+      };
+    }
+
     return {
-      records: SEED_ALUMNI,
-      analytics: {
-        employmentRate: 89.4,
-        employedInFieldRate: 78.2,
-        trackedAlumni: 18560,
-      },
+      records: seedDataset.alumniRecords,
+      analytics: seedDataset.alumniAnalytics,
+      graduationTrends: seedDataset.dashboardAnalytics.graduationTrends,
     };
   }
 
   async getIntegratedAlumni(role: AuthorizedRole) {
-    const records = INTEGRATED_ALUMNI_SEED.map((record) => {
+    const sourceRecords: IntegratedAlumniModel[] = env.db.enabled
+      ? await alumniRepository.findIntegratedAlumni()
+      : seedDataset.integratedAlumni;
+
+    const lastSynchronization = env.db.enabled
+      ? await alumniRepository.getCrmLastSynchronization()
+      : this.lastSynchronization;
+
+    const records = sourceRecords.map((record) => {
       if (role === "Registrar") {
         // Redact extended phone numbers for Registrar-scoped responses
         const { contactNumber: _redacted, ...registrarView } = record;
@@ -99,21 +50,46 @@ export class AlumniService {
       return record;
     });
 
+    const sourceInfo = seedDataset.alumniCrmSourceInfo as {
+      dataSource: "Alumni CRM";
+      integrationMethod: "API / ETL / ELT";
+      connectionStatus: "Connected";
+      recordsSynchronized: number;
+      graduationBatchesCount: number;
+      programsRepresentedCount: number;
+    };
+
     return {
       sourceInfo: {
-        dataSource: "Alumni CRM" as const,
-        integrationMethod: "API / ETL / ELT" as const,
+        ...sourceInfo,
         connectionStatus: "Connected" as const,
-        lastSynchronization: this.lastSynchronization,
-        recordsSynchronized: 18560,
-        graduationBatchesCount: 5,
-        programsRepresentedCount: 6,
+        lastSynchronization,
       },
       records,
     };
   }
 
-  async triggerCrmSync() {
+  async triggerCrmSync(actorUserId?: string) {
+    if (env.db.enabled) {
+      const result = await alumniRepository.touchCrmSync();
+      this.lastSynchronization = result.lastSynchronization;
+      try {
+        await authRepository.writeAudit({
+          actorUserId,
+          action: "alumni.sync",
+          entityType: "data_source",
+          entityId: "src-alumni",
+          metadata: {
+            recordsSynchronized: result.recordsSynchronized,
+            duration: result.duration,
+          },
+        });
+      } catch {
+        // Audit logging must not fail the sync response.
+      }
+      return { lastSynchronization: result.lastSynchronization };
+    }
+
     this.lastSynchronization = "Just now";
     return {
       lastSynchronization: this.lastSynchronization,

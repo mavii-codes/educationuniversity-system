@@ -1,0 +1,337 @@
+openapi: 3.0.3
+info:
+  title: University DataHub API
+  version: 0.2.0
+  description: >
+    Institutional data platform API. Authentication uses HttpOnly cookies
+    (`udis_at` access token, `udis_rt` refresh token). Mutations additionally
+    require the `X-CSRF-Token` header matching the readable `udis_csrf` cookie.
+servers:
+  - url: http://localhost:5000/api
+tags:
+  - name: Auth
+  - name: Students
+  - name: Analytics
+  - name: Integration
+  - name: Alumni
+  - name: Admin
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Sign in and set session cookies
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identifier, password]
+              properties:
+                identifier:
+                  type: string
+                  description: Email address or user ID
+                password:
+                  type: string
+                rememberMe:
+                  type: boolean
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/SessionUser"
+                  csrfToken:
+                    type: string
+        "401":
+          description: Invalid credentials
+        "429":
+          description: Too many attempts
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Email a password reset link when an active account matches
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        "202":
+          description: Request accepted without disclosing whether the email is registered
+        "429":
+          description: Too many reset requests
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Set a new password with a one-time reset token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token:
+                  type: string
+                password:
+                  type: string
+                  minLength: 12
+      responses:
+        "200":
+          description: Password updated and existing refresh sessions revoked
+        "400":
+          description: Invalid or expired reset token
+        "429":
+          description: Too many reset requests
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Rotate the refresh token
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/CsrfHeader"
+      responses:
+        "200":
+          description: Rotated session
+        "401":
+          description: Invalid, expired, or reused session
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Revoke the refresh token and clear cookies
+      parameters:
+        - $ref: "#/components/parameters/CsrfHeader"
+      responses:
+        "200":
+          description: Signed out
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Current session user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/SessionUser"
+        "401":
+          description: Not authenticated
+  /students:
+    get:
+      tags: [Students]
+      summary: List students
+      parameters:
+        - in: query
+          name: search
+          schema: { type: string }
+        - in: query
+          name: program
+          schema: { type: string }
+        - in: query
+          name: yearLevel
+          schema: { type: string }
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: riskLevel
+          schema: { type: string }
+      responses:
+        "200":
+          description: Student list
+  /students/{id}:
+    get:
+      tags: [Students]
+      summary: Get a student profile
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Student profile
+        "404":
+          description: Not found
+  /lifecycle:
+    get:
+      tags: [Students]
+      summary: Student lifecycle stages
+      responses:
+        "200":
+          description: Lifecycle overview
+  /analytics:
+    get:
+      tags: [Analytics]
+      summary: Academic analytics
+      responses:
+        "200":
+          description: Analytics payload
+  /analytics/dashboard:
+    get:
+      tags: [Analytics]
+      summary: Dashboard analytics and recent activity
+      responses:
+        "200":
+          description: Dashboard payload
+  /programs:
+    get:
+      tags: [Analytics]
+      summary: Program statistics
+      responses:
+        "200":
+          description: Programs
+  /courses:
+    get:
+      tags: [Analytics]
+      summary: Course catalog
+      responses:
+        "200":
+          description: Courses
+  /reports:
+    get:
+      tags: [Analytics]
+      summary: Report catalog
+      responses:
+        "200":
+          description: Reports
+  /data-sources:
+    get:
+      tags: [Integration]
+      summary: List integrated data sources
+      responses:
+        "200":
+          description: Data sources
+  /data-sources/{id}/sync:
+    post:
+      tags: [Integration]
+      summary: Trigger a simulated connector sync (Administrator)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+        - $ref: "#/components/parameters/CsrfHeader"
+      responses:
+        "200":
+          description: Sync result
+        "403":
+          description: Forbidden
+        "404":
+          description: Unknown data source
+  /integrations:
+    get:
+      tags: [Integration]
+      summary: Integration summary and sync logs
+      responses:
+        "200":
+          description: Integration status
+  /notifications:
+    get:
+      tags: [Integration]
+      summary: Notification feed
+      responses:
+        "200":
+          description: Notifications
+  /alumni:
+    get:
+      tags: [Alumni]
+      summary: Alumni records and analytics
+      responses:
+        "200":
+          description: Alumni overview
+  /alumni/integrated:
+    get:
+      tags: [Alumni]
+      summary: Integrated Alumni CRM records
+      responses:
+        "200":
+          description: Integrated records
+  /alumni/sync:
+    post:
+      tags: [Alumni]
+      summary: Trigger a simulated Alumni CRM sync (Administrator)
+      parameters:
+        - $ref: "#/components/parameters/CsrfHeader"
+      responses:
+        "200":
+          description: Sync result
+        "403":
+          description: Forbidden
+  /admin/dashboard:
+    get:
+      tags: [Admin]
+      summary: Admin overview (Administrator)
+      responses:
+        "200":
+          description: Admin dashboard
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: Portal users (Administrator)
+      responses:
+        "200":
+          description: Users
+  /admin/sync-history:
+    get:
+      tags: [Admin]
+      summary: Sync history (Administrator)
+      responses:
+        "200":
+          description: Sync history
+  /health:
+    get:
+      tags: [Auth]
+      summary: Service and database health
+      security: []
+      responses:
+        "200":
+          description: Healthy
+        "503":
+          description: Degraded
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: udis_at
+  parameters:
+    CsrfHeader:
+      in: header
+      name: X-CSRF-Token
+      required: true
+      schema: { type: string }
+  schemas:
+    SessionUser:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string }
+        role:
+          type: string
+          enum: [Administrator, Registrar]
+        accessRole: { type: string }
+        department: { type: string }
+        lastLogin: { type: string }
+security:
+  - cookieAuth: []

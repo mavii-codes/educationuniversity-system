@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { AuthorizedRole } from "../models";
+import { currentUser } from "../middleware/auth.middleware";
 import { alumniService } from "../services/alumni.service";
 
 export class AlumniController {
@@ -18,8 +18,7 @@ export class AlumniController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const role =
-        (res.locals.userRole as AuthorizedRole | undefined) || "Administrator";
+      const role = currentUser(res)?.portalRole ?? "Administrator";
       const data = await alumniService.getIntegratedAlumni(role);
       res.json(data);
     } catch (error) {
@@ -33,7 +32,7 @@ export class AlumniController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const result = await alumniService.triggerCrmSync();
+      const result = await alumniService.triggerCrmSync(currentUser(res)?.id);
       res.json(result);
     } catch (error) {
       next(error);

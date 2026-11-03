@@ -1,121 +1,88 @@
-import { DataSourceModel, IntegrationLogModel } from "../models";
-
-const DATA_SOURCES: DataSourceModel[] = [
-  {
-    id: "src-sis",
-    code: "SIS",
-    name: "Student Information System",
-    status: "Connected",
-    lastSynced: "5 minutes ago",
-    recordCount: 5240,
-  },
-  {
-    id: "src-lms",
-    code: "LMS",
-    name: "Learning Management System",
-    status: "Connected",
-    lastSynced: "12 minutes ago",
-    recordCount: 5100,
-  },
-  {
-    id: "src-hr",
-    code: "HR",
-    name: "HR / Payroll",
-    status: "Connected",
-    lastSynced: "25 minutes ago",
-    recordCount: 386,
-  },
-  {
-    id: "src-library",
-    code: "LIBRARY",
-    name: "Library System",
-    status: "Connected",
-    lastSynced: "18 minutes ago",
-    recordCount: 4850,
-  },
-  {
-    id: "src-alumni",
-    code: "ALUMNI",
-    name: "Alumni CRM",
-    status: "Connected",
-    lastSynced: "42 minutes ago",
-    recordCount: 8400,
-  },
-];
-
-const SYNC_LOGS: IntegrationLogModel[] = [
-  {
-    id: "sync-1001",
-    sourceCode: "SIS",
-    sourceName: "SIS",
-    recordsProcessed: 5240,
-    duplicatesDetected: 0,
-    failedRecords: 0,
-    status: "Successful",
-    timestamp: "Today, 10:45 AM",
-    notes: "All active student profiles and midterm grade records verified.",
-  },
-  {
-    id: "sync-1002",
-    sourceCode: "LMS",
-    sourceName: "LMS",
-    recordsProcessed: 5100,
-    duplicatesDetected: 4,
-    failedRecords: 0,
-    status: "Successful",
-    timestamp: "Today, 10:38 AM",
-    notes: "Course completion metrics and weekly engagement logs merged.",
-  },
-];
+import { env } from "../config/env";
+import { seedDataset } from "../data/dataset";
+import {
+  DataSourceModel,
+  IntegrationLogModel,
+  NotificationModel,
+} from "../models";
+import * as integrationRepository from "../repositories/integration.repository";
+import * as authRepository from "../repositories/auth.repository";
 
 export class IntegrationService {
+  private fallbackSources: DataSourceModel[] = seedDataset.dataSources.map((source) => ({
+    ...source,
+  }));
+
   async getDataSources(): Promise<DataSourceModel[]> {
-    return [...DATA_SOURCES];
+    if (env.db.enabled) {
+      return integrationRepository.findAllDataSources();
+    }
+    return this.fallbackSources.map((source) => ({ ...source }));
   }
 
-  async syncDataSource(id: string) {
-    const target = DATA_SOURCES.find((d) => d.id === id);
+  async syncDataSource(id: string, actorUserId?: string) {
+    if (env.db.enabled) {
+      const result = await integrationRepository.performDataSourceSync(id);
+      if (result) {
+        try {
+          await authRepository.writeAudit({
+            actorUserId,
+            action: "integration.sync",
+            entityType: "data_source",
+            entityId: id,
+            metadata: {
+              recordsProcessed: result.recordsProcessed,
+              duration: result.duration,
+              syncHistoryId: result.syncHistoryId,
+            },
+          });
+        } catch {
+          // Audit logging must not fail the sync response.
+        }
+      }
+      return result;
+    }
+
+    const target = this.fallbackSources.find((source) => source.id === id);
     if (!target) return null;
     target.lastSynced = "Just now";
     target.status = "Connected";
+    const now = Date.now();
     return {
       sourceId: id,
       status: target.status,
       lastSynced: target.lastSynced,
+      recordsProcessed: target.recordCount,
+      duration: "0.1s",
+      syncHistoryId: `SH-${now.toString(36).toUpperCase()}`,
+      logId: `SYN-${now.toString(36).toUpperCase()}`,
     };
   }
 
-  async getIntegrationStatus() {
+  async getIntegrationStatus(): Promise<{
+    summary: Record<string, any>;
+    logs: IntegrationLogModel[];
+  }> {
+    if (env.db.enabled) {
+      const [summary, logs] = await Promise.all([
+        integrationRepository.getIntegrationSummary(),
+        integrationRepository.findSyncLogs(),
+      ]);
+      return { summary: summary ?? {}, logs };
+    }
+
     return {
-      summary: {
-        totalRecordsProcessed: 23976,
-        successfulRecords: 23948,
-        failedRecords: 4,
-        duplicateRecords: 24,
-        lastIntegration: "Today, 5 minutes ago",
-        currentStatus: "Operational",
-      },
-      logs: SYNC_LOGS,
+      summary: seedDataset.integrationSummary,
+      logs: seedDataset.integrationLogs,
     };
   }
 
-  async getNotifications() {
-    return [
-      {
-        id: "notif-1",
-        title: "SIS synchronization completed",
-        timestamp: "5 minutes ago",
-        type: "success",
-      },
-      {
-        id: "notif-2",
-        title: "LMS synchronization warning",
-        timestamp: "15 minutes ago",
-        type: "warning",
-      },
-    ];
+  async getNotifications(): Promise<NotificationModel[]> {
+    if (env.db.enabled) {
+      return integrationRepository.findNotifications();
+    }
+    return seedDataset.notifications;
   }
 }
 
 export const integrationService = new IntegrationService();
-

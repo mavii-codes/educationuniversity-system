@@ -1,7 +1,9 @@
 import { Router } from "express";
 import { studentController } from "../controllers/student.controller";
+import { requireAuth } from "../middleware/auth.middleware";
 
 const router = Router();
+router.use(requireAuth);
 
 // GET /api/students
 router.get("/students", (req, res, next) =>
@@ -19,4 +21,3 @@ router.get("/lifecycle", (req, res, next) =>
 );
 
 export default router;
-

@@ -1,65 +1,75 @@
--- PostgreSQL Schema Reference for University DataHub
--- Prepared for future relational database migration
+-- PostgreSQL schema for University DataHub
+-- Applied by `npm run db:migrate` (see src/db/migrations/001_init.sql)
 
 CREATE TABLE IF NOT EXISTS programs (
   id VARCHAR(32) PRIMARY KEY,
   code VARCHAR(16) UNIQUE NOT NULL,
   name VARCHAR(160) NOT NULL,
   department VARCHAR(160) NOT NULL,
-  enrolled_count INTEGER NOT NULL DEFAULT 0,
-  average_gpa NUMERIC(3, 2) NOT NULL DEFAULT 0.00,
-  graduation_rate NUMERIC(5, 2) NOT NULL DEFAULT 0.00,
-  withdrawal_rate NUMERIC(5, 2) NOT NULL DEFAULT 0.00,
-  attendance_rate NUMERIC(5, 2) NOT NULL DEFAULT 0.00
+  enrolled_count INTEGER NOT NULL DEFAULT 0 CHECK (enrolled_count >= 0),
+  average_gpa NUMERIC(4, 2) NOT NULL DEFAULT 0.00 CHECK (average_gpa BETWEEN 0 AND 4),
+  graduation_rate NUMERIC(5, 2) NOT NULL DEFAULT 0.00 CHECK (graduation_rate BETWEEN 0 AND 100),
+  withdrawal_rate NUMERIC(5, 2) NOT NULL DEFAULT 0.00 CHECK (withdrawal_rate BETWEEN 0 AND 100),
+  attendance_rate NUMERIC(5, 2) NOT NULL DEFAULT 0.00 CHECK (attendance_rate BETWEEN 0 AND 100),
+  sort_order INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS students (
   id VARCHAR(32) PRIMARY KEY,
-  full_name VARCHAR(160) NOT NULL,
+  name VARCHAR(160) NOT NULL,
   email VARCHAR(160) UNIQUE NOT NULL,
-  program_code VARCHAR(16) NOT NULL REFERENCES programs(code),
+  program_code VARCHAR(16) NOT NULL REFERENCES programs(code) ON UPDATE CASCADE,
   year_level VARCHAR(24) NOT NULL,
-  status VARCHAR(24) NOT NULL,
-  performance_score NUMERIC(5, 2) NOT NULL,
-  gpa NUMERIC(3, 2) NOT NULL,
-  attendance_rate NUMERIC(5, 2) NOT NULL,
-  risk_level VARCHAR(16) NOT NULL,
-  admission_year INTEGER NOT NULL,
-  expected_graduation INTEGER NOT NULL,
+  status VARCHAR(24) NOT NULL CHECK (status IN ('Active', 'Graduated', 'On Leave', 'Withdrawn')),
+  performance_score NUMERIC(5, 2) NOT NULL CHECK (performance_score BETWEEN 0 AND 100),
+  gpa NUMERIC(4, 2) NOT NULL CHECK (gpa BETWEEN 0 AND 4),
+  attendance_rate NUMERIC(5, 2) NOT NULL CHECK (attendance_rate BETWEEN 0 AND 100),
+  risk_level VARCHAR(16) NOT NULL CHECK (risk_level IN ('Low', 'Medium', 'High')),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_students_program_code ON students(program_code);
+CREATE INDEX IF NOT EXISTS idx_students_status ON students(status);
+CREATE INDEX IF NOT EXISTS idx_students_risk_level ON students(risk_level);
+CREATE INDEX IF NOT EXISTS idx_students_name ON students(name);
 
 CREATE TABLE IF NOT EXISTS data_sources (
   id VARCHAR(32) PRIMARY KEY,
   code VARCHAR(24) UNIQUE NOT NULL,
   name VARCHAR(120) NOT NULL,
-  status VARCHAR(24) NOT NULL,
-  record_count INTEGER NOT NULL DEFAULT 0,
-  last_synced_at TIMESTAMPTZ
+  status VARCHAR(24) NOT NULL CHECK (status IN ('Connected', 'Syncing', 'Warning', 'Disconnected')),
+  record_count INTEGER NOT NULL DEFAULT 0 CHECK (record_count >= 0),
+  last_synced_at TIMESTAMPTZ,
+  sort_order INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS integration_sync_logs (
   id VARCHAR(64) PRIMARY KEY,
   source_code VARCHAR(24) NOT NULL,
-  records_processed INTEGER NOT NULL DEFAULT 0,
-  duplicates_detected INTEGER NOT NULL DEFAULT 0,
-  failed_records INTEGER NOT NULL DEFAULT 0,
-  status VARCHAR(24) NOT NULL,
+  source_name VARCHAR(120) NOT NULL,
+  records_processed INTEGER NOT NULL DEFAULT 0 CHECK (records_processed >= 0),
+  duplicates_detected INTEGER NOT NULL DEFAULT 0 CHECK (duplicates_detected >= 0),
+  failed_records INTEGER NOT NULL DEFAULT 0 CHECK (failed_records >= 0),
+  status VARCHAR(24) NOT NULL CHECK (status IN ('Successful', 'Warning', 'Failed')),
   notes TEXT,
   executed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS idx_sync_logs_executed_at ON integration_sync_logs(executed_at DESC);
+
 CREATE TABLE IF NOT EXISTS alumni_records (
   id VARCHAR(32) PRIMARY KEY,
-  student_id VARCHAR(32) REFERENCES students(id),
-  full_name VARCHAR(160) NOT NULL,
-  graduation_year INTEGER NOT NULL,
-  program_code VARCHAR(16) NOT NULL REFERENCES programs(code),
+  student_id VARCHAR(32),
+  name VARCHAR(160) NOT NULL,
+  graduation_year INTEGER NOT NULL CHECK (graduation_year BETWEEN 1900 AND 2200),
+  program_code VARCHAR(16) NOT NULL REFERENCES programs(code) ON UPDATE CASCADE,
   employment_status VARCHAR(48) NOT NULL,
   current_company VARCHAR(160),
   location VARCHAR(120)
 );
 
+CREATE INDEX IF NOT EXISTS idx_alumni_records_program_code ON alumni_records(program_code);
+CREATE INDEX IF NOT EXISTS idx_alumni_records_graduation_year ON alumni_records(graduation_year DESC);
 
 -- External Alumni CRM ETL / ELT synchronized mirror table
 CREATE TABLE IF NOT EXISTS integrated_alumni_crm (
@@ -78,3 +88,20 @@ CREATE TABLE IF NOT EXISTS integrated_alumni_crm (
   enrollment_year VARCHAR(16),
   synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_integrated_alumni_batch ON integrated_alumni_crm(batch DESC);
+CREATE INDEX IF NOT EXISTS idx_integrated_alumni_program_code ON integrated_alumni_crm(program_code);
+
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id BIGSERIAL PRIMARY KEY,
+  user_id VARCHAR(32) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash VARCHAR(64) UNIQUE NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user
+  ON password_reset_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires
+  ON password_reset_tokens(expires_at);
