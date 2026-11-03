@@ -24,7 +24,7 @@ function resolveNotificationHref(href: string | undefined, isAdminRoute: boolean
   if (!href) return undefined;
   if (!isAdminRoute) return href;
   if (href.startsWith("/admin")) return href;
-  if (href === "/data-integration" || href === "/integration") return "/admin/integrations";
+  if (href === "/data-integration" || href === "/integration") return "/admin/library";
   if (href === "/academic-analytics" || href === "/analytics") return "/admin/analytics";
   if (href === "/student-lifecycle" || href === "/lifecycle") return "/admin/lifecycle";
   if (href === "/data-sources") return "/admin/data-sources";

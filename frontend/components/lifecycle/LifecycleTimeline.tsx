@@ -26,7 +26,6 @@ const stageIcons: Record<LifecycleStageKey, React.ElementType> = {
   enrollment: ClipboardCheck,
   "academic-progress": BookOpenCheck,
   graduation: GraduationCap,
-  alumni: Award,
 };
 
 export function LifecycleTimeline({ stages }: LifecycleTimelineProps) {
@@ -242,10 +241,10 @@ export function LifecycleTimeline({ stages }: LifecycleTimelineProps) {
 
             <Link
               href={
-                activeStage.key === "alumni"
-                  ? "/alumni"
-                  : activeStage.key === "academic-progress"
+                activeStage.key === "academic-progress"
                   ? "/academic-analytics"
+                  : activeStage.key === "graduation"
+                  ? "/admin/library/records"
                   : "/students"
               }
               className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-indigo-700"

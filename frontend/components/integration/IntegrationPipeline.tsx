@@ -1,23 +1,27 @@
 import React from "react";
 import {
+  AlertCircle,
   ArrowDown,
   ArrowRight,
-  Award,
   BarChart3,
+  BookCheck,
   BookMarked,
-  Briefcase,
+  BookOpen,
+  CalendarCheck2,
+  Clock,
   Database,
   GitMerge,
-  Laptop,
   Layers,
+  Users,
 } from "lucide-react";
 
-const SOURCES = [
-  { code: "SIS", label: "Student Info System", count: "5,240", icon: Database },
-  { code: "LMS", label: "Learning Management", count: "5,100", icon: Laptop },
-  { code: "HR", label: "HR / Payroll", count: "386", icon: Briefcase },
-  { code: "Library", label: "Library System", count: "4,850", icon: BookMarked },
-  { code: "Alumni", label: "Alumni CRM", count: "8,400", icon: Award },
+const LIBRARY_ENTITIES = [
+  { code: "BOOKS", label: "Book Catalog Records", count: "14,850", icon: BookMarked },
+  { code: "PATRONS", label: "Student Borrower Accounts", count: "3,420", icon: Users },
+  { code: "LOANS", label: "Borrowing Transactions", count: "8,920", icon: BookOpen },
+  { code: "RETURNS", label: "Book Return Records", count: "7,650", icon: BookCheck },
+  { code: "HOLDS", label: "Book Reservations", count: "1,240", icon: CalendarCheck2 },
+  { code: "FINES", label: "Overdue & Clearance Fines", count: "64", icon: AlertCircle },
 ];
 
 export function IntegrationPipeline() {
@@ -26,10 +30,10 @@ export function IntegrationPipeline() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="text-base font-semibold text-slate-900">
-            Unified Data Integration Pipeline
+            Library Data Integration &amp; 9-Stage ETL Pipeline
           </h3>
           <p className="mt-0.5 text-xs text-slate-500">
-            How campus systems converge into a single verified student record for analytics
+            How external Library Management System records converge into central university student identities
           </p>
         </div>
         <span className="rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
@@ -38,17 +42,17 @@ export function IntegrationPipeline() {
       </div>
 
       <div className="grid grid-cols-1 items-center gap-4 lg:grid-cols-12">
-        {/* Step 1: 5 University Source Systems */}
+        {/* Step 1: Library LMS Source Streams */}
         <div className="space-y-2 lg:col-span-4">
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-            1. Campus Source Systems
+            1. External Library System Streams
           </p>
-          {SOURCES.map((src) => {
+          {LIBRARY_ENTITIES.map((src) => {
             const Icon = src.icon;
             return (
               <div
                 key={src.code}
-                className="flex items-center justify-between rounded-xl border border-slate-200/80 bg-slate-50/70 px-3.5 py-2.5"
+                className="flex items-center justify-between rounded-xl border border-slate-200/80 bg-slate-50/70 px-3.5 py-2"
               >
                 <div className="flex items-center gap-2.5">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200/70">

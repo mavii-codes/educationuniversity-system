@@ -45,7 +45,8 @@ export class AnalyticsService {
         atRiskStudents: 142,
         facultyStaff: 386,
         graduates: 850,
-        alumni: 8400,
+        libraryHoldings: 14850,
+        studentBorrowers: 3420,
       },
       campusAverageGpa: 3.31,
       passingRate: 94.2,
@@ -65,7 +66,7 @@ export class AnalyticsService {
       { id: "rep-attendance", title: "Attendance Report", category: "Attendance" },
       { id: "rep-risk", title: "At-Risk Student Report", category: "Retention" },
       { id: "rep-graduation", title: "Graduation Report", category: "Graduation" },
-      { id: "rep-alumni", title: "Alumni Employment Report", category: "Alumni" },
+      { id: "rep-library-circulation", title: "Library Circulation & Borrowing Report", category: "Library" },
       { id: "rep-integration", title: "Data Integration Report", category: "Integration" },
     ];
   }

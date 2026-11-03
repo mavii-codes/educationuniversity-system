@@ -360,7 +360,7 @@ function AdminSettingsContent() {
                         Institutional Two-Factor Authentication (MFA)
                       </span>
                       <span className="mt-0.5 block text-xs text-slate-600">
-                        Protects administrative access across SIS, LMS, HR, Library, and Alumni connectors.
+                        Protects administrative access to external Library LMS and centralized university data.
                       </span>
                     </div>
                   </div>

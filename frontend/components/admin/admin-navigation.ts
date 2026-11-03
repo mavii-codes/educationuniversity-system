@@ -1,10 +1,10 @@
 import {
-  Award,
   BarChart3,
   Bell,
+  BookMarked,
+  BookOpen,
   Database,
   FileSpreadsheet,
-  GitMerge,
   History,
   LayoutDashboard,
   LucideIcon,
@@ -18,6 +18,7 @@ export interface AdminNavItem {
   label: string;
   href: string;
   icon: LucideIcon;
+  badge?: string;
 }
 
 export interface AdminNavGroup {
@@ -37,6 +38,36 @@ export const ADMIN_NAVIGATION_GROUPS: AdminNavGroup[] = [
     ],
   },
   {
+    groupLabel: "Library Integration",
+    items: [
+      {
+        label: "Library Integration",
+        href: "/admin/library",
+        icon: BookOpen,
+      },
+      {
+        label: "Integrated Records",
+        href: "/admin/library/records",
+        icon: BookMarked,
+      },
+    ],
+  },
+  {
+    groupLabel: "Data Management",
+    items: [
+      {
+        label: "Data Sources",
+        href: "/admin/data-sources",
+        icon: Database,
+      },
+      {
+        label: "Sync History",
+        href: "/admin/sync-history",
+        icon: History,
+      },
+    ],
+  },
+  {
     groupLabel: "Student Data",
     items: [
       {
@@ -49,35 +80,10 @@ export const ADMIN_NAVIGATION_GROUPS: AdminNavGroup[] = [
         href: "/admin/lifecycle",
         icon: Milestone,
       },
-      {
-        label: "Alumni",
-        href: "/admin/alumni",
-        icon: Award,
-      },
     ],
   },
   {
-    groupLabel: "Data Integration",
-    items: [
-      {
-        label: "Data Sources",
-        href: "/admin/data-sources",
-        icon: Database,
-      },
-      {
-        label: "Integrations",
-        href: "/admin/integrations",
-        icon: GitMerge,
-      },
-      {
-        label: "Sync History",
-        href: "/admin/sync-history",
-        icon: History,
-      },
-    ],
-  },
-  {
-    groupLabel: "Analytics",
+    groupLabel: "Analytics & Reports",
     items: [
       {
         label: "Academic Analytics",
@@ -114,7 +120,11 @@ export const ADMIN_NAVIGATION_GROUPS: AdminNavGroup[] = [
 ];
 
 export function isAdminNavActive(pathname: string, item: AdminNavItem): boolean {
-  return pathname === item.href || pathname.startsWith(`${item.href}/`);
+  if (pathname === item.href) return true;
+  if (item.href === "/admin/library") {
+    return pathname === "/admin/library";
+  }
+  return pathname.startsWith(`${item.href}/`);
 }
 
 export function getAdminPageMeta(pathname: string): {
@@ -124,80 +134,91 @@ export function getAdminPageMeta(pathname: string): {
   if (pathname === "/admin/dashboard") {
     return {
       title: "Admin Dashboard",
-      subtitle: "1st Semester, AY 2026-2027 · Institutional Data Integration Hub",
+      subtitle: "1st Semester, AY 2026-2027 · University Library Data Integration Hub",
     };
   }
-  if (pathname === "/admin/students") {
+  if (pathname === "/admin/library") {
     return {
-      title: "Students",
-      subtitle: "Unified student master records across SIS, LMS, and Library",
+      title: "Library Integration",
+      subtitle: "External Library Management System REST API & Circulation Ledger",
     };
   }
-  if (pathname.startsWith("/admin/students/")) {
+  if (pathname === "/admin/etl" || pathname === "/admin/integrations") {
     return {
-      title: "Student Profile",
-      subtitle: "Cross-system academic, attendance, LMS, library, and lifecycle record",
+      title: "Data Processing (ETL/ELT)",
+      subtitle: "Automated 9-stage extraction, schema validation, deduplication, and student matching",
     };
   }
-  if (pathname === "/admin/lifecycle") {
+  if (pathname === "/admin/library/records") {
     return {
-      title: "Student Lifecycle",
-      subtitle: "Progression tracking from Enrollment through Learning, Graduation, and Alumni",
-    };
-  }
-  if (pathname === "/admin/alumni") {
-    return {
-      title: "Alumni",
-      subtitle:
-        "View and manage integrated alumni records from the university's Alumni CRM.",
+      title: "Integrated Library Records",
+      subtitle: "Centralized university catalog, circulation holdings, and shelf locations",
     };
   }
   if (pathname === "/admin/data-sources") {
     return {
       title: "Data Sources",
-      subtitle: "Connected university systems, health indicators, and connector status",
-    };
-  }
-  if (pathname === "/admin/integrations") {
-    return {
-      title: "Integrations",
-      subtitle: "Unified campus data pipeline, schema mapping, and duplicate resolution",
+      subtitle: "Configured Library Management System REST API connector",
     };
   }
   if (pathname === "/admin/sync-history") {
     return {
-      title: "Sync History",
-      subtitle: "Audit trail of scheduled and manual synchronization batches across all systems",
+      title: "Synchronization History",
+      subtitle: "Audit trail of scheduled and manual ETL synchronization batches for library data",
+    };
+  }
+  if (pathname === "/admin/students") {
+    return {
+      title: "Students",
+      subtitle: "Unified student master records matched with library borrower accounts",
+    };
+  }
+  if (pathname.startsWith("/admin/students/")) {
+    return {
+      title: "Student Profile",
+      subtitle: "Cross-system academic, attendance, library borrowing, and lifecycle record",
+    };
+  }
+  if (pathname === "/admin/lifecycle") {
+    return {
+      title: "Student Lifecycle",
+      subtitle: "Progression tracking from Admission to Enrollment, Learning, and Graduation",
     };
   }
   if (pathname === "/admin/analytics") {
     return {
       title: "Academic Analytics",
-      subtitle: "Institutional enrollment, GPA performance, graduation, and risk analytics",
+      subtitle: "Institutional enrollment, GPA performance, library correlation, and retention analytics",
     };
   }
   if (pathname === "/admin/reports") {
     return {
       title: "Reports",
-      subtitle: "Executive summaries, institutional compliance exports, and audit reports",
+      subtitle: "Library integration summaries, student borrower reports, and audit logs",
+    };
+  }
+  if (pathname === "/admin/audit-logs") {
+    return {
+      title: "Audit Logs",
+      subtitle: "System security, ETL data pipeline executions, and FERPA/GDPR compliance event log",
     };
   }
   if (pathname === "/admin/users") {
     return {
       title: "User Management",
-      subtitle: "Manage administrative access, data steward roles, and security policies",
+      subtitle: "Manage administrative access, library data steward roles, and security policies",
     };
   }
   if (pathname === "/admin/notifications") {
     return {
       title: "Notifications",
-      subtitle: "System synchronization alerts, identity warnings, and academic notices",
+      subtitle: "Library synchronization alerts, overdue warnings, and integration notices",
     };
   }
   if (pathname === "/admin/settings") {
     return {
       title: "Settings",
-      subtitle: "Administrator profile, account preferences, security, and platform configuration",
+      subtitle: "Administrator profile, Library API credentials, data fabric policies, and privacy controls",
     };
   }
   return {

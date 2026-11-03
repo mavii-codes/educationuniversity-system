@@ -75,7 +75,12 @@ export function AdminSidebar() {
                         )}
                       />
                       <span className="truncate">{item.label}</span>
-                      {active && (
+                      {item.badge && (
+                        <span className="ml-auto rounded px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                          {item.badge}
+                        </span>
+                      )}
+                      {active && !item.badge && (
                         <span className="ml-auto h-1.5 w-1.5 rounded-full bg-indigo-600" />
                       )}
                     </Link>

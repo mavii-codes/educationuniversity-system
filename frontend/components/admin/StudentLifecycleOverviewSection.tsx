@@ -14,6 +14,11 @@ const STAGE_STYLES: Record<
   AdminLifecycleStageStat["stage"],
   { icon: React.ElementType; badgeBg: string; iconColor: string }
 > = {
+  Admission: {
+    icon: UserPlus,
+    badgeBg: "bg-indigo-50 ring-indigo-100",
+    iconColor: "text-indigo-600",
+  },
   Enrollment: {
     icon: UserPlus,
     badgeBg: "bg-indigo-50 ring-indigo-100",
@@ -28,11 +33,6 @@ const STAGE_STYLES: Record<
     icon: GraduationCap,
     badgeBg: "bg-emerald-50 ring-emerald-100",
     iconColor: "text-emerald-600",
-  },
-  Alumni: {
-    icon: Award,
-    badgeBg: "bg-violet-50 ring-violet-100",
-    iconColor: "text-violet-600",
   },
 };
 
@@ -49,7 +49,7 @@ export function StudentLifecycleOverviewSection({
             Student Lifecycle Overview
           </h3>
           <p className="mt-0.5 text-xs text-slate-500">
-            Unified institutional progression: Enrollment → Learning → Graduation → Alumni
+            Unified institutional progression: Enrollment → Learning → Graduation &amp; Library Clearance
           </p>
         </div>
         <Link
@@ -61,7 +61,7 @@ export function StudentLifecycleOverviewSection({
         </Link>
       </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
         {stages.map((item, index) => {
           const style = STAGE_STYLES[item.stage];
           const Icon = style.icon;

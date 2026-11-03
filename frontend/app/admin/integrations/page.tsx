@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import DataIntegrationPage from "@/app/data-integration/page";
+import AdminETLPage from "../etl/page";
 
 export default function AdminIntegrationsPage() {
-  return <DataIntegrationPage />;
+  return <AdminETLPage />;
 }

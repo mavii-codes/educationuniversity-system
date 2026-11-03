@@ -1,21 +1,26 @@
 import {
   ADMIN_DASHBOARD_OVERVIEW,
   ADMIN_USERS,
-  ALUMNI_ANALYTICS,
-  ALUMNI_CRM_SOURCE_INFO,
-  ALUMNI_RECORDS,
+  AUDIT_LOG_RECORDS,
+  BOOK_CATEGORIES,
+  BORROWING_TRANSACTIONS,
   COURSES,
   DASHBOARD_ANALYTICS,
   DATA_SOURCES,
-  INTEGRATED_ALUMNI_RECORDS,
   INTEGRATION_LOGS,
   INTEGRATION_SUMMARY,
+  LIBRARY_BOOKS,
+  LIBRARY_ETL_LOGS,
+  LIBRARY_OVERVIEW,
   LIFECYCLE_OVERVIEW_STATS,
   LIFECYCLE_STAGES,
   NOTIFICATIONS,
+  OVERDUE_FINES,
   PROGRAMS,
   RECENT_ACTIVITY,
   REPORTS,
+  RESERVATIONS,
+  STUDENT_BORROWERS,
   STUDENTS,
   SYNC_HISTORY_RECORDS,
 } from "@/data/mock-data";
@@ -23,19 +28,26 @@ import {
   ActivityFeedItem,
   AdminDashboardOverview,
   AdminUserRecord,
-  AlumniCrmSourceInfo,
-  AlumniRecord,
+  AuditLogRecord,
+  BookCategory,
+  BorrowingRequest,
+  BorrowingTransaction,
   CourseCatalogItem,
   DashboardAnalytics,
   DataSource,
-  IntegratedAlumniRecord,
   IntegrationSummary,
   IntegrationSyncLog,
+  LibraryBook,
+  LibraryETLLog,
+  LibraryOverview,
   LifecycleStage,
   NotificationItem,
+  OverdueFineRecord,
   Program,
   ReportItem,
+  ReservationRecord,
   Student,
+  StudentBorrower,
   SyncHistoryRecord,
 } from "@/types";
 
@@ -301,31 +313,6 @@ export async function getIntegrationsData(): Promise<{
   );
 }
 
-// GET /api/alumni
-export async function getAlumniData(): Promise<{
-  records: AlumniRecord[];
-  analytics: typeof ALUMNI_ANALYTICS;
-  graduationTrends: DashboardAnalytics["graduationTrends"];
-}> {
-  return tryLiveOrFallback(
-    () =>
-      fetchJson<{
-        records: AlumniRecord[];
-        analytics: typeof ALUMNI_ANALYTICS;
-        graduationTrends: DashboardAnalytics["graduationTrends"];
-      }>("/alumni"),
-    async () => {
-      await simulateNetworkDelay(160);
-      return {
-        records: [...ALUMNI_RECORDS],
-        analytics: ALUMNI_ANALYTICS,
-        graduationTrends: DASHBOARD_ANALYTICS.graduationTrends,
-      };
-    },
-    (data) => Boolean(Array.isArray(data?.records) && data?.analytics?.employmentTrends)
-  );
-}
-
 // GET /api/reports
 export async function getReportsData(): Promise<ReportItem[]> {
   return tryLiveOrFallback(
@@ -412,38 +399,323 @@ export async function getSyncHistory(): Promise<SyncHistoryRecord[]> {
 }
 
 
-// GET /api/alumni/integrated
-export async function getIntegratedAlumni(): Promise<{
-  sourceInfo: AlumniCrmSourceInfo;
-  records: IntegratedAlumniRecord[];
-}> {
+// =============================================================
+// LIBRARY MANAGEMENT SYSTEM API & ETL PIPELINE SERVICES
+// =============================================================
+
+// GET /api/library/overview
+export async function getLibraryOverview(): Promise<LibraryOverview> {
   return tryLiveOrFallback(
-    () =>
-      fetchJson<{
-        sourceInfo: AlumniCrmSourceInfo;
-        records: IntegratedAlumniRecord[];
-      }>("/alumni/integrated"),
     async () => {
-      await simulateNetworkDelay(150);
-      return {
-        sourceInfo: { ...ALUMNI_CRM_SOURCE_INFO },
-        records: INTEGRATED_ALUMNI_RECORDS.map((r) => ({ ...r })),
-      };
+      const res = await fetchJson<{ success: boolean; data: LibraryOverview }>("/library/overview");
+      return res.data;
     },
-    (data) => Boolean(data?.sourceInfo && Array.isArray(data?.records))
+    async () => {
+      await simulateNetworkDelay(120);
+      return { ...LIBRARY_OVERVIEW };
+    },
+    (data) => Boolean(data?.kpis && Array.isArray(data?.categoryDistribution))
   );
 }
 
-// POST /api/alumni/sync
-export async function syncAlumniCrm(): Promise<{ lastSynchronization: string }> {
+// GET /api/library/books
+export async function getLibraryBooks(filters?: {
+  search?: string;
+  category?: string;
+  status?: string;
+}): Promise<LibraryBook[]> {
   return tryLiveOrFallback(
-    () =>
-      fetchJson<{ lastSynchronization: string }>("/alumni/sync", {
-        method: "POST",
-      }),
     async () => {
-      await simulateNetworkDelay(800);
-      return { lastSynchronization: "Just now" };
+      const params = new URLSearchParams();
+      if (filters?.search) params.set("search", filters.search);
+      if (filters?.category && filters.category !== "All") params.set("category", filters.category);
+      if (filters?.status && filters.status !== "All") params.set("status", filters.status);
+      const query = params.toString() ? `?${params.toString()}` : "";
+      const res = await fetchJson<{ success: boolean; data: LibraryBook[] }>(`/library/books${query}`);
+      return res.data;
+    },
+    async () => {
+      await simulateNetworkDelay(140);
+      let list = LIBRARY_BOOKS.map((b) => ({ ...b }));
+      if (filters?.search) {
+        const q = filters.search.toLowerCase();
+        list = list.filter(
+          (b) =>
+            b.title.toLowerCase().includes(q) ||
+            b.author.toLowerCase().includes(q) ||
+            b.isbn.toLowerCase().includes(q) ||
+            b.callNumber.toLowerCase().includes(q)
+        );
+      }
+      if (filters?.category && filters.category !== "All") {
+        list = list.filter((b) => b.category === filters.category);
+      }
+      if (filters?.status && filters.status !== "All") {
+        list = list.filter((b) => b.status === filters.status);
+      }
+      return list;
+    },
+    (data) => Array.isArray(data)
+  );
+}
+
+// GET /api/library/categories
+export async function getBookCategories(): Promise<BookCategory[]> {
+  return tryLiveOrFallback(
+    async () => {
+      const res = await fetchJson<{ success: boolean; data: BookCategory[] }>("/library/categories");
+      return res.data;
+    },
+    async () => {
+      await simulateNetworkDelay(80);
+      return BOOK_CATEGORIES.map((c) => ({ ...c }));
+    },
+    (data) => Array.isArray(data)
+  );
+}
+
+// GET /api/library/borrowers
+export async function getLibraryBorrowers(filters?: {
+  search?: string;
+  program?: string;
+  status?: string;
+}): Promise<StudentBorrower[]> {
+  return tryLiveOrFallback(
+    async () => {
+      const params = new URLSearchParams();
+      if (filters?.search) params.set("search", filters.search);
+      if (filters?.program && filters.program !== "All") params.set("program", filters.program);
+      if (filters?.status && filters.status !== "All") params.set("status", filters.status);
+      const query = params.toString() ? `?${params.toString()}` : "";
+      const res = await fetchJson<{ success: boolean; data: StudentBorrower[] }>(`/library/borrowers${query}`);
+      return res.data;
+    },
+    async () => {
+      await simulateNetworkDelay(120);
+      let list = STUDENT_BORROWERS.map((brw) => ({ ...brw }));
+      if (filters?.search) {
+        const q = filters.search.toLowerCase();
+        list = list.filter(
+          (brw) =>
+            brw.studentName.toLowerCase().includes(q) ||
+            brw.studentId.toLowerCase().includes(q) ||
+            brw.borrowerId.toLowerCase().includes(q)
+        );
+      }
+      if (filters?.program && filters.program !== "All") {
+        list = list.filter((brw) => brw.programCode === filters.program);
+      }
+      if (filters?.status && filters.status !== "All") {
+        list = list.filter((brw) => brw.status === filters.status);
+      }
+      return list;
+    },
+    (data) => Array.isArray(data)
+  );
+}
+
+// GET /api/library/transactions
+export async function getLibraryTransactions(filters?: {
+  search?: string;
+  status?: string;
+}): Promise<BorrowingTransaction[]> {
+  return tryLiveOrFallback(
+    async () => {
+      const params = new URLSearchParams();
+      if (filters?.search) params.set("search", filters.search);
+      if (filters?.status && filters.status !== "All") params.set("status", filters.status);
+      const query = params.toString() ? `?${params.toString()}` : "";
+      const res = await fetchJson<{ success: boolean; data: BorrowingTransaction[] }>(`/library/transactions${query}`);
+      return res.data;
+    },
+    async () => {
+      await simulateNetworkDelay(130);
+      let list = BORROWING_TRANSACTIONS.map((t) => ({ ...t }));
+      if (filters?.search) {
+        const q = filters.search.toLowerCase();
+        list = list.filter(
+          (t) =>
+            t.bookTitle.toLowerCase().includes(q) ||
+            t.studentName.toLowerCase().includes(q) ||
+            t.studentId.toLowerCase().includes(q) ||
+            t.transactionCode.toLowerCase().includes(q)
+        );
+      }
+      if (filters?.status && filters.status !== "All") {
+        list = list.filter((t) => t.status === filters.status);
+      }
+      return list;
+    },
+    (data) => Array.isArray(data)
+  );
+}
+
+// GET /api/library/reservations
+export async function getLibraryReservations(filters?: {
+  search?: string;
+  status?: string;
+}): Promise<ReservationRecord[]> {
+  return tryLiveOrFallback(
+    async () => {
+      const params = new URLSearchParams();
+      if (filters?.search) params.set("search", filters.search);
+      if (filters?.status && filters.status !== "All") params.set("status", filters.status);
+      const query = params.toString() ? `?${params.toString()}` : "";
+      const res = await fetchJson<{ success: boolean; data: ReservationRecord[] }>(`/library/reservations${query}`);
+      return res.data;
+    },
+    async () => {
+      await simulateNetworkDelay(110);
+      let list = RESERVATIONS.map((r) => ({ ...r }));
+      if (filters?.search) {
+        const q = filters.search.toLowerCase();
+        list = list.filter(
+          (r) =>
+            r.bookTitle.toLowerCase().includes(q) ||
+            r.studentName.toLowerCase().includes(q) ||
+            r.studentId.toLowerCase().includes(q) ||
+            r.reservationCode.toLowerCase().includes(q)
+        );
+      }
+      if (filters?.status && filters.status !== "All") {
+        list = list.filter((r) => r.status === filters.status);
+      }
+      return list;
+    },
+    (data) => Array.isArray(data)
+  );
+}
+
+// GET /api/library/fines
+export async function getLibraryFines(filters?: {
+  search?: string;
+  paymentStatus?: string;
+}): Promise<OverdueFineRecord[]> {
+  return tryLiveOrFallback(
+    async () => {
+      const params = new URLSearchParams();
+      if (filters?.search) params.set("search", filters.search);
+      if (filters?.paymentStatus && filters.paymentStatus !== "All") {
+        params.set("paymentStatus", filters.paymentStatus);
+      }
+      const query = params.toString() ? `?${params.toString()}` : "";
+      const res = await fetchJson<{ success: boolean; data: OverdueFineRecord[] }>(`/library/fines${query}`);
+      return res.data;
+    },
+    async () => {
+      await simulateNetworkDelay(100);
+      let list = OVERDUE_FINES.map((f) => ({ ...f }));
+      if (filters?.search) {
+        const q = filters.search.toLowerCase();
+        list = list.filter(
+          (f) =>
+            f.bookTitle.toLowerCase().includes(q) ||
+            f.studentName.toLowerCase().includes(q) ||
+            f.studentId.toLowerCase().includes(q)
+        );
+      }
+      if (filters?.paymentStatus && filters.paymentStatus !== "All") {
+        list = list.filter((f) => f.paymentStatus === filters.paymentStatus);
+      }
+      return list;
+    },
+    (data) => Array.isArray(data)
+  );
+}
+
+// POST /api/library/etl/sync
+export async function runLibraryETL(triggeredBy = "Admin Console"): Promise<LibraryETLLog> {
+  return tryLiveOrFallback(
+    async () => {
+      const res = await fetchJson<{ success: boolean; data: LibraryETLLog }>("/library/etl/sync", {
+        method: "POST",
+        body: JSON.stringify({ triggeredBy }),
+      });
+      return res.data;
+    },
+    async () => {
+      await simulateNetworkDelay(900);
+      const newLog: LibraryETLLog = {
+        id: `etl-run-${Date.now()}`,
+        jobName: "Library LMS API Ingestion & Student Identity Matching",
+        status: "Completed",
+        startedAt: new Date(Date.now() - 6200).toISOString(),
+        completedAt: new Date().toISOString(),
+        duration: "6.2s",
+        recordsExtracted: 27,
+        recordsValidated: 27,
+        duplicatesCleaned: 1,
+        studentsMatched: 6,
+        recordsLoaded: 26,
+        errors: [],
+        executionLog: [
+          "[00:00.000] Initialized connection to external Library LMS API (Adapter: Koha/Folio)",
+          "[00:01.200] Extracted 11 raw catalog books, 6 borrower cards, 6 circulation transactions, 3 reservations",
+          "[00:02.400] Validation: verified 11 ISBN-13 checksums and date ranges",
+          "[00:03.100] Cleaning: detected and purged 1 duplicate book record (ISBN 978-0262033848)",
+          "[00:04.300] Transformation: mapped Koha marc21 fields to University DataHub central schema",
+          "[00:05.100] Identity Matching: resolved 6/6 student borrower IDs against student master records",
+          "[00:05.800] Loaded 10 books, 6 borrowers, 6 transactions, 3 reservations into central database",
+          "[00:06.200] ETL pipeline completed successfully with 0 errors",
+        ],
+      };
+      LIBRARY_ETL_LOGS.unshift(newLog);
+      return newLog;
     }
+  );
+}
+
+// GET /api/library/etl/logs
+export async function getLibraryETLLogs(): Promise<LibraryETLLog[]> {
+  return tryLiveOrFallback(
+    async () => {
+      const res = await fetchJson<{ success: boolean; data: LibraryETLLog[] }>("/library/etl/logs");
+      return res.data;
+    },
+    async () => {
+      await simulateNetworkDelay(120);
+      return LIBRARY_ETL_LOGS.map((l) => ({ ...l }));
+    },
+    (data) => Array.isArray(data)
+  );
+}
+
+// GET /api/audit-logs
+export async function getAuditLogs(): Promise<AuditLogRecord[]> {
+  return tryLiveOrFallback(
+    async () => {
+      const res = await fetchJson<AuditLogRecord[]>("/audit-logs");
+      return res;
+    },
+    async () => {
+      await simulateNetworkDelay(120);
+      return AUDIT_LOG_RECORDS.map((a) => ({ ...a }));
+    },
+    (data) => Array.isArray(data)
+  );
+}
+
+// GET /api/library/requests
+export async function getLibraryRequests(studentId?: string): Promise<BorrowingRequest[]> {
+  return tryLiveOrFallback(
+    async () => {
+      const qs = studentId ? `?studentId=${encodeURIComponent(studentId)}` : "";
+      const res = await fetchJson<{ success: boolean; data: BorrowingRequest[] }>(`/library/requests${qs}`);
+      return res.data;
+    },
+    async () => {
+      await simulateNetworkDelay(100);
+      try {
+        if (typeof window !== "undefined") {
+          const stored = window.localStorage.getItem("udis_library_requests");
+          if (stored) {
+            const list = JSON.parse(stored) as BorrowingRequest[];
+            return studentId ? list.filter((r) => r.studentId === studentId) : list;
+          }
+        }
+      } catch {}
+      return [];
+    },
+    (data) => Array.isArray(data)
   );
 }

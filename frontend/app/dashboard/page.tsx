@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,
-  Award,
+  BookMarked,
   Briefcase,
   GraduationCap,
   UserCheck,
@@ -150,10 +150,10 @@ export default function DashboardPage() {
               iconTone="violet"
             />
             <StatCard
-              label="Alumni"
-              value={formatNumber(analytics.summary.alumni)}
-              supportingText={analytics.summary.alumniSubtext}
-              icon={Award}
+              label="Library Holdings"
+              value="14,850"
+              supportingText="Catalog books & digital monographs"
+              icon={BookMarked}
               iconTone="indigo"
             />
           </div>

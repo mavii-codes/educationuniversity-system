@@ -45,7 +45,7 @@ export default function StudentLifecyclePage() {
             Unified Student Lifecycle
           </h2>
           <p className="mt-0.5 text-sm text-slate-500">
-            Track institutional progression from initial admission through graduation and alumni placement.
+            Track institutional progression from initial admission through learning and graduation clearance.
           </p>
         </div>
         <ViewStateControl

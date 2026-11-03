@@ -2,10 +2,7 @@ import React from "react";
 import Link from "next/link";
 import {
   ArrowUpRight,
-  Award,
   BookMarked,
-  Database,
-  Laptop,
   Users,
 } from "lucide-react";
 import { ActivityFeedItem } from "@/types/university";
@@ -18,14 +15,8 @@ interface RecentActivityProps {
 export function RecentActivity({ items }: RecentActivityProps) {
   const getSourceIcon = (source: ActivityFeedItem["source"]) => {
     switch (source) {
-      case "SIS":
-        return Database;
-      case "LMS":
-        return Laptop;
       case "Library":
         return BookMarked;
-      case "Alumni":
-        return Award;
       default:
         return Users;
     }
@@ -57,31 +48,30 @@ export function RecentActivity({ items }: RecentActivityProps) {
           return (
             <div
               key={item.id}
-              className="flex items-start gap-3.5 py-3.5 first:pt-1 last:pb-0"
+              className="flex items-start gap-3 py-3 first:pt-0 last:pb-0"
             >
               <div
                 className={cn(
-                  "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset",
-                  item.status === "success" &&
-                    "bg-emerald-50 text-emerald-600 ring-emerald-600/15",
-                  item.status === "warning" &&
-                    "bg-amber-50 text-amber-600 ring-amber-600/15",
-                  item.status === "info" &&
-                    "bg-indigo-50 text-indigo-600 ring-indigo-600/15"
+                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset",
+                  item.source === "Library"
+                    ? "bg-indigo-50 text-indigo-600 ring-indigo-600/15"
+                    : "bg-slate-50 text-slate-600 ring-slate-600/15"
                 )}
               >
                 <Icon className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-medium text-slate-900">
-                    {item.title}
-                  </p>
-                  <span className="text-xs text-slate-400">{item.timestamp}</span>
-                </div>
-                <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+                <p className="text-xs font-medium text-slate-900 leading-snug">
+                  {item.title}
+                </p>
+                <p className="mt-0.5 text-[11px] text-slate-500 leading-normal">
                   {item.detail}
                 </p>
+                <div className="mt-1 flex items-center gap-2 text-[10px] text-slate-400">
+                  <span>{item.source}</span>
+                  <span>&bull;</span>
+                  <span>{item.timestamp}</span>
+                </div>
               </div>
             </div>
           );
@@ -90,4 +80,3 @@ export function RecentActivity({ items }: RecentActivityProps) {
     </div>
   );
 }
-

@@ -90,14 +90,13 @@ export class StudentService {
         { label: "Enrolled", value: 5240 },
         { label: "Active", value: 4820 },
         { label: "Graduated", value: 850 },
-        { label: "Alumni", value: 8400 },
+        { label: "Library Borrowers", value: 3420 },
       ],
       stages: [
         "Admission",
         "Enrollment",
         "Academic Progress",
-        "Graduation",
-        "Alumni",
+        "Graduation & Library Clearance",
       ],
     };
   }

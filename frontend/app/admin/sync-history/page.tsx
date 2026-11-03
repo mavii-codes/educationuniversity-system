@@ -54,21 +54,21 @@ export default function AdminSyncHistoryPage() {
 
     const newItem: SyncHistoryRecord = {
       id: `SH-${Math.floor(9050 + Math.random() * 400)}`,
-      dataSource: "SIS",
-      fullName: "Student Information System",
+      dataSource: "Library LMS",
+      fullName: "Library Management System",
       syncMode: "Manual Full Sync",
       lastSync: "Just now",
-      records: 12450,
-      duration: "5.2s",
+      records: 14850,
+      duration: "5.8s",
       status: "Connected",
-      notes: "Manual administrator verification completed across all enrolled records.",
+      notes: "Manual administrator verification completed across all library catalog and borrower records.",
     };
 
     setRecords((prev) => [newItem, ...prev]);
     setRunningSync(false);
     showToast({
       title: "Synchronization batch logged",
-      description: "SIS incremental reconciliation completed with 12,450 verified records.",
+      description: "Library LMS reconciliation completed with 14,850 verified records.",
       type: "success",
     });
   };
@@ -196,11 +196,7 @@ export default function AdminSyncHistoryPage() {
                 className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 focus:border-indigo-300 focus:outline-none"
               >
                 <option value="All">All Data Sources</option>
-                <option value="SIS">SIS</option>
-                <option value="LMS">LMS</option>
-                <option value="HR / Payroll">HR / Payroll</option>
-                <option value="Library">Library</option>
-                <option value="Alumni CRM">Alumni CRM</option>
+                <option value="Library LMS">Library LMS</option>
               </select>
             </div>
 

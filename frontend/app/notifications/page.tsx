@@ -238,7 +238,7 @@ export default function NotificationsPage() {
                       !isAdmin
                         ? notif.href
                         : notif.href === "/data-integration" || notif.href === "/integration"
-                        ? "/admin/integrations"
+                        ? "/admin/library"
                         : notif.href === "/academic-analytics" || notif.href === "/analytics"
                         ? "/admin/analytics"
                         : notif.href === "/data-sources"

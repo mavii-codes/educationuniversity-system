@@ -11,32 +11,56 @@ import { useRouter } from "next/navigation";
 import { PortalAuthorizedRole } from "@/types";
 import { API_CONFIG } from "./api";
 
-export interface AdminSessionUser {
+export interface SessionUser {
   id: string;
   name: string;
   email: string;
   role: PortalAuthorizedRole;
   department: string;
+  studentId?: string;
+  programCode?: string;
+  programName?: string;
+  yearLevel?: string;
+  borrowerCardNo?: string;
   lastLogin: string;
 }
 
-interface SignInParams {
+// Backwards-compatible alias for existing imports
+export type AdminSessionUser = SessionUser;
+
+export interface SignInParams {
   identifier: string;
   password: string;
   rememberMe: boolean;
+  expectedRole?: "Administrator" | "Student";
+}
+
+export interface RegisterStudentParams {
+  name: string;
+  email: string;
+  studentId: string;
+  programCode: string;
+  programName: string;
+  yearLevel: string;
+  password: string;
 }
 
 interface AuthContextValue {
-  user: AdminSessionUser | null;
+  user: SessionUser | null;
   isAuthenticated: boolean;
   isInitializing: boolean;
   signIn: (
     params: SignInParams
   ) => Promise<{ ok: boolean; role?: PortalAuthorizedRole; error?: string }>;
+  registerStudent: (
+    params: RegisterStudentParams
+  ) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => void;
 }
 
-const STORAGE_KEY = "udis_admin_session";
+const STORAGE_KEY = "udis_user_session";
+const LEGACY_STORAGE_KEY = "udis_admin_session";
+const REGISTERED_STUDENTS_KEY = "udis_registered_students";
 
 /**
  * Development mock credentials for frontend authentication demonstration.
@@ -52,7 +76,12 @@ const DEV_REGISTRAR_ID = "reg-001";
 const DEV_REGISTRAR_PASSWORD =
   process.env.NEXT_PUBLIC_DEV_REGISTRAR_PASSWORD || "Registrar123!";
 
-const DEFAULT_ADMIN_USER: AdminSessionUser = {
+const DEV_STUDENT_EMAIL = "student@university.edu";
+const DEV_STUDENT_ID = "2024-042";
+const DEV_STUDENT_PASSWORD =
+  process.env.NEXT_PUBLIC_DEV_STUDENT_PASSWORD || "Student123!";
+
+const DEFAULT_ADMIN_USER: SessionUser = {
   id: "ADM-2026-001",
   name: "Administrator",
   email: "admin@university.edu",
@@ -61,7 +90,7 @@ const DEFAULT_ADMIN_USER: AdminSessionUser = {
   lastLogin: "Today, 9:45 AM",
 };
 
-const DEFAULT_REGISTRAR_USER: AdminSessionUser = {
+const DEFAULT_REGISTRAR_USER: SessionUser = {
   id: "REG-2026-001",
   name: "University Registrar",
   email: "registrar@university.edu",
@@ -70,20 +99,38 @@ const DEFAULT_REGISTRAR_USER: AdminSessionUser = {
   lastLogin: "Today, 9:50 AM",
 };
 
+export const DEFAULT_STUDENT_USER: SessionUser = {
+  id: "STU-2024-042",
+  studentId: "2024-042",
+  name: "Marco Villanueva",
+  email: "student@university.edu",
+  role: "Student",
+  department: "College of Computing & Information Sciences",
+  programCode: "BSIT",
+  programName: "BS Information Technology",
+  yearLevel: "2nd Year",
+  borrowerCardNo: "LIB-2024-042",
+  lastLogin: "Today, 10:15 AM",
+};
+
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AdminSessionUser | null>(null);
+  const [user, setUser] = useState<SessionUser | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     try {
-      const savedLocal = window.localStorage.getItem(STORAGE_KEY);
-      const savedSession = window.sessionStorage.getItem(STORAGE_KEY);
+      const savedLocal =
+        window.localStorage.getItem(STORAGE_KEY) ||
+        window.localStorage.getItem(LEGACY_STORAGE_KEY);
+      const savedSession =
+        window.sessionStorage.getItem(STORAGE_KEY) ||
+        window.sessionStorage.getItem(LEGACY_STORAGE_KEY);
       const raw = savedLocal || savedSession;
       if (raw) {
-        const parsed = JSON.parse(raw) as AdminSessionUser;
+        const parsed = JSON.parse(raw) as SessionUser;
         if (parsed && parsed.email) {
           setUser(parsed);
         }
@@ -100,6 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       identifier,
       password,
       rememberMe,
+      expectedRole,
     }: SignInParams): Promise<{
       ok: boolean;
       role?: PortalAuthorizedRole;
@@ -117,8 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
           if (res.ok) {
             const data = await res.json();
-            const sessionUser: AdminSessionUser =
-              data.user || DEFAULT_ADMIN_USER;
+            const sessionUser: SessionUser = data.user || DEFAULT_ADMIN_USER;
             const storage = rememberMe
               ? window.localStorage
               : window.sessionStorage;
@@ -132,8 +179,88 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Realistic network latency for Sign In transition
-      await new Promise((resolve) => setTimeout(resolve, 750));
+      await new Promise((resolve) => setTimeout(resolve, 600));
 
+      // 1. Check Registered Students in LocalStorage
+      let registeredStudentMatch: SessionUser | null = null;
+      try {
+        const registeredRaw = window.localStorage.getItem(
+          REGISTERED_STUDENTS_KEY
+        );
+        if (registeredRaw) {
+          const registeredList = JSON.parse(registeredRaw) as Array<
+            RegisterStudentParams & { id: string }
+          >;
+          const found = registeredList.find(
+            (s) =>
+              (s.email.toLowerCase() === normalized ||
+                s.studentId.toLowerCase() === normalized) &&
+              s.password === password
+          );
+          if (found) {
+            registeredStudentMatch = {
+              id: found.id,
+              studentId: found.studentId,
+              name: found.name,
+              email: found.email,
+              role: "Student",
+              department: "College of Computing & Information Sciences",
+              programCode: found.programCode,
+              programName: found.programName,
+              yearLevel: found.yearLevel,
+              borrowerCardNo: `LIB-${found.studentId}`,
+              lastLogin: "Just now",
+            };
+          }
+        }
+      } catch {
+        // Ignore JSON error
+      }
+
+      if (registeredStudentMatch) {
+        if (expectedRole === "Administrator") {
+          return {
+            ok: false,
+            error:
+              "This is a Student account. Please switch to the Student Portal tab to sign in.",
+          };
+        }
+        const storage = rememberMe
+          ? window.localStorage
+          : window.sessionStorage;
+        storage.setItem(STORAGE_KEY, JSON.stringify(registeredStudentMatch));
+        setUser(registeredStudentMatch);
+        return { ok: true, role: "Student" };
+      }
+
+      // 2. Check Mock Student Credentials
+      const isStudentMatch =
+        (normalized === DEV_STUDENT_EMAIL ||
+          normalized === DEV_STUDENT_ID.toLowerCase() ||
+          normalized === "marco.villanueva@university.edu.ph") &&
+        password === DEV_STUDENT_PASSWORD;
+
+      if (isStudentMatch) {
+        if (expectedRole === "Administrator") {
+          return {
+            ok: false,
+            error:
+              "This is a Student account. Please switch to the Student Portal tab to sign in.",
+          };
+        }
+        const sessionUser: SessionUser = {
+          ...DEFAULT_STUDENT_USER,
+          lastLogin: "Just now",
+        };
+        const storage = rememberMe
+          ? window.localStorage
+          : window.sessionStorage;
+        storage.setItem(STORAGE_KEY, JSON.stringify(sessionUser));
+        setUser(sessionUser);
+        return { ok: true, role: "Student" };
+      }
+
+      // 3. Check Mock Admin & Registrar Credentials
       const isAdminMatch =
         (normalized === DEV_MOCK_EMAIL || normalized === DEV_MOCK_ADMIN_ID) &&
         password === DEV_MOCK_PASSWORD;
@@ -147,7 +274,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return {
           ok: false,
           error:
-            "Invalid email or password. Please check your credentials and try again.",
+            "Invalid credentials. Please verify your email / student ID and password.",
+        };
+      }
+
+      if (expectedRole === "Student") {
+        return {
+          ok: false,
+          error:
+            "This is an Administrative account. Please switch to the Admin Portal tab to sign in.",
         };
       }
 
@@ -155,7 +290,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ? DEFAULT_REGISTRAR_USER
         : DEFAULT_ADMIN_USER;
 
-      const sessionUser: AdminSessionUser = {
+      const sessionUser: SessionUser = {
         ...baseProfile,
         lastLogin: "Just now",
       };
@@ -177,10 +312,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const registerStudent = useCallback(
+    async (
+      params: RegisterStudentParams
+    ): Promise<{ ok: boolean; error?: string }> => {
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      try {
+        const raw =
+          window.localStorage.getItem(REGISTERED_STUDENTS_KEY) || "[]";
+        const current = JSON.parse(raw) as Array<
+          RegisterStudentParams & { id: string }
+        >;
+
+        const exists = current.some(
+          (s) =>
+            s.email.toLowerCase() === params.email.trim().toLowerCase() ||
+            s.studentId.trim() === params.studentId.trim()
+        );
+
+        if (
+          exists ||
+          params.email.trim().toLowerCase() === DEV_STUDENT_EMAIL ||
+          params.studentId.trim() === DEV_STUDENT_ID
+        ) {
+          return {
+            ok: false,
+            error:
+              "An account with this Student ID or email is already registered.",
+          };
+        }
+
+        const newStudent = {
+          ...params,
+          id: `STU-${params.studentId.trim()}`,
+        };
+
+        current.push(newStudent);
+        window.localStorage.setItem(
+          REGISTERED_STUDENTS_KEY,
+          JSON.stringify(current)
+        );
+
+        return { ok: true };
+      } catch (err: any) {
+        return {
+          ok: false,
+          error: err?.message || "Failed to complete student registration.",
+        };
+      }
+    },
+    []
+  );
+
   const signOut = useCallback(() => {
     try {
       window.localStorage.removeItem(STORAGE_KEY);
       window.sessionStorage.removeItem(STORAGE_KEY);
+      window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+      window.sessionStorage.removeItem(LEGACY_STORAGE_KEY);
     } catch {
       // Ignore
     }
@@ -195,6 +385,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthenticated: Boolean(user),
         isInitializing,
         signIn,
+        registerStudent,
         signOut,
       }}
     >

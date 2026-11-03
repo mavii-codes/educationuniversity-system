@@ -127,7 +127,7 @@ export default function SettingsPage() {
             <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className="block text-xs font-medium text-slate-700">
-                  Automated Sync Cadence (SIS &amp; LMS)
+                  Automated Sync Cadence (Library LMS)
                 </label>
                 <select
                   value={autoSyncInterval}
@@ -150,10 +150,10 @@ export default function SettingsPage() {
                   className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:border-indigo-300 focus:outline-none"
                 >
                   <option value="queue_review">
-                    Flag &amp; queue for Registrar review
+                    Flag &amp; queue for administrator review
                   </option>
                   <option value="sis_primary">
-                    Auto-merge using SIS as source of truth
+                    Auto-merge using Central Student Master as source of truth
                   </option>
                 </select>
               </div>
@@ -281,7 +281,7 @@ export default function SettingsPage() {
               <p>GET /api/analytics</p>
               <p>GET /api/data-sources</p>
               <p>GET /api/integrations</p>
-              <p>GET /api/alumni</p>
+              <p>GET /api/library/overview</p>
             </div>
           </div>
         </div>

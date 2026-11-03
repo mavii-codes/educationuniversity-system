@@ -7,8 +7,8 @@ import { optionalAuthContext } from "./middleware/auth.middleware";
 import { errorHandler, notFoundHandler } from "./middleware/error.middleware";
 import studentRoutes from "./routes/student.routes";
 import analyticsRoutes from "./routes/analytics.routes";
-import alumniRoutes from "./routes/alumni.routes";
 import integrationRoutes from "./routes/integration.routes";
+import libraryRoutes from "./routes/library.routes";
 
 const app = express();
 
@@ -47,8 +47,8 @@ app.get("/api/health", async (_req, res) => {
 // REST API Routes
 app.use("/api", studentRoutes);
 app.use("/api", analyticsRoutes);
-app.use("/api", alumniRoutes);
 app.use("/api", integrationRoutes);
+app.use("/api", libraryRoutes);
 
 // Error Handling
 app.use(notFoundHandler);

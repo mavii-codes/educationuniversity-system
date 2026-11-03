@@ -55,9 +55,9 @@ export default function DataIntegrationPage() {
     await new Promise((r) => setTimeout(r, 950));
     const newEntry: IntegrationSyncLog = {
       id: `sync-${Date.now()}`,
-      sourceCode: "ALL",
-      sourceName: "SIS + LMS + Library",
-      recordsProcessed: 15190,
+      sourceCode: "LIBRARY",
+      sourceName: "Library LMS",
+      recordsProcessed: 14850,
       duplicatesDetected: 0,
       failedRecords: 0,
       duration: "11.4s",

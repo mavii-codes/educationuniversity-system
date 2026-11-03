@@ -2,6 +2,7 @@ import React from "react";
 import {
   AlertTriangle,
   CheckCircle2,
+  Clock,
   RefreshCw,
   XCircle,
 } from "lucide-react";
@@ -64,6 +65,19 @@ export function SyncStatus({
         >
           <XCircle className="h-3.5 w-3.5 shrink-0 text-rose-600" />
           <span>{status}</span>
+        </span>
+      );
+    case "Planned":
+    default:
+      return (
+        <span
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-400/20",
+            className
+          )}
+        >
+          <Clock className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+          <span>Planned</span>
         </span>
       );
   }

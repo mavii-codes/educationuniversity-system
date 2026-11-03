@@ -138,7 +138,7 @@ export function StudentProfile({ student }: { student: Student }) {
               onClick={() =>
                 showToast({
                   title: "Student profile refreshed",
-                  description: `Pulled latest SIS, LMS, and Library records for ${student.name}.`,
+                  description: `Pulled latest Library circulation and borrower records for ${student.name}.`,
                   type: "success",
                 })
               }
@@ -195,7 +195,7 @@ export function StudentProfile({ student }: { student: Student }) {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-card">
               <span className="text-xs font-medium text-slate-500">
-                Cumulative GPA (SIS)
+                Cumulative GPA
               </span>
               <p className="mt-2 text-2xl font-semibold text-slate-900 tabular-nums">
                 {student.gpa.toFixed(2)}{" "}
@@ -254,7 +254,7 @@ export function StudentProfile({ student }: { student: Student }) {
                 Student &amp; Enrollment Information
               </h3>
               <p className="mt-0.5 text-xs text-slate-500">
-                Official demographic and curriculum details synchronized from SIS
+                Official demographic and curriculum details from central student master identities
               </p>
 
               <dl className="mt-5 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 text-sm">
@@ -442,7 +442,7 @@ export function StudentProfile({ student }: { student: Student }) {
               Academic History by Term
             </h3>
             <p className="mt-0.5 text-xs text-slate-500">
-              Historical semester GPA and academic standing from Registrar SIS
+              Historical semester GPA and academic standing records
             </p>
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {student.academicRecords.history.map((term) => (
@@ -890,41 +890,32 @@ export function StudentProfile({ student }: { student: Student }) {
               {
                 stage: "Admission",
                 state: "completed",
-                detail: `Admitted in ${student.admissionYear} under ${student.programName}. Credentials and entrance exam verified in SIS.`,
-                system: "SIS Admissions",
+                detail: `Admitted in ${student.admissionYear} under ${student.programName}. Central student master record created.`,
+                system: "Student Master Registry",
               },
               {
                 stage: "Enrollment",
                 state: "completed",
                 detail: `Registered as ${student.yearLevel} student (${student.academicRecords.currentSemester}) under adviser ${student.adviser}.`,
-                system: "SIS + LMS + Library",
+                system: "Curriculum Registry & Library Patron Account",
               },
               {
                 stage: "Academic Progress",
                 state: student.status === "Graduated" ? "completed" : "current",
                 detail: `${student.academicRecords.totalUnitsEarned} of ${student.academicRecords.totalUnitsRequired} units earned · Cumulative GPA ${student.gpa.toFixed(2)} · Attendance ${student.attendanceRate}%.`,
-                system: "SIS + LMS Analytics",
+                system: "Academic Analytics & Library Usage Data Fabric",
               },
               {
-                stage: "Graduation",
+                stage: "Graduation & Clearance",
                 state: student.status === "Graduated" ? "completed" : "upcoming",
                 detail:
                   student.status === "Graduated"
-                    ? `Degree conferred in Class of ${student.expectedGraduation} with zero institutional liabilities.`
+                    ? `Degree conferred in Class of ${student.expectedGraduation} with zero library holds and full clearance verified.`
                     : `Scheduled for Class of ${student.expectedGraduation} upon completion of remaining ${
                         student.academicRecords.totalUnitsRequired -
                         student.academicRecords.totalUnitsEarned
-                      } units and clearance.`,
-                system: "Registrar & Library Clearance",
-              },
-              {
-                stage: "Alumni",
-                state: student.status === "Graduated" ? "current" : "upcoming",
-                detail:
-                  student.status === "Graduated"
-                    ? "Profile active in Alumni CRM for career outcome tracking and industry networking."
-                    : "Record will automatically transition to Alumni CRM upon commencement.",
-                system: "Alumni CRM",
+                      } units and library clearance hold audit.`,
+                system: "Registrar & Library Clearance Audit",
               },
             ].map((item, idx, arr) => (
               <div key={item.stage} className="relative flex items-start gap-4">

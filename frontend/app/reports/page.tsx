@@ -29,7 +29,7 @@ const CATEGORIES = [
   "Attendance",
   "Retention",
   "Graduation",
-  "Alumni",
+  "Library",
   "Integration",
 ] as const;
 

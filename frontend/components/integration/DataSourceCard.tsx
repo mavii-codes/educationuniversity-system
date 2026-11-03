@@ -27,24 +27,13 @@ export function DataSourceCard({
 }: DataSourceCardProps) {
   const isSyncing = source.status === "Syncing";
 
-  const Icon =
-    source.code === "SIS"
-      ? Database
-      : source.code === "LMS"
-      ? Laptop
-      : source.code === "HR"
-      ? Briefcase
-      : source.code === "LIBRARY"
-      ? BookMarked
-      : Award;
-
   return (
     <div className="flex flex-col justify-between rounded-xl border border-slate-200/80 bg-white p-6 shadow-card transition-all duration-150 hover:border-slate-300/80 hover:shadow-card-hover">
       <div>
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3.5">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-inset ring-indigo-600/15">
-              <Icon className="h-5 w-5" />
+              <BookMarked className="h-5 w-5" />
             </div>
             <div>
               <h3 className="text-base font-semibold text-slate-900">
@@ -72,7 +61,7 @@ export function DataSourceCard({
           </div>
           <div>
             <span className="block text-[11px] font-medium text-slate-400">
-              Last Synchronized
+              Connection Status
             </span>
             <span className="mt-0.5 block text-sm font-medium text-slate-700">
               {isSyncing ? "Syncing records..." : source.lastSynced}

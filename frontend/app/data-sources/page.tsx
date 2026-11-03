@@ -76,18 +76,22 @@ export default function DataSourcesPage() {
 
   const handleSyncAll = async () => {
     showToast({
-      title: "Campus-wide synchronization started",
-      description: "Refreshing SIS, LMS, HR / Payroll, Library, and Alumni CRM...",
+      title: "Data source synchronization started",
+      description: "Executing 9-stage ETL pipeline for active Library LMS connector...",
       type: "info",
     });
-    setSources((prev) => prev.map((s) => ({ ...s, status: "Syncing" })));
+    setSources((prev) =>
+      prev.map((s) => (s.isPlanned ? s : { ...s, status: "Syncing" }))
+    );
     await new Promise((r) => setTimeout(r, 1100));
     setSources((prev) =>
-      prev.map((s) => ({ ...s, status: "Connected", lastSynced: "Just now" }))
+      prev.map((s) =>
+        s.isPlanned ? s : { ...s, status: "Connected", lastSynced: "Just now" }
+      )
     );
     showToast({
-      title: "All 5 university systems synchronized",
-      description: "23,976 records verified across DataHub.",
+      title: "Library LMS synchronized successfully",
+      description: "14,850 catalog and borrower records verified through active Library LMS REST API & ETL pipeline.",
       type: "success",
     });
   };
@@ -120,7 +124,7 @@ export default function DataSourcesPage() {
             Connected University Systems
           </h2>
           <p className="mt-0.5 text-sm text-slate-500">
-            Manage data connectors for SIS, LMS, HR / Payroll, Library, and Alumni CRM.
+            Manage data connector for the university Library Management System.
           </p>
         </div>
 
@@ -136,7 +140,7 @@ export default function DataSourcesPage() {
             className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-indigo-700"
           >
             <RefreshCw className="h-3.5 w-3.5" />
-            Sync All Systems
+            Sync Library System
           </button>
         </div>
       </div>
@@ -163,7 +167,7 @@ export default function DataSourcesPage() {
             )}
           </div>
           <span className="text-xs text-slate-400">
-            Showing {filteredSources.length} of {sources.length} campus connectors
+            Showing {filteredSources.length} of {sources.length} active connector{sources.length === 1 ? "" : "s"}
           </span>
         </div>
       )}

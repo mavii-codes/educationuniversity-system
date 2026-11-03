@@ -9,6 +9,7 @@ import {
   BookMarked,
   Briefcase,
   CheckCircle2,
+  Clock,
   Database,
   Laptop,
   RefreshCw,
@@ -24,18 +25,7 @@ interface DataSourceOverviewSectionProps {
 }
 
 function getSourceIcon(code: string) {
-  switch (code) {
-    case "SIS":
-      return Database;
-    case "LMS":
-      return Laptop;
-    case "HR":
-      return Briefcase;
-    case "LIBRARY":
-      return BookMarked;
-    default:
-      return Award;
-  }
+  return BookMarked;
 }
 
 const STATUS_LEGEND: { label: DataSourceStatus; icon: React.ElementType; tone: string }[] = [
@@ -54,10 +44,10 @@ export function DataSourceOverviewSection({
       <div className="flex flex-col justify-between gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center">
         <div>
           <h3 className="text-base font-semibold text-slate-900">
-            Data Source Overview
+            External Data Source
           </h3>
           <p className="mt-0.5 text-xs text-slate-500">
-            Live connection health across integrated university systems
+            Live connection health and ETL pipeline for the integrated Library Management System
           </p>
         </div>
 
@@ -79,13 +69,13 @@ export function DataSourceOverviewSection({
             href="/admin/data-sources"
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 transition hover:text-indigo-700"
           >
-            <span>Manage Data Sources</span>
+            <span>Manage Data Source</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mt-5 grid grid-cols-1 gap-4 max-w-2xl">
         {sources.map((source) => {
           const Icon = getSourceIcon(source.code);
           const isSyncing = source.status === "Syncing";
@@ -93,17 +83,17 @@ export function DataSourceOverviewSection({
           return (
             <div
               key={source.id}
-              className="flex flex-col justify-between rounded-xl border border-slate-200/80 bg-slate-50/50 p-4 transition hover:border-indigo-200 hover:bg-white hover:shadow-sm"
+              className="flex flex-col justify-between rounded-xl border border-slate-200/80 bg-slate-50/50 p-5 transition hover:border-indigo-200 hover:bg-white hover:shadow-sm"
             >
               <div>
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200/80">
-                    <Icon className="h-4 w-4" />
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200/80">
+                    <Icon className="h-5 w-5" />
                   </div>
                   <SyncStatus status={source.status} />
                 </div>
 
-                <h4 className="mt-3.5 text-sm font-semibold text-slate-900">
+                <h4 className="mt-3.5 text-base font-semibold text-slate-900">
                   {source.name}
                 </h4>
                 <p className="mt-1 text-xs leading-relaxed text-slate-500">
@@ -111,7 +101,7 @@ export function DataSourceOverviewSection({
                 </p>
               </div>
 
-              <div className="mt-4 flex items-center justify-between border-t border-slate-200/60 pt-3 text-xs">
+              <div className="mt-5 flex items-center justify-between border-t border-slate-200/60 pt-3.5 text-xs">
                 <div>
                   <p className="font-semibold text-slate-800 tabular-nums">
                     {formatNumber(source.records)} records
@@ -123,12 +113,12 @@ export function DataSourceOverviewSection({
                   disabled={isSyncing}
                   onClick={() => onTriggerSync(source.id)}
                   title={`Sync ${source.name}`}
-                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 transition hover:border-indigo-200 hover:text-indigo-700 disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-medium text-indigo-700 transition hover:bg-indigo-50 disabled:opacity-60"
                 >
                   <RefreshCw
-                    className={`h-3 w-3 ${isSyncing ? "animate-spin" : ""}`}
+                    className={`h-3.5 w-3.5 ${isSyncing ? "animate-spin" : ""}`}
                   />
-                  <span>Sync</span>
+                  <span>Sync Now</span>
                 </button>
               </div>
             </div>

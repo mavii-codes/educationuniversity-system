@@ -170,7 +170,7 @@ export default function AcademicAnalyticsPage() {
             <AnalyticsChart
               title="Enrollment & Average GPA by Program"
               subtitle="Active student headcount alongside program GPA average"
-              badgeText="SIS + LMS"
+              badgeText="Academic Data Fabric"
             >
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
@@ -315,7 +315,7 @@ export default function AcademicAnalyticsPage() {
                   At-Risk Students Requiring Early Advising
                 </h3>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  Identified by cross-referencing SIS midterm GPA, classroom attendance, and LMS engagement
+                  Identified by cross-referencing academic indicators, coursework progress, and library resource utilization
                 </p>
               </div>
               <Link

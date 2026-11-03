@@ -23,15 +23,15 @@ interface HeaderProps {
 }
 
 const QUICK_LINKS = [
-  { label: "Dashboard Overview", href: "/dashboard", category: "Page" },
+  { label: "Dashboard Overview", href: "/admin/dashboard", category: "Page" },
+  { label: "Library Management Hub", href: "/admin/library", category: "Page" },
+  { label: "Library Integrated Records", href: "/admin/library/records", category: "Page" },
   { label: "Students Directory", href: "/students", category: "Page" },
   { label: "Student Lifecycle", href: "/lifecycle", category: "Page" },
-  { label: "Data Sources (SIS, LMS, Library)", href: "/data-sources", category: "Page" },
-  { label: "Data Integration Pipeline", href: "/integration", category: "Page" },
-  { label: "Academic Analytics & Risk", href: "/analytics", category: "Page" },
-  { label: "Alumni Outcomes", href: "/alumni", category: "Page" },
-  { label: "Institutional Reports", href: "/reports", category: "Page" },
-  { label: "Notifications & Alerts", href: "/notifications", category: "Page" },
+  { label: "Data Sources (Library LMS)", href: "/data-sources", category: "Page" },
+  { label: "Academic Analytics", href: "/admin/analytics", category: "Page" },
+  { label: "Institutional Reports", href: "/admin/reports", category: "Page" },
+  { label: "Notifications & Alerts", href: "/admin/notifications", category: "Page" },
 ];
 
 export function Header({ onOpenMobileMenu }: HeaderProps) {

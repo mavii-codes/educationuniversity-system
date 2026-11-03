@@ -2,69 +2,37 @@ import { DataSourceModel, IntegrationLogModel } from "../models";
 
 const DATA_SOURCES: DataSourceModel[] = [
   {
-    id: "src-sis",
-    code: "SIS",
-    name: "Student Information System",
-    status: "Connected",
-    lastSynced: "5 minutes ago",
-    recordCount: 5240,
-  },
-  {
-    id: "src-lms",
-    code: "LMS",
-    name: "Learning Management System",
-    status: "Connected",
-    lastSynced: "12 minutes ago",
-    recordCount: 5100,
-  },
-  {
-    id: "src-hr",
-    code: "HR",
-    name: "HR / Payroll",
-    status: "Connected",
-    lastSynced: "25 minutes ago",
-    recordCount: 386,
-  },
-  {
     id: "src-library",
     code: "LIBRARY",
-    name: "Library System",
+    name: "Library Management System",
     status: "Connected",
-    lastSynced: "18 minutes ago",
-    recordCount: 4850,
-  },
-  {
-    id: "src-alumni",
-    code: "ALUMNI",
-    name: "Alumni CRM",
-    status: "Connected",
-    lastSynced: "42 minutes ago",
-    recordCount: 8400,
+    lastSynced: "Just now",
+    recordCount: 14850,
   },
 ];
 
 const SYNC_LOGS: IntegrationLogModel[] = [
   {
-    id: "sync-1001",
-    sourceCode: "SIS",
-    sourceName: "SIS",
-    recordsProcessed: 5240,
-    duplicatesDetected: 0,
+    id: "sync-lib-1001",
+    sourceCode: "LIBRARY",
+    sourceName: "Library LMS",
+    recordsProcessed: 14850,
+    duplicatesDetected: 1,
     failedRecords: 0,
     status: "Successful",
     timestamp: "Today, 10:45 AM",
-    notes: "All active student profiles and midterm grade records verified.",
+    notes: "Automated 9-stage ETL: catalog books, borrower accounts, and circulation loans synced.",
   },
   {
-    id: "sync-1002",
-    sourceCode: "LMS",
-    sourceName: "LMS",
-    recordsProcessed: 5100,
-    duplicatesDetected: 4,
+    id: "sync-lib-1002",
+    sourceCode: "LIBRARY",
+    sourceName: "Library LMS",
+    recordsProcessed: 3420,
+    duplicatesDetected: 0,
     failedRecords: 0,
     status: "Successful",
-    timestamp: "Today, 10:38 AM",
-    notes: "Course completion metrics and weekly engagement logs merged.",
+    timestamp: "Today, 10:15 AM",
+    notes: "Student borrower records matched with central university student master identities.",
   },
 ];
 
@@ -88,11 +56,11 @@ export class IntegrationService {
   async getIntegrationStatus() {
     return {
       summary: {
-        totalRecordsProcessed: 23976,
-        successfulRecords: 23948,
-        failedRecords: 4,
-        duplicateRecords: 24,
-        lastIntegration: "Today, 5 minutes ago",
+        totalRecordsProcessed: 14850,
+        successfulRecords: 14849,
+        failedRecords: 0,
+        duplicateRecords: 1,
+        lastIntegration: "Today, Just now",
         currentStatus: "Operational",
       },
       logs: SYNC_LOGS,
@@ -103,19 +71,18 @@ export class IntegrationService {
     return [
       {
         id: "notif-1",
-        title: "SIS synchronization completed",
-        timestamp: "5 minutes ago",
+        title: "Library LMS synchronization completed",
+        timestamp: "Just now",
         type: "success",
       },
       {
         id: "notif-2",
-        title: "LMS synchronization warning",
-        timestamp: "15 minutes ago",
-        type: "warning",
+        title: "Student borrower matching verified",
+        timestamp: "32 minutes ago",
+        type: "info",
       },
     ];
   }
 }
 
 export const integrationService = new IntegrationService();
-

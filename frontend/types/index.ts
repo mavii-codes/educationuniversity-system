@@ -1,13 +1,12 @@
 export type StudentStatus = "Active" | "Graduated" | "On Leave" | "Withdrawn";
 export type RiskLevel = "Low" | "Medium" | "High";
-export type DataSourceStatus = "Connected" | "Syncing" | "Warning" | "Disconnected";
+export type DataSourceStatus = "Connected" | "Syncing" | "Warning" | "Disconnected" | "Planned";
 export type SyncLogStatus = "Successful" | "Warning" | "Failed";
 export type LifecycleStageKey =
   | "admission"
   | "enrollment"
   | "academic-progress"
-  | "graduation"
-  | "alumni";
+  | "graduation";
 
 export interface Program {
   id: string;
@@ -149,7 +148,7 @@ export interface LifecycleStage {
 
 export interface DataSource {
   id: string;
-  code: "SIS" | "LMS" | "HR" | "LIBRARY" | "ALUMNI";
+  code: "LIBRARY";
   name: string;
   shortName: string;
   description: string;
@@ -161,6 +160,7 @@ export interface DataSource {
   healthScore: number;
   entitiesSynced: string[];
   maintainerDept: string;
+  isPlanned?: boolean;
 }
 
 export interface IntegrationSyncLog {
@@ -187,24 +187,6 @@ export interface IntegrationSummary {
   uptimePercentage: number;
 }
 
-export interface AlumniRecord {
-  id: string;
-  name: string;
-  graduationYear: number;
-  programCode: string;
-  programName: string;
-  employmentStatus:
-    | "Employed"
-    | "Self-Employed"
-    | "Postgraduate Studies"
-    | "Seeking Opportunities";
-  currentCompany: string;
-  jobTitle: string;
-  location: string;
-  industry: string;
-  alignedWithDegree: boolean;
-}
-
 export interface ReportItem {
   id: string;
   title: string;
@@ -214,7 +196,7 @@ export interface ReportItem {
     | "Attendance"
     | "Retention"
     | "Graduation"
-    | "Alumni"
+    | "Library"
     | "Integration";
   description: string;
   lastGenerated: string;
@@ -241,7 +223,7 @@ export interface ActivityFeedItem {
   id: string;
   title: string;
   detail: string;
-  source: "SIS" | "LMS" | "Library" | "Alumni" | "HR";
+  source: string;
   timestamp: string;
   status: "success" | "warning" | "info";
 }
@@ -323,10 +305,11 @@ export interface AdminDataSourceOverviewItem {
   lastSync: string;
   records: number;
   description: string;
+  isPlanned?: boolean;
 }
 
 export interface AdminLifecycleStageStat {
-  stage: "Enrollment" | "Learning" | "Graduation" | "Alumni";
+  stage: "Admission" | "Enrollment" | "Learning" | "Graduation";
   count: number;
   subtitle: string;
   sourceLabel: string;
@@ -361,12 +344,21 @@ export interface AdminDashboardOverview {
     activeStudentsSubtext: string;
     graduatingStudents: number;
     graduatingStudentsSubtext: string;
-    alumni: number;
-    alumniSubtext: string;
     connectedDataSources: string;
     connectedDataSourcesSubtext: string;
     lastSuccessfulSync: string;
     lastSuccessfulSyncSubtext: string;
+    // Dedicated Library Integration KPIs
+    totalIntegratedBooks?: number;
+    totalIntegratedBooksSubtext?: string;
+    totalStudentBorrowers?: number;
+    totalStudentBorrowersSubtext?: string;
+    totalBorrowingTransactions?: number;
+    totalBorrowingTransactionsSubtext?: string;
+    availableBooks?: number;
+    borrowedBooks?: number;
+    overdueTransactions?: number;
+    overdueTransactionsSubtext?: string;
   };
   dataSources: AdminDataSourceOverviewItem[];
   lifecycleOverview: AdminLifecycleStageStat[];
@@ -379,30 +371,214 @@ export interface AdminDashboardOverview {
   };
 }
 
-export type PortalAuthorizedRole = "Administrator" | "Registrar";
+export type PortalAuthorizedRole = "Administrator" | "Registrar" | "Student";
 
-export interface IntegratedAlumniRecord {
+// -------------------------------------------------------------
+// Library Integration Models & ETL Types
+// -------------------------------------------------------------
+
+export interface LibraryBook {
   id: string;
-  studentId: string;
-  fullName: string;
-  programCode: string;
-  program: string;
-  department: string;
-  batch: string;
-  graduationDate: string;
-  status: "Alumni";
-  source: "Alumni CRM";
-  email?: string;
-  contactNumber?: string;
-  enrollmentYear: string;
+  isbn: string;
+  title: string;
+  author: string;
+  publisher: string;
+  publicationYear: number;
+  category: string;
+  callNumber: string;
+  totalCopies: number;
+  availableCopies: number;
+  borrowedCopies: number;
+  location: string;
+  status: "Available" | "Partially Available" | "Checked Out";
+  lastSyncedAt: string;
 }
 
-export interface AlumniCrmSourceInfo {
-  dataSource: "Alumni CRM";
-  integrationMethod: "API / ETL / ELT";
-  connectionStatus: DataSourceStatus;
-  lastSynchronization: string;
-  recordsSynchronized: number;
-   graduationBatchesCount: number;
-  programsRepresentedCount: number;
+export interface BookCategory {
+  id: string;
+  code: string;
+  name: string;
+  totalTitles: number;
+  totalCopies: number;
+  borrowedCount: number;
+}
+
+export interface StudentBorrower {
+  id: string;
+  borrowerId: string;
+  studentId: string;
+  studentName: string;
+  email: string;
+  programCode: string;
+  programName: string;
+  yearLevel: string;
+  activeLoansCount: number;
+  totalLoansHistory: number;
+  finesBalance: number;
+  status: "Active" | "Restricted" | "Cleared";
+  lastActive: string;
+}
+
+export interface BorrowingTransaction {
+  id: string;
+  transactionCode: string;
+  bookId: string;
+  bookTitle: string;
+  isbn: string;
+  studentId: string;
+  studentName: string;
+  programCode: string;
+  borrowDate: string;
+  dueDate: string;
+  returnDate?: string;
+  status: "Borrowed" | "Returned" | "Overdue";
+  finesAccrued: number;
+  sourceSystem: string;
+}
+
+export interface ReservationRecord {
+  id: string;
+  reservationCode: string;
+  bookId: string;
+  bookTitle: string;
+  isbn: string;
+  studentId: string;
+  studentName: string;
+  programCode: string;
+  reservedDate: string;
+  expiryDate: string;
+  status: "Pending" | "Ready for Pickup" | "Fulfilled" | "Cancelled" | "Expired";
+}
+
+export interface OverdueFineRecord {
+  id: string;
+  transactionId: string;
+  bookTitle: string;
+  studentId: string;
+  studentName: string;
+  programCode: string;
+  dueDate: string;
+  daysOverdue: number;
+  fineAmount: number;
+  paymentStatus: "Unpaid" | "Waived" | "Paid";
+}
+
+export interface LibraryETLLog {
+  id: string;
+  jobName: string;
+  status: "Completed" | "Running" | "Failed";
+  startedAt: string;
+  completedAt: string;
+  duration: string;
+  recordsExtracted: number;
+  recordsValidated: number;
+  duplicatesCleaned: number;
+  studentsMatched: number;
+  recordsLoaded: number;
+  errors: string[];
+  executionLog: string[];
+}
+
+export interface LibraryOverview {
+  kpis: {
+    totalIntegratedBooks: number;
+    totalStudentBorrowers: number;
+    totalBorrowingTransactions: number;
+    availableBooks: number;
+    borrowedBooks: number;
+    overdueTransactions: number;
+    totalFinesRecorded: number;
+    lastSyncTimestamp: string;
+    connectionStatus: "Connected" | "Syncing" | "Error";
+    apiEndpoint: string;
+    adapterType: string;
+  };
+  categoryDistribution: {
+    category: string;
+    count: number;
+    borrowed: number;
+  }[];
+  programBorrowingStats: {
+    program: string;
+    programName: string;
+    activeBorrowers: number;
+    activeLoans: number;
+    totalBorrows: number;
+  }[];
+  monthlyTrend: {
+    month: string;
+    borrowed: number;
+    returned: number;
+    overdue: number;
+  }[];
+}
+
+export interface AuditLogRecord {
+  id: string;
+  timestamp: string;
+  actor: string;
+  actorRole: string;
+  action: string;
+  resource: string;
+  status: "Success" | "Warning" | "Failure";
+  ipAddress: string;
+  details: string;
+}
+
+// -------------------------------------------------------------
+// Student Portal Specific Types
+// -------------------------------------------------------------
+
+export type BorrowingRequestStatus =
+  | "Pending"
+  | "Approved"
+  | "Rejected"
+  | "Cancelled"
+  | "Completed";
+
+export interface BorrowingRequest {
+  id: string;
+  requestCode: string;
+  bookId: string;
+  bookTitle: string;
+  author: string;
+  isbn: string;
+  category: string;
+  studentId: string;
+  studentName: string;
+  programCode: string;
+  requestDate: string;
+  status: BorrowingRequestStatus;
+  rejectionReason?: string;
+  reviewedBy?: string;
+  reviewedDate?: string;
+  pickupDueDate?: string;
+}
+
+export type StudentReservationStatus =
+  | "Pending"
+  | "Ready for Pickup"
+  | "Fulfilled"
+  | "Cancelled"
+  | "Expired";
+
+export interface StudentNotificationItem {
+  id: string;
+  studentId: string;
+  title: string;
+  message: string;
+  type: "BorrowRequest" | "DueDate" | "Reservation" | "Fine" | "General";
+  timestamp: string;
+  read: boolean;
+  actionUrl?: string;
+}
+
+export interface StudentLibraryDashboardSummary {
+  availableBooksCount: number;
+  currentBorrowedCount: number;
+  pendingRequestsCount: number;
+  activeReservationsCount: number;
+  overdueBooksCount: number;
+  outstandingFinesTotal: number;
+  unreadNotificationsCount: number;
 }

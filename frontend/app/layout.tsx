@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 import { AuthProvider } from "@/lib/auth";
+import { LibraryStoreProvider } from "@/lib/library-store";
 import { AppShell } from "@/components/layout/AppShell";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -13,9 +14,9 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "University Data Integration System | Admin Portal",
+  title: "University Data Integration System",
   description:
-    "Securely connect, manage, and understand university data across SIS, LMS, HR/Payroll, Library, and Alumni CRM in one place.",
+    "Securely connect, manage, and understand university data integrated with the Library Management System via REST API and ETL pipelines.",
 };
 
 export default function RootLayout({
@@ -28,7 +29,9 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <ToastProvider>
           <AuthProvider>
-            <AppShell>{children}</AppShell>
+            <LibraryStoreProvider>
+              <AppShell>{children}</AppShell>
+            </LibraryStoreProvider>
           </AuthProvider>
         </ToastProvider>
       </body>
