@@ -2,7 +2,7 @@
 
 import React, { useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { BookOpen, LogOut, User, X } from "lucide-react";
 import { STUDENT_NAVIGATION_GROUPS } from "./student-navigation";
 import { useAuth } from "@/lib/auth";
@@ -19,17 +19,35 @@ export function StudentMobileDrawer({
   onClose,
 }: StudentMobileDrawerProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user, signOut } = useAuth();
   const { getStudentSummary } = useLibraryStore();
 
   const studentId = user?.studentId || user?.id || "2024-042";
   const summary = getStudentSummary(studentId);
+  const currentTab = searchParams.get("tab");
 
   useEffect(() => {
     onClose();
-  }, [pathname, onClose]);
+  }, [pathname, searchParams, onClose]);
 
   if (!open) return null;
+
+  const isItemActive = (href: string) => {
+    const [basePath, query] = href.split("?");
+    if (query) {
+      const params = new URLSearchParams(query);
+      const tab = params.get("tab");
+      return pathname === basePath && (currentTab === tab || (!currentTab && tab === "current"));
+    }
+    if (href === "/student/dashboard") {
+      return pathname === "/student/dashboard";
+    }
+    if (href === "/student/borrowing") {
+      return pathname === "/student/borrowing" && !currentTab;
+    }
+    return pathname === href;
+  };
 
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
@@ -44,9 +62,14 @@ export function StudentMobileDrawer({
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white">
               <BookOpen className="h-4 w-4" />
             </div>
-            <span className="text-xs font-bold text-slate-900">
-              Student Library Portal
-            </span>
+            <div>
+              <span className="block text-xs font-bold text-slate-900">
+                University Data Integration
+              </span>
+              <span className="block text-[10px] font-medium text-indigo-600">
+                Student Library Portal
+              </span>
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -62,19 +85,22 @@ export function StudentMobileDrawer({
               <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                 {group.groupLabel}
               </p>
-              <ul className="space-y-1">
+              <ul className="space-y-0.5">
                 {group.items.map((item) => {
                   const Icon = item.icon;
-                  const active =
-                    pathname === item.href ||
-                    (item.href !== "/student/dashboard" &&
-                      pathname?.startsWith(item.href));
+                  const active = isItemActive(item.href);
 
                   let badgeCount: number | null = null;
                   if (item.badgeKey === "currentBorrowedCount" && summary.currentBorrowedCount > 0) {
                     badgeCount = summary.currentBorrowedCount;
+                  } else if (item.badgeKey === "pendingRequestsCount" && summary.pendingRequestsCount > 0) {
+                    badgeCount = summary.pendingRequestsCount;
+                  } else if (item.badgeKey === "activeReservationsCount" && summary.activeReservationsCount > 0) {
+                    badgeCount = summary.activeReservationsCount;
                   } else if (item.badgeKey === "overdueBooksCount" && summary.overdueBooksCount > 0) {
                     badgeCount = summary.overdueBooksCount;
+                  } else if (item.badgeKey === "unreadNotificationsCount" && summary.unreadNotificationsCount > 0) {
+                    badgeCount = summary.unreadNotificationsCount;
                   }
 
                   return (
@@ -85,7 +111,7 @@ export function StudentMobileDrawer({
                         className={cn(
                           "flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium transition-colors",
                           active
-                            ? "bg-indigo-50 text-indigo-700"
+                            ? "bg-indigo-50 text-indigo-700 font-semibold"
                             : "text-slate-600 hover:bg-slate-50"
                         )}
                       >
@@ -97,6 +123,8 @@ export function StudentMobileDrawer({
                               "ml-auto rounded-full px-2 py-0.5 text-[9px] font-semibold",
                               item.badgeKey === "overdueBooksCount"
                                 ? "bg-rose-100 text-rose-700"
+                                : item.badgeKey === "pendingRequestsCount"
+                                ? "bg-amber-100 text-amber-700"
                                 : "bg-indigo-100 text-indigo-700"
                             )}
                           >
@@ -110,6 +138,21 @@ export function StudentMobileDrawer({
               </ul>
             </div>
           ))}
+
+          {/* Explicit Logout Nav Item for Mobile */}
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                signOut();
+              }}
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50/80 transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Logout</span>
+            </button>
+          </div>
         </nav>
 
         <div className="border-t border-slate-100 p-4">
@@ -131,7 +174,7 @@ export function StudentMobileDrawer({
               onClose();
               signOut();
             }}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200/80 bg-white py-2 text-xs font-medium text-rose-600 hover:bg-rose-50"
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200/80 bg-white py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 transition"
           >
             <LogOut className="h-3.5 w-3.5" />
             <span>Sign Out</span>
@@ -141,4 +184,3 @@ export function StudentMobileDrawer({
     </div>
   );
 }
-

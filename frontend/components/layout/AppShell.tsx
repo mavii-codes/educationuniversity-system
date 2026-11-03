@@ -24,6 +24,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isAuthPage =
     pathname === "/" ||
     pathname === "/login" ||
+    pathname === "/admin/login" ||
     pathname === "/register" ||
     pathname === "/forgot-password" ||
     pathname === "/reset-password";
@@ -35,8 +36,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (isInitializing) return;
 
     if (isAdminPortal) {
+      if (pathname === "/admin/login") {
+        if (
+          isAuthenticated &&
+          (user?.role === "Administrator" || user?.role === "Registrar")
+        ) {
+          router.replace("/admin/dashboard");
+        } else if (isAuthenticated && user?.role === "Student") {
+          router.replace("/student/dashboard");
+        }
+        return;
+      }
       if (!isAuthenticated) {
-        router.replace("/login");
+        router.replace("/admin/login");
       } else if (user?.role === "Student") {
         router.replace("/student/dashboard");
       }
@@ -46,6 +58,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       } else if (user?.role === "Administrator" || user?.role === "Registrar") {
         router.replace("/admin/dashboard");
       }
+    } else if (pathname === "/login") {
+      if (isAuthenticated && user?.role === "Student") {
+        router.replace("/student/dashboard");
+      } else if (
+        isAuthenticated &&
+        (user?.role === "Administrator" || user?.role === "Registrar")
+      ) {
+        router.replace("/admin/dashboard");
+      }
     }
   }, [
     isAdminPortal,
@@ -53,6 +74,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     isInitializing,
     isAuthenticated,
     user,
+    pathname,
     router,
   ]);
 
@@ -73,10 +95,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
             {!isAuthenticated && !isInitializing && (
               <Link
-                href="/login"
+                href="/admin/login"
                 className="mt-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700 underline"
               >
-                Redirecting to Login (click if delayed)
+                Redirecting to Administrator Login (click if delayed)
               </Link>
             )}
           </div>
@@ -129,7 +151,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 href="/login"
                 className="mt-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700 underline"
               >
-                Redirecting to Login (click if delayed)
+                Redirecting to Student Login (click if delayed)
               </Link>
             )}
           </div>

@@ -2,15 +2,16 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { BookOpen, GraduationCap, LogOut, User } from "lucide-react";
-import { STUDENT_NAVIGATION_GROUPS, StudentNavItem } from "./student-navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { BookOpen, LogOut, User } from "lucide-react";
+import { STUDENT_NAVIGATION_GROUPS } from "./student-navigation";
 import { useAuth } from "@/lib/auth";
 import { useLibraryStore } from "@/lib/library-store";
 import { cn } from "@/lib/utils";
 
 export function StudentSidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user, signOut } = useAuth();
   const { getStudentSummary } = useLibraryStore();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -30,7 +31,23 @@ export function StudentSidebar() {
   }, []);
 
   const studentName = user?.name || "Student Member";
-  const studentEmail = user?.email || "student@university.edu";
+  const currentTab = searchParams.get("tab");
+
+  const isItemActive = (href: string) => {
+    const [basePath, query] = href.split("?");
+    if (query) {
+      const params = new URLSearchParams(query);
+      const tab = params.get("tab");
+      return pathname === basePath && (currentTab === tab || (!currentTab && tab === "current"));
+    }
+    if (href === "/student/dashboard") {
+      return pathname === "/student/dashboard";
+    }
+    if (href === "/student/borrowing") {
+      return pathname === "/student/borrowing" && !currentTab;
+    }
+    return pathname === href;
+  };
 
   return (
     <aside className="hidden lg:fixed lg:inset-y-0 lg:z-30 lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-slate-200/80 lg:bg-white">
@@ -41,16 +58,16 @@ export function StudentSidebar() {
         </div>
         <div className="min-w-0">
           <span className="block text-[13px] font-bold leading-snug tracking-tight text-slate-900 truncate">
-            University Library Portal
+            University Data Integration
           </span>
-          <span className="block text-[11px] font-medium text-slate-500">
-            Student / Member Portal
+          <span className="block text-[11px] font-medium text-indigo-600">
+            Student Library Portal
           </span>
         </div>
       </div>
 
       {/* Navigation Groups */}
-      <nav className="flex-1 space-y-5 overflow-y-auto px-3.5 py-5">
+      <nav className="flex-1 space-y-4 overflow-y-auto px-3.5 py-4">
         {STUDENT_NAVIGATION_GROUPS.map((group) => (
           <div key={group.groupLabel}>
             <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
@@ -59,14 +76,15 @@ export function StudentSidebar() {
             <ul className="space-y-0.5">
               {group.items.map((item) => {
                 const Icon = item.icon;
-                const active =
-                  pathname === item.href ||
-                  (item.href !== "/student/dashboard" &&
-                    pathname?.startsWith(item.href));
+                const active = isItemActive(item.href);
 
                 let badgeCount: number | null = null;
                 if (item.badgeKey === "currentBorrowedCount" && summary.currentBorrowedCount > 0) {
                   badgeCount = summary.currentBorrowedCount;
+                } else if (item.badgeKey === "pendingRequestsCount" && summary.pendingRequestsCount > 0) {
+                  badgeCount = summary.pendingRequestsCount;
+                } else if (item.badgeKey === "activeReservationsCount" && summary.activeReservationsCount > 0) {
+                  badgeCount = summary.activeReservationsCount;
                 } else if (item.badgeKey === "overdueBooksCount" && summary.overdueBooksCount > 0) {
                   badgeCount = summary.overdueBooksCount;
                 } else if (item.badgeKey === "unreadNotificationsCount" && summary.unreadNotificationsCount > 0) {
@@ -78,15 +96,15 @@ export function StudentSidebar() {
                     <Link
                       href={item.href}
                       className={cn(
-                        "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
+                        "group flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold transition-all duration-150",
                         active
-                          ? "bg-indigo-50/90 text-indigo-700"
+                          ? "bg-indigo-50/90 text-indigo-700 shadow-xs"
                           : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                       )}
                     >
                       <Icon
                         className={cn(
-                          "h-[18px] w-[18px] shrink-0 transition-colors",
+                          "h-[17px] w-[17px] shrink-0 transition-colors",
                           active
                             ? "text-indigo-600"
                             : "text-slate-400 group-hover:text-slate-600"
@@ -100,6 +118,8 @@ export function StudentSidebar() {
                             "ml-auto rounded-full px-2 py-0.5 text-[10px] font-semibold",
                             item.badgeKey === "overdueBooksCount"
                               ? "bg-rose-100 text-rose-700 border border-rose-200"
+                              : item.badgeKey === "pendingRequestsCount"
+                              ? "bg-amber-100 text-amber-700"
                               : "bg-indigo-100 text-indigo-700"
                           )}
                         >
@@ -117,6 +137,18 @@ export function StudentSidebar() {
             </ul>
           </div>
         ))}
+
+        {/* Explicit Logout Nav Item */}
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={signOut}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50/80 transition-colors"
+          >
+            <LogOut className="h-[17px] w-[17px] shrink-0" />
+            <span>Logout</span>
+          </button>
+        </div>
       </nav>
 
       {/* Bottom Student Profile Card */}
@@ -146,7 +178,7 @@ export function StudentSidebar() {
               className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50"
             >
               <LogOut className="h-3.5 w-3.5" />
-              <span>Sign Out</span>
+              <span>Logout</span>
             </button>
           </div>
         )}
@@ -170,8 +202,8 @@ export function StudentSidebar() {
           </button>
           <button
             onClick={signOut}
-            title="Sign Out"
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-slate-600"
+            title="Logout"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-rose-600 transition"
           >
             <LogOut className="h-4 w-4" />
           </button>
@@ -180,4 +212,3 @@ export function StudentSidebar() {
     </aside>
   );
 }
-

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -37,6 +37,13 @@ export default function StudentBorrowingPage() {
 
   const [activeTab, setActiveTab] = useState<BorrowingTab>(initialTab);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const tabParam = searchParams.get("tab") as BorrowingTab;
+    if (tabParam && (tabParam === "current" || tabParam === "requests" || tabParam === "reservations")) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
 
   const studentId = user?.studentId || user?.id || "2024-042";
 

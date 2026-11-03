@@ -222,7 +222,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return {
             ok: false,
             error:
-              "This is a Student account. Please switch to the Student Portal tab to sign in.",
+              "This is a Student account. Please access the Student Library Portal at /login.",
           };
         }
         const storage = rememberMe
@@ -245,7 +245,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return {
             ok: false,
             error:
-              "This is a Student account. Please switch to the Student Portal tab to sign in.",
+              "This is a Student account. Please access the Student Library Portal at /login.",
           };
         }
         const sessionUser: SessionUser = {
@@ -282,7 +282,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return {
           ok: false,
           error:
-            "This is an Administrative account. Please switch to the Admin Portal tab to sign in.",
+            "This is an Administrative account. Please access the Administrator / Librarian Portal at /admin/login.",
         };
       }
 
@@ -366,6 +366,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const signOut = useCallback(() => {
+    const wasAdmin = user?.role === "Administrator" || user?.role === "Registrar";
     try {
       window.localStorage.removeItem(STORAGE_KEY);
       window.sessionStorage.removeItem(STORAGE_KEY);
@@ -375,8 +376,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Ignore
     }
     setUser(null);
-    router.push("/login");
-  }, [router]);
+    router.push(wasAdmin ? "/admin/login" : "/login");
+  }, [user, router]);
 
   return (
     <AuthContext.Provider
