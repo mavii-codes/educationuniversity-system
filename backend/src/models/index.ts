@@ -250,7 +250,7 @@ export interface SyncHistoryModel {
   notes: string;
 }
 
-export type AuthorizedRole = "Administrator" | "Registrar" | "Student";
+export type AuthorizedRole = "Administrator" | "Librarian" | "Student" | "Registrar";
 
 export interface IntegratedAlumniModel {
   id: string;

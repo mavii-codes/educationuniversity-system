@@ -30,6 +30,12 @@ export interface AuthContext {
 }
 
 export function toPortalRole(accessRole: string): AuthorizedRole {
+  if (accessRole === "Librarian" || accessRole === "Library Staff") {
+    return "Librarian";
+  }
+  if (accessRole === "Student") {
+    return "Student";
+  }
   return accessRole === "University Registrar Admin" ? "Registrar" : "Administrator";
 }
 

@@ -16,6 +16,7 @@ export interface SessionUser {
   name: string;
   email: string;
   role: PortalAuthorizedRole;
+  accessRole?: string;
   department: string;
   studentId?: string;
   programCode?: string;
@@ -55,7 +56,7 @@ interface AuthContextValue {
   registerStudent: (
     params: RegisterStudentParams
   ) => Promise<{ ok: boolean; error?: string }>;
-  signOut: () => void;
+  signOut: (targetUrl?: string | React.MouseEvent) => void;
 }
 
 const STORAGE_KEY = "udis_user_session";
@@ -71,10 +72,10 @@ const DEV_MOCK_ADMIN_ID = "admin-001";
 const DEV_MOCK_PASSWORD =
   process.env.NEXT_PUBLIC_DEV_ADMIN_PASSWORD || "Admin123!";
 
-const DEV_REGISTRAR_EMAIL = "registrar@university.edu";
-const DEV_REGISTRAR_ID = "reg-001";
-const DEV_REGISTRAR_PASSWORD =
-  process.env.NEXT_PUBLIC_DEV_REGISTRAR_PASSWORD || "Registrar123!";
+const DEV_LIBRARIAN_EMAIL = "librarian@university.edu";
+const DEV_LIBRARIAN_ID = "lib-001";
+const DEV_LIBRARIAN_PASSWORD =
+  process.env.NEXT_PUBLIC_DEV_LIBRARIAN_PASSWORD || "Librarian123!";
 
 const DEV_STUDENT_EMAIL = "student@university.edu";
 const DEV_STUDENT_ID = "2024-042";
@@ -83,19 +84,21 @@ const DEV_STUDENT_PASSWORD =
 
 const DEFAULT_ADMIN_USER: SessionUser = {
   id: "ADM-2026-001",
-  name: "Administrator",
+  name: "Head Administrator",
+  accessRole: "Head Administrator",
   email: "admin@university.edu",
   role: "Administrator",
   department: "Office of Institutional Data & Systems",
   lastLogin: "Today, 9:45 AM",
 };
 
-const DEFAULT_REGISTRAR_USER: SessionUser = {
-  id: "REG-2026-001",
-  name: "University Registrar",
-  email: "registrar@university.edu",
-  role: "Registrar",
-  department: "Office of the University Registrar",
+export const DEFAULT_LIBRARIAN_USER: SessionUser = {
+  id: "LIB-STAFF-001",
+  name: "Elena Rostova",
+  email: "librarian@university.edu",
+  role: "Librarian",
+  accessRole: "Library Staff",
+  department: "University Library & Circulation Services",
   lastLogin: "Today, 9:50 AM",
 };
 
@@ -260,21 +263,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { ok: true, role: "Student" };
       }
 
-      // 3. Check Mock Admin & Registrar Credentials
+      // 3. Check Mock Admin & Library Staff Credentials
       const isAdminMatch =
-        (normalized === DEV_MOCK_EMAIL || normalized === DEV_MOCK_ADMIN_ID) &&
+        (normalized === DEV_MOCK_EMAIL ||
+          normalized === DEV_MOCK_ADMIN_ID ||
+          normalized === "admin") &&
         password === DEV_MOCK_PASSWORD;
 
-      const isRegistrarMatch =
-        (normalized === DEV_REGISTRAR_EMAIL ||
-          normalized === DEV_REGISTRAR_ID) &&
-        password === DEV_REGISTRAR_PASSWORD;
+      const isLibrarianMatch =
+        (normalized === DEV_LIBRARIAN_EMAIL ||
+          normalized === "staff@university.edu" ||
+          normalized === DEV_LIBRARIAN_ID ||
+          normalized === "librarian" ||
+          normalized === "staff") &&
 
-      if (!isAdminMatch && !isRegistrarMatch) {
+        (password === DEV_LIBRARIAN_PASSWORD || password === "Staff123!");
+
+      if (!isAdminMatch && !isLibrarianMatch) {
         return {
           ok: false,
           error:
-            "Invalid credentials. Please verify your email / student ID and password.",
+            "Invalid credentials. Please verify your institutional email or username and password.",
         };
       }
 
@@ -282,12 +291,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return {
           ok: false,
           error:
-            "This is an Administrative account. Please access the Administrator / Librarian Portal at /admin/login.",
+            "This is an Administrative account. Please access the Administrator / Library Staff Portal at /admin/login.",
         };
       }
 
-      const baseProfile = isRegistrarMatch
-        ? DEFAULT_REGISTRAR_USER
+      const baseProfile = isLibrarianMatch
+        ? DEFAULT_LIBRARIAN_USER
         : DEFAULT_ADMIN_USER;
 
       const sessionUser: SessionUser = {
@@ -365,7 +374,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
-  const signOut = useCallback(() => {
+  const signOut = useCallback((targetUrl?: string | React.MouseEvent) => {
     const wasAdmin = user?.role === "Administrator" || user?.role === "Registrar";
     try {
       window.localStorage.removeItem(STORAGE_KEY);
@@ -376,7 +385,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Ignore
     }
     setUser(null);
-    router.push(wasAdmin ? "/admin/login" : "/login");
+    if (typeof targetUrl === "string") {
+      router.push(targetUrl);
+    } else {
+      router.push(wasAdmin ? "/admin/login" : "/login");
+    }
   }, [user, router]);
 
   return (
