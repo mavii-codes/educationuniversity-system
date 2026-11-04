@@ -212,21 +212,6 @@ export function LoginFormCard() {
           </p>
         </div>
 
-        {/* Mock-mode demo hint (hidden entirely against the live API) */}
-        {!API_CONFIG.useLiveApi && (
-          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-[11px] leading-relaxed text-slate-600">
-            <p className="font-semibold text-slate-700">
-              Demo credentials (mock mode)
-            </p>
-            <p className="mt-1 font-mono">
-              Student: student@university.edu / Student123!
-            </p>
-            <p className="font-mono">
-              Administrator: admin@university.edu / Admin123!
-            </p>
-          </div>
-        )}
-
         {/* Success Message Alert */}
         {regSuccessMsg && (
           <div

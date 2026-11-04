@@ -35,7 +35,10 @@ const forgotPasswordSchema = z.object({
 });
 
 const resetPasswordSchema = z.object({
-  token: z.string().min(32).max(256),
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, "Enter the 6-digit verification code from your email."),
   password: z.string().min(12).max(200),
 });
 
@@ -65,10 +68,10 @@ export class AuthController {
         throw new ApiError(400, "Enter a valid email address.");
       }
 
-      const delivery = await requestPasswordReset(parsed.data.email);
+      await requestPasswordReset(parsed.data.email);
       res.status(202).json({
-        message: "If an active account matches that email, a reset link will be sent.",
-        ...(delivery.devResetLink ? { devResetLink: delivery.devResetLink } : {}),
+        message:
+          "If an active account matches that email, a 6-digit verification code will be sent.",
       });
     } catch (error) {
       next(error);
@@ -79,10 +82,13 @@ export class AuthController {
     try {
       const parsed = resetPasswordSchema.safeParse(req.body);
       if (!parsed.success) {
-        throw new ApiError(400, "Use a valid reset link and a password of at least 12 characters.");
+        throw new ApiError(
+          400,
+          "Enter the 6-digit verification code and a new password of at least 12 characters."
+        );
       }
 
-      await resetPassword(parsed.data.token, parsed.data.password);
+      await resetPassword(parsed.data.code, parsed.data.password);
       res.json({ message: "Password updated. You can now sign in." });
     } catch (error) {
       next(error);

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { FormEvent, useEffect, useState } from "react";
+import React, { FormEvent, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Loader2, LockKeyhole } from "lucide-react";
 import {
@@ -10,26 +10,19 @@ import {
 import { API_CONFIG } from "@/lib/api";
 
 export default function ResetPasswordPage() {
-  const [token, setToken] = useState("");
+  const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [completed, setCompleted] = useState(false);
-  useEffect(() => {
-    const resetToken = new URLSearchParams(window.location.search).get("token") || "";
-    setToken(resetToken);
-    if (resetToken) {
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
 
-    if (!token) {
-      setError("This reset link is invalid. Request a new one.");
+    if (code.length !== 6) {
+      setError("Enter the 6-digit verification code from your email.");
       return;
     }
     if (password.length < 12) {
@@ -47,7 +40,7 @@ export default function ResetPasswordPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ token, password }),
+        body: JSON.stringify({ code, password }),
       });
       const body = (await response.json().catch(() => ({}))) as {
         message?: string;
@@ -96,13 +89,36 @@ export default function ResetPasswordPage() {
             <>
               <div className="text-center">
                 <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
-                  Choose a new password
+                  Enter code &amp; choose a new password
                 </h1>
                 <p className="mt-1.5 text-sm text-slate-500">
-                  Use at least 12 characters.
+                  We emailed a 6-digit verification code to your account. It
+                  expires in 10 minutes.
                 </p>
               </div>
               <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+                <div>
+                  <label
+                    htmlFor="reset-code"
+                    className="block text-xs font-semibold text-slate-700"
+                  >
+                    Verification code
+                  </label>
+                  <input
+                    id="reset-code"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    placeholder="000000"
+                    required
+                    maxLength={6}
+                    value={code}
+                    onChange={(event) =>
+                      setCode(event.target.value.replace(/\D/g, "").slice(0, 6))
+                    }
+                    className="mt-1.5 h-12 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-center text-lg font-semibold tracking-[0.5em] text-slate-900 placeholder:font-normal placeholder:tracking-[0.5em] placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/15"
+                  />
+                </div>
                 <div>
                   <label
                     htmlFor="new-password"
@@ -169,7 +185,7 @@ export default function ResetPasswordPage() {
                   href="/forgot-password"
                   className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 transition hover:text-indigo-600"
                 >
-                  Request another reset link
+                  Request a new code
                 </Link>
               </div>
             </>

@@ -20,7 +20,6 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [devResetLink, setDevResetLink] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,12 +46,8 @@ export default function ForgotPasswordPage() {
         const body = (await response.json().catch(() => ({}))) as {
           message?: string;
         };
-        throw new Error(body.message || "Unable to send the reset link right now.");
+        throw new Error(body.message || "Unable to send the verification code right now.");
       }
-      const body = (await response.json().catch(() => ({}))) as {
-        devResetLink?: string;
-      };
-      setDevResetLink(body.devResetLink || "");
       setSubmitted(true);
     } catch (requestError) {
       setError(
@@ -79,33 +74,23 @@ export default function ForgotPasswordPage() {
                 <CheckCircle2 className="h-6 w-6" />
               </div>
               <h2 className="mt-4 text-xl font-semibold text-slate-900">
-                Check your university email
+                Check your email
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                If an administrator account matches{" "}
+                If an account matches{" "}
                 <strong className="font-semibold text-slate-900">{email}</strong>,
-                a password reset link has been sent.
+                a 6-digit verification code has been sent. It expires in 10
+                minutes.
               </p>
-              {devResetLink && (
-                <div
-                  role="status"
-                  className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-left"
-                >
-                  <p className="text-xs font-semibold text-amber-800">
-                    Dev mode: email service is not configured (or delivery
-                    failed), so the reset link is shown here:
-                  </p>
-                  <a
-                    href={devResetLink}
-                    className="mt-2 block break-all text-xs font-medium text-indigo-600 underline hover:text-indigo-800"
-                  >
-                    {devResetLink}
-                  </a>
-                </div>
-              )}
+              <Link
+                href="/reset-password"
+                className="mt-6 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+              >
+                Enter verification code
+              </Link>
               <Link
                 href="/login"
-                className="mt-6 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+                className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Back to Login
@@ -118,7 +103,8 @@ export default function ForgotPasswordPage() {
                   Reset password
                 </h2>
                 <p className="mt-1.5 text-sm text-slate-500">
-                  Enter your university email to receive a password reset link
+                  Enter your university email to receive a 6-digit verification
+                  code
                 </p>
               </div>
 
@@ -164,10 +150,10 @@ export default function ForgotPasswordPage() {
                   {isSending ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Sending Reset Link...</span>
+                      <span>Sending Verification Code...</span>
                     </>
                   ) : (
-                    <span>Send Reset Link</span>
+                    <span>Send Verification Code</span>
                   )}
                 </button>
               </form>

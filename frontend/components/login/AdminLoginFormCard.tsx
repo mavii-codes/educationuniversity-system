@@ -68,19 +68,6 @@ export function AdminLoginFormCard() {
     router.push("/admin/dashboard");
   };
 
-  const handleUseDemo = (role: "admin" | "registrar") => {
-    setFormError("");
-    setIdentifierError("");
-    setPasswordError("");
-    if (role === "admin") {
-      setIdentifier("admin@university.edu");
-      setPassword("Admin123!");
-    } else {
-      setIdentifier("registrar@university.edu");
-      setPassword("Registrar123!");
-    }
-  };
-
   return (
     <div className="w-full max-w-[420px]">
       <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-card sm:p-8">
@@ -97,26 +84,6 @@ export function AdminLoginFormCard() {
             Sign in with administrative credentials for external Library API
             data integration, circulation administration, and system governance.
           </p>
-        </div>
-
-        {/* Quick Demo Fill Buttons */}
-        <div className="mt-5 flex items-center justify-center gap-2">
-          <span className="text-[11px] font-medium text-slate-400">Quick Test:</span>
-          <button
-            type="button"
-            onClick={() => handleUseDemo("admin")}
-            className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100 transition"
-          >
-            Admin Demo
-          </button>
-          <button
-            type="button"
-            onClick={() => handleUseDemo("registrar")}
-            className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100 transition"
-          >
-            Registrar Demo
-          </button>
-        </div>
 
         {/* Error Alert Box */}
         {formError && (

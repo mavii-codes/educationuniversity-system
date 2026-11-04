@@ -33,6 +33,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const isAdminPortal = Boolean(pathname?.startsWith("/admin"));
   const isStudentPortal = Boolean(pathname?.startsWith("/student"));
+  const isStaffPortal = Boolean(pathname?.startsWith("/staff"));
 
   useEffect(() => {
     if (isInitializing) return;
