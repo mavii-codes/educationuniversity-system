@@ -9,10 +9,17 @@ import {
   Search,
   ShieldCheck,
   UserCheck,
+  UserX,
   Users,
 } from "lucide-react";
-import { getAdminUsers } from "@/lib/api";
-import { AdminUserRecord, AdminUserRole } from "@/types";
+import {
+  API_CONFIG,
+  createAdminLibraryStaff,
+  getAdminUsers,
+  updateAdminUserStatus,
+} from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { AdminUserRecord } from "@/types";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
@@ -30,19 +37,20 @@ export default function AdminUserManagementPage() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
-  const [inviteOpen, setInviteOpen] = useState(false);
+  const [createStaffOpen, setCreateStaffOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [updatingStatusFor, setUpdatingStatusFor] = useState<string | null>(null);
   const [viewState, setViewState] = useState<DemoViewState>("loading");
 
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
-  const [newRole, setNewRole] = useState<AdminUserRole>(
-    "Library Staff"
-  );
   const [newDepartment, setNewDepartment] = useState(
     "Library Services"
   );
+  const [newPassword, setNewPassword] = useState("");
 
   const { showToast } = useToast();
+  const { user: currentUser } = useAuth();
 
   const loadUsers = useCallback(async () => {
     setViewState("loading");
@@ -59,31 +67,68 @@ export default function AdminUserManagementPage() {
     loadUsers();
   }, [loadUsers]);
 
-  const handleInviteSubmit = (e: React.FormEvent) => {
+  const handleCreateStaffSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newName.trim() || !newEmail.trim()) return;
+    setCreating(true);
+    try {
+      const created = await createAdminLibraryStaff({
+        name: newName.trim(),
+        email: newEmail.trim().toLowerCase(),
+        password: newPassword,
+        department: newDepartment.trim(),
+      });
+      setUsers((previous) => [
+        created,
+        ...previous.filter((user) => user.id !== created.id),
+      ]);
+      setNewName("");
+      setNewEmail("");
+      setNewDepartment("Library Services");
+      setNewPassword("");
+      setCreateStaffOpen(false);
+      showToast({
+        title: "Staff account created",
+        description: `${created.name} can now sign in as a Staff Librarian.`,
+        type: "success",
+      });
+    } catch (error) {
+      showToast({
+        title: "Unable to create staff account",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+        type: "warning",
+      });
+    } finally {
+      setCreating(false);
+    }
+  };
 
-    const created: AdminUserRecord = {
-      id: `ADM-2026-00${users.length + 1}`,
-      name: newName.trim(),
-      email: newEmail.trim().toLowerCase(),
-      role: newRole,
-      department: newDepartment.trim(),
-      status: "Invited",
-      mfaEnabled: false,
-      lastActive: "Invitation sent just now",
-    };
-
-    setUsers((prev) => [created, ...prev]);
-    setNewName("");
-    setNewEmail("");
-    setInviteOpen(false);
-
-    showToast({
-      title: "Administrator invitation sent",
-      description: `Sent onboarding credentials to ${created.email}.`,
-      type: "success",
-    });
+  const handleAccountStatusChange = async (account: AdminUserRecord) => {
+    const status = account.status === "Active" ? "Inactive" : "Active";
+    setUpdatingStatusFor(account.id);
+    try {
+      const updated = await updateAdminUserStatus(account.id, status);
+      setUsers((previous) =>
+        previous.map((item) => (item.id === updated.id ? updated : item))
+      );
+      showToast({
+        title: `Account ${status === "Active" ? "activated" : "deactivated"}`,
+        description:
+          status === "Active"
+            ? `${updated.name} can sign in again.`
+            : `${updated.name} can no longer sign in.`,
+        type: "success",
+      });
+    } catch (error) {
+      showToast({
+        title: "Unable to update account",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+        type: "warning",
+      });
+    } finally {
+      setUpdatingStatusFor(null);
+    }
   };
 
   const filteredUsers = users.filter((u) => {
@@ -121,11 +166,11 @@ export default function AdminUserManagementPage() {
           />
           <button
             type="button"
-            onClick={() => setInviteOpen(true)}
+            onClick={() => setCreateStaffOpen(true)}
             className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-700"
           >
             <Plus className="h-4 w-4" />
-            <span>Invite Library Staff</span>
+            <span>Add Staff</span>
           </button>
         </div>
       </div>
@@ -211,7 +256,6 @@ export default function AdminUserManagementPage() {
               >
                 <option value="All">All Statuses</option>
                 <option value="Active">Active</option>
-                <option value="Invited">Invited</option>
                 <option value="Inactive">Inactive</option>
               </select>
             </div>
@@ -243,6 +287,7 @@ export default function AdminUserManagementPage() {
                       <th className="px-5 py-3.5">Security (MFA)</th>
                       <th className="px-5 py-3.5">Status</th>
                       <th className="px-5 py-3.5">Last Active</th>
+                      <th className="px-5 py-3.5">Account Access</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -286,8 +331,6 @@ export default function AdminUserManagementPage() {
                             variant={
                               admin.status === "Active"
                                 ? "success"
-                                : admin.status === "Invited"
-                                ? "warning"
                                 : "neutral"
                             }
                             dot
@@ -297,6 +340,41 @@ export default function AdminUserManagementPage() {
                         </td>
                         <td className="whitespace-nowrap px-5 py-4 text-xs text-slate-500">
                           {admin.lastActive}
+                        </td>
+                        <td className="whitespace-nowrap px-5 py-4">
+                          <button
+                            type="button"
+                            onClick={() => handleAccountStatusChange(admin)}
+                            disabled={
+                              !API_CONFIG.useLiveApi ||
+                              updatingStatusFor !== null ||
+                              admin.id === currentUser?.id
+                            }
+                            title={
+                              admin.id === currentUser?.id
+                                ? "You cannot deactivate your own account."
+                                : !API_CONFIG.useLiveApi
+                                  ? "Account access changes require the live API."
+                                  : undefined
+                            }
+                            aria-label={`${admin.status === "Active" ? "Deactivate" : "Activate"} ${admin.name}`}
+                            className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                              admin.status === "Active"
+                                ? "border-rose-200 text-rose-700 hover:bg-rose-50"
+                                : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                            }`}
+                          >
+                            {admin.status === "Active" ? (
+                              <UserX className="h-3.5 w-3.5" />
+                            ) : (
+                              <UserCheck className="h-3.5 w-3.5" />
+                            )}
+                            {updatingStatusFor === admin.id
+                              ? "Updating..."
+                              : admin.status === "Active"
+                                ? "Deactivate"
+                                : "Activate"}
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -308,19 +386,23 @@ export default function AdminUserManagementPage() {
         </>
       )}
 
-      {/* Invite Admin Modal */}
+      {/* Create Staff Account Modal */}
       <Modal
-        open={inviteOpen}
-        onClose={() => setInviteOpen(false)}
-        title="Invite University Administrator"
-        subtitle="Manage administrator and staff librarian access"
+        open={createStaffOpen}
+        onClose={() => !creating && setCreateStaffOpen(false)}
+        title="Create Staff Librarian Account"
+        subtitle="Create an active staff account with sign-in credentials."
       >
-        <form onSubmit={handleInviteSubmit} className="space-y-4">
+        <form onSubmit={handleCreateStaffSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700">
+            <label
+              htmlFor="staff-account-name"
+              className="block text-xs font-semibold text-slate-700"
+            >
               Full Name
             </label>
             <input
+              id="staff-account-name"
               type="text"
               required
               value={newName}
@@ -331,12 +413,16 @@ export default function AdminUserManagementPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700">
+            <label
+              htmlFor="staff-account-email"
+              className="block text-xs font-semibold text-slate-700"
+            >
               University Email
             </label>
             <div className="relative mt-1.5">
               <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
+                id="staff-account-email"
                 type="email"
                 required
                 value={newEmail}
@@ -349,23 +435,22 @@ export default function AdminUserManagementPage() {
 
           <div>
             <label className="block text-xs font-semibold text-slate-700">
-              Library Staff Role
+              Role
             </label>
-            <select
-              value={newRole}
-              onChange={(e) => setNewRole(e.target.value as AdminUserRole)}
-              className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:border-indigo-400 focus:outline-none"
-            >
-              <option value="System Administrator">System Administrator</option>
-              <option value="Library Staff">Staff Librarian</option>
-            </select>
+            <div className="mt-1.5 flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700">
+              Staff Librarian
+            </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700">
+            <label
+              htmlFor="staff-account-department"
+              className="block text-xs font-semibold text-slate-700"
+            >
               Library / Department
             </label>
             <input
+              id="staff-account-department"
               type="text"
               required
               value={newDepartment}
@@ -374,19 +459,51 @@ export default function AdminUserManagementPage() {
             />
           </div>
 
+          <div>
+            <label
+              htmlFor="staff-account-password"
+              className="block text-xs font-semibold text-slate-700"
+            >
+              Initial Password
+            </label>
+            <input
+              id="staff-account-password"
+              type="password"
+              required
+              minLength={12}
+              maxLength={200}
+              autoComplete="new-password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="At least 12 characters"
+              className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 focus:border-indigo-400 focus:outline-none"
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              The account is active immediately. Share this password securely with the staff member.
+            </p>
+          </div>
+
+          {!API_CONFIG.useLiveApi && (
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Account creation is unavailable in demo mode. Configure the live API and PostgreSQL database.
+            </p>
+          )}
+
           <div className="flex items-center justify-end gap-2.5 border-t border-slate-100 pt-4">
             <button
               type="button"
-              onClick={() => setInviteOpen(false)}
+              onClick={() => setCreateStaffOpen(false)}
+              disabled={creating}
               className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-700"
+              disabled={creating || !API_CONFIG.useLiveApi}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Send Invitation
+              {creating ? "Creating account..." : "Create Account"}
             </button>
           </div>
         </form>

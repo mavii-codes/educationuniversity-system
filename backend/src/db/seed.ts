@@ -372,6 +372,34 @@ async function main(): Promise<void> {
       }
     }
 
+    await client.query(`
+      INSERT INTO library_transactions
+        (id, transaction_code, book_id, book_title, isbn, student_id,
+         student_name, program_code, borrow_date, due_date, return_date,
+         status, fines_accrued, source_system)
+      SELECT md5(loan.student_id || ':' || loan.book_id || ':' ||
+                 COALESCE(loan.borrowed_date::text, '')),
+             'LEGACY-' || upper(substr(md5(
+               loan.student_id || ':' || loan.book_id || ':' ||
+               COALESCE(loan.borrowed_date::text, '')
+             ), 1, 24)),
+             book.id, book.title, book.isbn, student.id, student.name,
+             student.program_code,
+             COALESCE(loan.borrowed_date::timestamptz, NOW()),
+             COALESCE(loan.due_date::timestamptz, NOW()),
+             loan.returned_date::timestamptz,
+             CASE
+               WHEN loan.returned_date IS NOT NULL THEN 'Returned'
+               WHEN loan.due_date < CURRENT_DATE THEN 'Overdue'
+               ELSE 'Borrowed'
+             END,
+             0, 'Seeded university records'
+        FROM library_loans AS loan
+        JOIN library_books AS book ON book.id = loan.book_id
+        JOIN students AS student ON student.id = loan.student_id
+      ON CONFLICT (id) DO NOTHING
+    `);
+
     for (const [index, source] of seedDataset.dataSources.entries()) {
       await client.query(
         `INSERT INTO data_sources

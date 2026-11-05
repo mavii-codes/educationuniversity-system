@@ -40,5 +40,8 @@ router.post("/auth/logout", (req, res, next) =>
 router.get("/auth/me", requireAuth, (req, res, next) =>
   authController.me(req, res, next)
 );
+router.post("/auth/change-password", requireAuth, (req, res, next) =>
+  authController.changePassword(req, res, next)
+);
 
 export default router;

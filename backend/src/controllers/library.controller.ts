@@ -4,9 +4,7 @@ import { env } from "../config/env";
 import {
   createLibraryBook as createDatabaseBook,
   getLibraryBook as getDatabaseBook,
-  listLibraryFinePayments,
   listLibraryBooks,
-  markLibraryFinePaid as markDatabaseLibraryFinePaid,
   updateLibraryBook as updateDatabaseBook,
   updateLibraryBookCover,
 } from "../repositories/library.repository";
@@ -16,6 +14,17 @@ import {
   getUploadedCoverUrl,
 } from "../middleware/book-cover-upload.middleware";
 import { removeLocalCover } from "../utils/book-cover-storage";
+import { currentUser } from "../middleware/auth.middleware";
+import * as libraryCirculationRepository from "../repositories/library-circulation.repository";
+
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "23505"
+  );
+}
 
 const bookInputSchema = z
   .object({
@@ -161,6 +170,12 @@ export const createLibraryBook = async (req: Request, res: Response) => {
       } catch (cleanupError) {
         console.error("[Library] Failed to remove unsaved uploaded cover:", cleanupError);
       }
+    }
+    if (isUniqueViolation(error)) {
+      return res.status(409).json({
+        success: false,
+        message: "A book with that ISBN already exists.",
+      });
     }
     return res.status(500).json({
       success: false,
@@ -328,14 +343,26 @@ export const refreshLibraryBookCover = async (req: Request, res: Response) => {
   }
 };
 
-export const getLibraryBorrowers = (req: Request, res: Response) => {
+export const getLibraryBorrowers = async (req: Request, res: Response) => {
   try {
     const { search, program, status } = req.query as {
       search?: string;
       program?: string;
       status?: string;
     };
-    const borrowers = libraryETLService.getBorrowers({ search, program, status });
+    const sourceBorrowers = env.db.enabled
+      ? await libraryCirculationRepository.listLibraryBorrowers()
+      : libraryETLService.getBorrowers({ search, program, status });
+    const query = search?.toLowerCase();
+    const borrowers = sourceBorrowers.filter(
+      (borrower) =>
+        (!query ||
+          borrower.studentName.toLowerCase().includes(query) ||
+          borrower.studentId.toLowerCase().includes(query) ||
+          borrower.borrowerId.toLowerCase().includes(query)) &&
+        (!program || program === "All" || borrower.programCode === program) &&
+        (!status || status === "All" || borrower.status === status)
+    );
     res.json({
       success: true,
       count: borrowers.length,
@@ -350,13 +377,27 @@ export const getLibraryBorrowers = (req: Request, res: Response) => {
   }
 };
 
-export const getLibraryTransactions = (req: Request, res: Response) => {
+export const getLibraryTransactions = async (req: Request, res: Response) => {
   try {
+    const user = currentUser(res);
     const { search, status } = req.query as {
       search?: string;
       status?: string;
     };
-    const transactions = libraryETLService.getTransactions({ search, status });
+    const studentId = user?.portalRole === "Student" ? user.id : undefined;
+    const sourceTransactions = env.db.enabled
+      ? await libraryCirculationRepository.listLibraryTransactions(studentId)
+      : libraryETLService.getTransactions({ search, status });
+    const query = search?.toLowerCase();
+    const transactions = sourceTransactions.filter(
+      (transaction) =>
+        (!query ||
+          transaction.bookTitle.toLowerCase().includes(query) ||
+          transaction.studentName.toLowerCase().includes(query) ||
+          transaction.studentId.toLowerCase().includes(query) ||
+          transaction.transactionCode.toLowerCase().includes(query)) &&
+        (!status || status === "All" || transaction.status === status)
+    );
     res.json({
       success: true,
       count: transactions.length,
@@ -371,13 +412,27 @@ export const getLibraryTransactions = (req: Request, res: Response) => {
   }
 };
 
-export const getLibraryReservations = (req: Request, res: Response) => {
+export const getLibraryReservations = async (req: Request, res: Response) => {
   try {
+    const user = currentUser(res);
     const { search, status } = req.query as {
       search?: string;
       status?: string;
     };
-    const reservations = libraryETLService.getReservations({ search, status });
+    const studentId = user?.portalRole === "Student" ? user.id : undefined;
+    const sourceReservations = env.db.enabled
+      ? await libraryCirculationRepository.listLibraryReservations(studentId)
+      : libraryETLService.getReservations({ search, status });
+    const query = search?.toLowerCase();
+    const reservations = sourceReservations.filter(
+      (reservation) =>
+        (!query ||
+          reservation.bookTitle.toLowerCase().includes(query) ||
+          reservation.studentName.toLowerCase().includes(query) ||
+          reservation.studentId.toLowerCase().includes(query) ||
+          reservation.reservationCode.toLowerCase().includes(query)) &&
+        (!status || status === "All" || reservation.status === status)
+    );
     res.json({
       success: true,
       count: reservations.length,
@@ -394,20 +449,16 @@ export const getLibraryReservations = (req: Request, res: Response) => {
 
 export const getLibraryFines = async (req: Request, res: Response) => {
   try {
+    const user = currentUser(res);
     const { search, paymentStatus } = req.query as {
       search?: string;
       paymentStatus?: string;
     };
-    const paymentStatuses = env.db.enabled
-      ? await listLibraryFinePayments()
-      : [];
-    const paidFineIds = new Set(paymentStatuses.map((payment) => payment.fineId));
-    const fines = libraryETLService
-      .getFines()
-      .map((fine) =>
-        paidFineIds.has(fine.id) ? { ...fine, paymentStatus: "Paid" as const } : fine
-      )
-      .filter((fine) => {
+    const studentId = user?.portalRole === "Student" ? user.id : undefined;
+    const sourceFines = env.db.enabled
+      ? await libraryCirculationRepository.listLibraryFines(studentId)
+      : libraryETLService.getFines();
+    const fines = sourceFines.filter((fine) => {
         if (paymentStatus && paymentStatus !== "All" && fine.paymentStatus !== paymentStatus) {
           return false;
         }
@@ -436,7 +487,10 @@ export const getLibraryFines = async (req: Request, res: Response) => {
 export const markLibraryFinePaid = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const fine = libraryETLService.getFines().find((item) => item.id === id);
+    const fines = env.db.enabled
+      ? await libraryCirculationRepository.listLibraryFines()
+      : libraryETLService.getFines();
+    const fine = fines.find((item) => item.id === id);
     if (!fine) {
       return res.status(404).json({ success: false, message: "Fine record not found." });
     }
@@ -445,9 +499,16 @@ export const markLibraryFinePaid = async (req: Request, res: Response) => {
     }
 
     if (env.db.enabled) {
-      await markDatabaseLibraryFinePaid(id);
+      const updated = await libraryCirculationRepository.markLibraryFinePaid(id);
+      if (!updated) {
+        return res.status(409).json({
+          success: false,
+          message: "Fine payment was already recorded or the fine is no longer unpaid.",
+        });
+      }
+    } else {
+      libraryETLService.markFinePaid(id);
     }
-    libraryETLService.markFinePaid(id);
     return res.json({ success: true, message: "Fine payment recorded successfully." });
   } catch (error) {
     return res.status(500).json({
@@ -508,10 +569,19 @@ export const getLibraryETLLogs = (_req: Request, res: Response) => {
   }
 };
 
-export const getBorrowingRequests = (req: Request, res: Response) => {
+export const getBorrowingRequests = async (req: Request, res: Response) => {
   try {
-    const { studentId } = req.query as { studentId?: string };
-    const requests = libraryETLService.getBorrowingRequests(studentId);
+    const user = currentUser(res);
+    const requestedStudentId = req.query.studentId;
+    const studentId =
+      user?.portalRole === "Student"
+        ? user.id
+        : typeof requestedStudentId === "string"
+          ? requestedStudentId
+          : undefined;
+    const requests = env.db.enabled
+      ? await libraryCirculationRepository.listBorrowingRequests(studentId)
+      : libraryETLService.getBorrowingRequests(studentId);
     res.json({
       success: true,
       count: requests.length,
@@ -526,9 +596,27 @@ export const getBorrowingRequests = (req: Request, res: Response) => {
   }
 };
 
-export const createBorrowingRequest = (req: Request, res: Response) => {
+export const createBorrowingRequest = async (req: Request, res: Response) => {
   try {
-    const request = libraryETLService.createBorrowingRequest(req.body);
+    const user = currentUser(res);
+    if (!user || user.portalRole !== "Student") {
+      return res.status(403).json({
+        success: false,
+        message: "Only an authenticated student can submit a borrowing request.",
+      });
+    }
+
+    const request = env.db.enabled
+      ? await libraryCirculationRepository.createBorrowingRequest({
+          studentId: user.id,
+          studentName: user.name,
+          bookId: typeof req.body?.bookId === "string" ? req.body.bookId : "",
+        })
+      : libraryETLService.createBorrowingRequest({
+          ...req.body,
+          studentId: user.id,
+          studentName: user.name,
+        });
     res.status(201).json({
       success: true,
       message: "Borrowing request submitted",
@@ -543,13 +631,181 @@ export const createBorrowingRequest = (req: Request, res: Response) => {
   }
 };
 
-export const approveBorrowingRequest = (req: Request, res: Response) => {
+export const cancelBorrowingRequest = async (req: Request, res: Response) => {
+  const user = currentUser(res);
+  if (!user || user.portalRole !== "Student") {
+    return res.status(403).json({ success: false, message: "Student access required." });
+  }
+  try {
+    if (env.db.enabled) {
+      const cancelled = await libraryCirculationRepository.cancelBorrowingRequest(
+        req.params.id,
+        user.id
+      );
+      if (!cancelled) {
+        return res.status(404).json({
+          success: false,
+          message: "Pending borrowing request not found.",
+        });
+      }
+    } else {
+      const request = libraryETLService
+        .getBorrowingRequests(user.id)
+        .find((item) => item.id === req.params.id && item.status === "Pending");
+      if (!request) {
+        return res.status(404).json({
+          success: false,
+          message: "Pending borrowing request not found.",
+        });
+      }
+      if (!libraryETLService.cancelBorrowingRequest(req.params.id, user.id)) {
+        return res.status(404).json({
+          success: false,
+          message: "Pending borrowing request not found.",
+        });
+      }
+    }
+    return res.json({ success: true, message: "Borrowing request cancelled." });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to cancel borrowing request.",
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+};
+
+export const createLibraryReservation = async (req: Request, res: Response) => {
+  const user = currentUser(res);
+  if (!user || user.portalRole !== "Student") {
+    return res.status(403).json({ success: false, message: "Student access required." });
+  }
+  try {
+    if (env.db.enabled) {
+      const reservation = await libraryCirculationRepository.createLibraryReservation({
+        studentId: user.id,
+        studentName: user.name,
+        bookId: typeof req.body?.bookId === "string" ? req.body.bookId : "",
+      });
+      return res.status(201).json({ success: true, data: reservation });
+    }
+    return res.status(501).json({
+      success: false,
+      message: "Reservations require the database to be enabled.",
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to place reservation.";
+    const isClientError =
+      message ===
+      "Book or student not found, or an active reservation already exists.";
+    return res.status(isClientError ? 400 : 500).json({
+      success: false,
+      message,
+    });
+  }
+};
+
+export const cancelLibraryReservation = async (req: Request, res: Response) => {
+  const user = currentUser(res);
+  if (!user || user.portalRole !== "Student") {
+    return res.status(403).json({ success: false, message: "Student access required." });
+  }
+  try {
+    const cancelled = env.db.enabled
+      ? await libraryCirculationRepository.cancelLibraryReservation(req.params.id, user.id)
+      : false;
+    if (!cancelled) {
+      return res.status(404).json({
+        success: false,
+        message: "Active reservation not found.",
+      });
+    }
+    return res.json({ success: true, message: "Reservation cancelled." });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to cancel reservation.",
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+};
+
+export const getLibraryNotifications = async (_req: Request, res: Response) => {
+  const user = currentUser(res);
+  if (!user) {
+    return res.status(401).json({ success: false, message: "Authentication required." });
+  }
+  try {
+    const notifications =
+      user.portalRole === "Student" && env.db.enabled
+        ? await libraryCirculationRepository.listLibraryNotifications(user.id)
+        : [];
+    return res.json(notifications);
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve library notifications.",
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+};
+
+export const markLibraryNotificationRead = async (req: Request, res: Response) => {
+  const user = currentUser(res);
+  if (!user || user.portalRole !== "Student") {
+    return res.status(403).json({ success: false, message: "Student access required." });
+  }
+  try {
+    const updated = env.db.enabled
+      ? await libraryCirculationRepository.markLibraryNotificationRead(
+          req.params.id,
+          user.id
+        )
+      : false;
+    if (!updated) {
+      return res.status(404).json({ success: false, message: "Notification not found." });
+    }
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update notification.",
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+};
+
+export const markAllLibraryNotificationsRead = async (_req: Request, res: Response) => {
+  const user = currentUser(res);
+  if (!user || user.portalRole !== "Student") {
+    return res.status(403).json({ success: false, message: "Student access required." });
+  }
+  try {
+    if (env.db.enabled) {
+      await libraryCirculationRepository.markAllLibraryNotificationsRead(user.id);
+    }
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update notifications.",
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+};
+
+export const approveBorrowingRequest = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { reviewedBy } = req.body;
-    const result = libraryETLService.approveBorrowingRequest(id, reviewedBy);
+    const reviewer = currentUser(res);
+    const reviewedBy = reviewer?.name || "Library Staff";
+    const result = env.db.enabled
+      ? await libraryCirculationRepository.approveBorrowingRequest(id, reviewedBy)
+      : libraryETLService.approveBorrowingRequest(id, reviewedBy);
     if (!result.ok) {
-      return res.status(400).json({ success: false, message: result.message });
+      const statusCode = result.message === "Request not found." ? 404 : 400;
+      return res.status(statusCode).json({ success: false, message: result.message });
     }
     res.json({ success: true, message: result.message });
   } catch (error) {
@@ -561,17 +817,26 @@ export const approveBorrowingRequest = (req: Request, res: Response) => {
   }
 };
 
-export const rejectBorrowingRequest = (req: Request, res: Response) => {
+export const rejectBorrowingRequest = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { reason, reviewedBy } = req.body;
-    const result = libraryETLService.rejectBorrowingRequest(
-      id,
-      reason,
-      reviewedBy
-    );
+    const { reason } = req.body;
+    const reviewer = currentUser(res);
+    const reviewedBy = reviewer?.name || "Library Staff";
+    const result = env.db.enabled
+      ? await libraryCirculationRepository.rejectBorrowingRequest(
+          id,
+          typeof reason === "string" ? reason : "",
+          reviewedBy
+        )
+      : libraryETLService.rejectBorrowingRequest(id, reason, reviewedBy);
     if (!result.ok) {
-      return res.status(400).json({ success: false, message: result.message });
+      const statusCode =
+        result.message === "Request not found." ||
+        result.message === "Pending request not found."
+          ? 404
+          : 400;
+      return res.status(statusCode).json({ success: false, message: result.message });
     }
     res.json({ success: true, message: result.message });
   } catch (error) {
@@ -583,10 +848,12 @@ export const rejectBorrowingRequest = (req: Request, res: Response) => {
   }
 };
 
-export const confirmBookReturn = (req: Request, res: Response) => {
+export const confirmBookReturn = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const result = libraryETLService.confirmReturn(id);
+    const result = env.db.enabled
+      ? await libraryCirculationRepository.confirmLibraryReturn(id)
+      : libraryETLService.confirmReturn(id);
     if (!result.ok) {
       return res.status(400).json({ success: false, message: result.message });
     }

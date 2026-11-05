@@ -278,6 +278,29 @@ paths:
                     $ref: "#/components/schemas/SessionUser"
         "401":
           description: Not authenticated
+  /auth/change-password:
+    post:
+      tags: [Auth]
+      summary: Change the authenticated user's password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword:
+                  type: string
+                newPassword:
+                  type: string
+                  minLength: 12
+                  maxLength: 200
+      responses:
+        "200":
+          description: Password updated and refresh sessions revoked
+        "400":
+          description: Invalid current password or new password
   /students:
     get:
       tags: [Students]
@@ -434,6 +457,109 @@ paths:
       responses:
         "200":
           description: Users
+  /admin/settings:
+    get:
+      tags: [Admin]
+      summary: Read administrator profile and library preferences
+      responses:
+        "200":
+          description: Current profile and library settings
+    put:
+      tags: [Admin]
+      summary: Update administrator profile and library preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [profile, library]
+              properties:
+                profile:
+                  type: object
+                  required: [name, email, department]
+                  properties:
+                    name: { type: string }
+                    email: { type: string, format: email }
+                    department: { type: string }
+                library:
+                  type: object
+                  required: [libraryName, officeLocation, dueDateReminders, fineNotifications]
+                  properties:
+                    libraryName: { type: string }
+                    officeLocation: { type: string }
+                    dueDateReminders: { type: boolean }
+                    fineNotifications: { type: boolean }
+      responses:
+        "200":
+          description: Settings saved
+        "409":
+          description: Email address already in use
+    post:
+      tags: [Admin]
+      summary: Create an active Staff Librarian account (Administrator)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password, department]
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 160
+                email:
+                  type: string
+                  format: email
+                  maxLength: 160
+                password:
+                  type: string
+                  minLength: 12
+                  maxLength: 200
+                department:
+                  type: string
+                  minLength: 2
+                  maxLength: 160
+      responses:
+        "201":
+          description: Active staff account created
+        "400":
+          description: Invalid account details
+        "409":
+          description: Email address already belongs to an account
+        "503":
+          description: PostgreSQL is not enabled
+  /admin/users/{id}/status:
+    patch:
+      tags: [Admin]
+      summary: Activate or deactivate an administrator or staff account
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            maxLength: 32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [Active, Inactive]
+      responses:
+        "200":
+          description: Account status updated
+        "400":
+          description: Invalid status or attempt to deactivate own account
+        "404":
+          description: Account not found
   /admin/sync-history:
     get:
       tags: [Admin]
@@ -441,6 +567,13 @@ paths:
       responses:
         "200":
           description: Sync history
+  /audit-logs:
+    get:
+      tags: [Admin]
+      summary: Recent audit events (Administrator)
+      responses:
+        "200":
+          description: Up to 500 most recent audit events
   /health:
     get:
       tags: [Auth]

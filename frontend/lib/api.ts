@@ -49,6 +49,7 @@ import {
   ReservationRecord,
   Student,
   StudentBorrower,
+  StudentNotificationItem,
   SyncHistoryRecord,
 } from "@/types";
 
@@ -63,6 +64,20 @@ export const API_CONFIG = {
     Boolean(process.env.NEXT_PUBLIC_API_URL) &&
     process.env.NEXT_PUBLIC_USE_LIVE_API !== "false",
 };
+
+export interface AdminSettingsRecord {
+  profile: {
+    name: string;
+    email: string;
+    department: string;
+  };
+  library: {
+    libraryName: string;
+    officeLocation: string;
+    dueDateReminders: boolean;
+    fineNotifications: boolean;
+  };
+}
 
 const CSRF_COOKIE = "udis_csrf";
 const CLIENT_ID_KEY = "udis_realtime_client_id";
@@ -492,6 +507,75 @@ export async function getAdminUsers(): Promise<AdminUserRecord[]> {
     },
     (data) => Array.isArray(data)
   );
+}
+
+// POST /api/admin/users
+export async function createAdminLibraryStaff(input: {
+  name: string;
+  email: string;
+  password: string;
+  department: string;
+}): Promise<AdminUserRecord> {
+  if (!API_CONFIG.useLiveApi) {
+    throw new Error(
+      "Creating staff accounts requires the live API and PostgreSQL database."
+    );
+  }
+  return fetchJson<AdminUserRecord>("/admin/users", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+// PATCH /api/admin/users/:id/status
+export async function updateAdminUserStatus(
+  userId: string,
+  status: "Active" | "Inactive"
+): Promise<AdminUserRecord> {
+  if (!API_CONFIG.useLiveApi) {
+    throw new Error(
+      "Updating account status requires the live API and PostgreSQL database."
+    );
+  }
+  return fetchJson<AdminUserRecord>(
+    `/admin/users/${encodeURIComponent(userId)}/status`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }
+  );
+}
+
+export async function getAdminSettings(): Promise<AdminSettingsRecord> {
+  if (!API_CONFIG.useLiveApi) {
+    throw new Error("Administrator settings require the live API.");
+  }
+  return fetchJson<AdminSettingsRecord>("/admin/settings");
+}
+
+export async function saveAdminSettings(
+  settings: AdminSettingsRecord
+): Promise<AdminSettingsRecord> {
+  if (!API_CONFIG.useLiveApi) {
+    throw new Error("Saving administrator settings requires the live API.");
+  }
+  return fetchJson<AdminSettingsRecord>("/admin/settings", {
+    method: "PUT",
+    body: JSON.stringify(settings),
+  });
+}
+
+export async function changeAccountPassword(input: {
+  currentPassword: string;
+  newPassword: string;
+}): Promise<void> {
+  if (!API_CONFIG.useLiveApi) {
+    throw new Error("Changing passwords requires the live API.");
+  }
+  await fetchJson("/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 }
 
 // GET /api/admin/sync-history
@@ -925,4 +1009,96 @@ export async function getLibraryRequests(studentId?: string): Promise<BorrowingR
     },
     (data) => Array.isArray(data)
   );
+}
+
+export async function createLibraryRequest(
+  request: Pick<
+    BorrowingRequest,
+    "bookId" | "bookTitle" | "author" | "isbn" | "category" | "programCode"
+  >
+): Promise<BorrowingRequest> {
+  const response = await fetchJson<{
+    success: boolean;
+    data: BorrowingRequest;
+  }>("/library/requests", {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
+  return response.data;
+}
+
+export async function cancelLibraryRequest(
+  requestId: string
+): Promise<{ success: boolean; message: string }> {
+  return fetchJson(`/library/requests/${encodeURIComponent(requestId)}/cancel`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export async function approveLibraryRequest(
+  requestId: string
+): Promise<{ success: boolean; message: string }> {
+  return fetchJson(`/library/requests/${encodeURIComponent(requestId)}/approve`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export async function rejectLibraryRequest(
+  requestId: string,
+  reason: string
+): Promise<{ success: boolean; message: string }> {
+  return fetchJson(`/library/requests/${encodeURIComponent(requestId)}/reject`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export async function createLibraryReservation(
+  bookId: string
+): Promise<ReservationRecord> {
+  const response = await fetchJson<{ success: boolean; data: ReservationRecord }>(
+    "/library/reservations",
+    { method: "POST", body: JSON.stringify({ bookId }) }
+  );
+  return response.data;
+}
+
+export async function cancelLibraryReservation(
+  reservationId: string
+): Promise<{ success: boolean; message: string }> {
+  return fetchJson(
+    `/library/reservations/${encodeURIComponent(reservationId)}/cancel`,
+    { method: "POST", body: JSON.stringify({}) }
+  );
+}
+
+export async function returnLibraryTransaction(
+  transactionId: string
+): Promise<{ success: boolean; fineAccrued: number; message: string }> {
+  return fetchJson(
+    `/library/returns/${encodeURIComponent(transactionId)}`,
+    { method: "POST", body: JSON.stringify({}) }
+  );
+}
+
+export async function getLibraryNotifications(): Promise<StudentNotificationItem[]> {
+  return fetchJson<StudentNotificationItem[]>("/library/notifications");
+}
+
+export async function markLibraryNotificationRead(
+  notificationId: string
+): Promise<void> {
+  await fetchJson(
+    `/library/notifications/${encodeURIComponent(notificationId)}/read`,
+    { method: "POST", body: JSON.stringify({}) }
+  );
+}
+
+export async function markAllLibraryNotificationsRead(): Promise<void> {
+  await fetchJson("/library/notifications/read-all", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
 }

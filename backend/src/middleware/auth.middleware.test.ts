@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env";
+import * as authRepository from "../repositories/auth.repository";
 import {
   attachAuthContext,
   csrfGuard,
@@ -43,6 +44,7 @@ function createReq(overrides: Partial<Request> = {}): Request {
 const next = vi.fn() as unknown as NextFunction;
 
 beforeEach(() => {
+  vi.restoreAllMocks();
   vi.clearAllMocks();
 });
 
@@ -110,15 +112,33 @@ describe("attachAuthContext", () => {
 });
 
 describe("requireAuth", () => {
-  it("passes through when a user is attached", () => {
+  it("passes through when a user is attached and active", async () => {
+    vi.spyOn(authRepository, "isUserActive").mockResolvedValue(true);
     const req = createReq();
     const res = createRes();
     (res.locals as { user?: unknown }).user = { id: "u1" };
 
-    requireAuth(req, res, next);
+    await requireAuth(req, res, next);
 
     expect(next).toHaveBeenCalledTimes(1);
     expect(res.status).not.toHaveBeenCalled();
+  });
+
+  it("rejects a user whose account has been deactivated", async () => {
+    const wasDbEnabled = env.db.enabled;
+    env.db.enabled = true;
+    vi.spyOn(authRepository, "isUserActive").mockResolvedValue(false);
+    const req = createReq();
+    const res = createRes();
+    (res.locals as { user?: unknown }).user = { id: "u1" };
+
+    try {
+      await requireAuth(req, res, next);
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(next).not.toHaveBeenCalled();
+    } finally {
+      env.db.enabled = wasDbEnabled;
+    }
   });
 
   it("rejects unauthenticated requests with 401", () => {
@@ -133,13 +153,14 @@ describe("requireAuth", () => {
 });
 
 describe("requireRoles", () => {
-  it("allows users with an authorized role", () => {
+  it("allows users with an authorized role and active account", async () => {
+    vi.spyOn(authRepository, "isUserActive").mockResolvedValue(true);
     const middleware = requireRoles("Administrator");
     const req = createReq();
     const res = createRes();
     (res.locals as { user?: unknown }).user = { id: "u1", portalRole: "Administrator" };
 
-    middleware(req, res, next);
+    await middleware(req, res, next);
 
     expect(next).toHaveBeenCalledTimes(1);
     expect(res.status).not.toHaveBeenCalled();

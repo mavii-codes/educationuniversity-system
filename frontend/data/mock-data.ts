@@ -1856,7 +1856,7 @@ export const ADMIN_USERS: AdminUserRecord[] = [
     email: "b.soriano@university.edu",
     role: "Library Staff",
     department: "University Library Services & Archives",
-    status: "Invited",
+    status: "Inactive",
     mfaEnabled: false,
     lastActive: "Pending invitation",
   },

@@ -286,7 +286,7 @@ export type AdminUserRole =
   | "Data Integration Engineer"
   | "Institutional Data Steward";
 
-export type AdminUserStatus = "Active" | "Inactive" | "Invited";
+export type AdminUserStatus = "Active" | "Inactive";
 
 export interface AdminUserRecord {
   id: string;

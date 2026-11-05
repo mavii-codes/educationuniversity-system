@@ -1,10 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
+import { appRoot } from "../config/app-root";
 import { createPgPool } from "../config/database";
 
 function resolveMigrationsDir(): string {
-  // Works from both src/db (tsx) and dist/db (compiled): both are two levels below backend/.
-  const repoRelative = path.resolve(__dirname, "../../db/migrations");
+  // Works from both src/db (tsx) and dist/db (compiled), regardless of cwd.
+  const repoRelative = path.join(appRoot, "db", "migrations");
   if (fs.existsSync(repoRelative)) return repoRelative;
 
   const fromCwd = path.resolve(process.cwd(), "db", "migrations");

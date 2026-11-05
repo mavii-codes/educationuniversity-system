@@ -1,8 +1,9 @@
 import crypto from "node:crypto";
 import path from "node:path";
 import dotenv from "dotenv";
+import { appRoot } from "./app-root";
 
-dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+dotenv.config({ path: path.join(appRoot, ".env") });
 
 const nodeEnv = process.env.NODE_ENV || "development";
 const isProduction = nodeEnv === "production";

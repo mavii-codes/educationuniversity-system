@@ -244,17 +244,23 @@ export async function login(input: {
   );
 
   if (!user || !passwordMatches) {
-    await safeAudit(null, "auth.login_failed", { identifier });
+    await safeAudit(null, "auth.login_failed", { ipAddress: input.ip });
     throw new ApiError(401, "Invalid email or password.");
   }
 
   if (user.status !== "Active") {
-    await safeAudit(user.id, "auth.login_blocked", { status: user.status });
+    await safeAudit(user.id, "auth.login_blocked", {
+      status: user.status,
+      ipAddress: input.ip,
+    });
     throw new ApiError(403, `This account is ${user.status.toLowerCase()}. Contact an administrator.`);
   }
 
   await authRepository.touchLastLogin(user.id);
-  await safeAudit(user.id, "auth.login_succeeded", { role: user.role });
+  await safeAudit(user.id, "auth.login_succeeded", {
+    role: user.role,
+    ipAddress: input.ip,
+  });
 
   return issueSession(user, Boolean(input.rememberMe), input.ip, input.userAgent);
 }
@@ -334,6 +340,29 @@ export async function getSessionUser(userId: string): Promise<SessionUser | null
   const user = await authRepository.findUserById(userId);
   if (!user || user.status !== "Active") return null;
   return toSessionUser(user);
+}
+
+export async function changePassword(input: {
+  userId: string;
+  currentPassword: string;
+  newPassword: string;
+}): Promise<void> {
+  const user = await authRepository.findUserById(input.userId);
+  if (
+    !user ||
+    user.status !== "Active" ||
+    !comparePassword(input.currentPassword, user.password_hash)
+  ) {
+    throw new ApiError(400, "Current password is incorrect.");
+  }
+
+  const changed = await authRepository.changePassword(
+    input.userId,
+    user.password_hash,
+    hashPassword(input.newPassword)
+  );
+  if (!changed) throw new ApiError(409, "Password changed concurrently. Please try again.");
+  await safeAudit(input.userId, "auth.password_changed", {});
 }
 
 async function safeAudit(

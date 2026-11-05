@@ -105,6 +105,41 @@ CREATE TABLE IF NOT EXISTS library_transactions (
   source_system VARCHAR(48) NOT NULL DEFAULT 'Library LMS'
 );
 
+CREATE TABLE IF NOT EXISTS library_borrowing_requests (
+  id VARCHAR(64) PRIMARY KEY,
+  request_code VARCHAR(48) UNIQUE NOT NULL,
+  book_id VARCHAR(32) NOT NULL REFERENCES library_books(id) ON UPDATE CASCADE,
+  book_title VARCHAR(255) NOT NULL,
+  author VARCHAR(160) NOT NULL,
+  isbn VARCHAR(32) NOT NULL,
+  category VARCHAR(80) NOT NULL,
+  student_id VARCHAR(32) NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+  student_name VARCHAR(160) NOT NULL,
+  program_code VARCHAR(16) NOT NULL,
+  request_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  status VARCHAR(24) NOT NULL DEFAULT 'Pending'
+    CHECK (status IN ('Pending', 'Approved', 'Rejected', 'Cancelled', 'Completed')),
+  rejection_reason TEXT,
+  reviewed_by VARCHAR(120),
+  reviewed_date TIMESTAMPTZ,
+  pickup_due_date TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_library_requests_student_date
+  ON library_borrowing_requests(student_id, request_date DESC);
+
+CREATE TABLE IF NOT EXISTS library_notifications (
+  id VARCHAR(64) PRIMARY KEY,
+  student_id VARCHAR(32) NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+  title VARCHAR(200) NOT NULL,
+  message TEXT NOT NULL,
+  type VARCHAR(24) NOT NULL
+    CHECK (type IN ('BorrowRequest', 'DueDate', 'Reservation', 'Fine', 'General')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  is_read BOOLEAN NOT NULL DEFAULT FALSE,
+  action_url VARCHAR(160)
+);
+
 CREATE TABLE IF NOT EXISTS library_reservations (
   id VARCHAR(32) PRIMARY KEY,
   reservation_code VARCHAR(48) UNIQUE NOT NULL,
@@ -154,14 +189,23 @@ CREATE TABLE IF NOT EXISTS library_etl_logs (
   execution_log JSONB
 );
 
-CREATE TABLE IF NOT EXISTS audit_logs (
-  id VARCHAR(64) PRIMARY KEY,
-  timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  actor VARCHAR(120) NOT NULL,
-  actor_role VARCHAR(64) NOT NULL,
-  action VARCHAR(120) NOT NULL,
-  resource VARCHAR(120) NOT NULL,
-  status VARCHAR(24) NOT NULL,
-  ip_address VARCHAR(48) NOT NULL,
-  details TEXT
+CREATE TABLE IF NOT EXISTS audit_log (
+  id BIGSERIAL PRIMARY KEY,
+  actor_user_id VARCHAR(32),
+  action VARCHAR(64) NOT NULL,
+  entity_type VARCHAR(48) NOT NULL,
+  entity_id VARCHAR(64),
+  metadata JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS library_system_settings (
+  id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  library_name VARCHAR(160) NOT NULL DEFAULT 'University Library',
+  office_location VARCHAR(160) NOT NULL DEFAULT 'Library Office',
+  due_date_reminders BOOLEAN NOT NULL DEFAULT TRUE,
+  fine_notifications BOOLEAN NOT NULL DEFAULT TRUE,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

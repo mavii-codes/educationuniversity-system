@@ -7,7 +7,7 @@ export type UserRow = {
   password_hash: string;
   role: string;
   department: string;
-  status: "Active" | "Inactive" | "Invited";
+  status: "Active" | "Inactive";
   mfa_enabled: boolean;
   last_login_at: Date | null;
 };
@@ -41,6 +41,14 @@ export async function findUserById(id: string): Promise<UserRow | null> {
     [id]
   );
   return result.rows[0] ?? null;
+}
+
+export async function isUserActive(id: string): Promise<boolean> {
+  const result = await queryDb<{ active: boolean }>(
+    "SELECT status = 'Active' AS active FROM users WHERE id = $1",
+    [id]
+  );
+  return result.rows[0]?.active === true;
 }
 
 export async function findUserByEmail(email: string): Promise<UserRow | null> {
@@ -173,6 +181,31 @@ export async function consumePasswordResetToken(
       `UPDATE refresh_tokens SET revoked_at = NOW()
         WHERE user_id = $1 AND revoked_at IS NULL`,
       [reset.user_id]
+    );
+    return true;
+  });
+}
+
+export async function changePassword(
+  userId: string,
+  currentPasswordHash: string,
+  newPasswordHash: string
+): Promise<boolean> {
+  return withTransaction(async (client) => {
+    const { rows } = await client.query<{ password_hash: string }>(
+      `SELECT password_hash FROM users WHERE id = $1 AND status = 'Active' FOR UPDATE`,
+      [userId]
+    );
+    if (!rows[0] || rows[0].password_hash !== currentPasswordHash) return false;
+
+    await client.query(
+      `UPDATE users SET password_hash = $2, updated_at = NOW() WHERE id = $1`,
+      [userId, newPasswordHash]
+    );
+    await client.query(
+      `UPDATE refresh_tokens SET revoked_at = NOW()
+        WHERE user_id = $1 AND revoked_at IS NULL`,
+      [userId]
     );
     return true;
   });

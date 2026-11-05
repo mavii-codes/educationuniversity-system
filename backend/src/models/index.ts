@@ -234,7 +234,7 @@ export interface AdminUserModel {
   email: string;
   role: string;
   department: string;
-  status: "Active" | "Inactive" | "Invited";
+  status: "Active" | "Inactive";
   mfaEnabled: boolean;
   lastActive: string;
 }

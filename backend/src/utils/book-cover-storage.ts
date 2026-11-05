@@ -1,7 +1,8 @@
 import { mkdir, unlink } from "node:fs/promises";
 import path from "node:path";
+import { appRoot } from "../config/app-root";
 
-export const uploadsDirectory = path.resolve(__dirname, "../../uploads");
+export const uploadsDirectory = path.join(appRoot, "uploads");
 export const coversDirectory = path.join(uploadsDirectory, "covers");
 export const coverUploadUrlPrefix = "/uploads/covers/";
 

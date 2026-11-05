@@ -17,6 +17,7 @@ import integrationRoutes from "./routes/integration.routes";
 import adminRoutes from "./routes/admin.routes";
 import libraryRoutes from "./routes/library.routes";
 import { uploadsDirectory } from "./utils/book-cover-storage";
+import * as authRepository from "./repositories/auth.repository";
 
 const app = express();
 
@@ -51,11 +52,43 @@ app.use((req, res, next) => {
   res.once("finish", () => {
     const isMutation = !["GET", "HEAD", "OPTIONS"].includes(req.method);
     const isAuthRequest = req.path.startsWith("/api/auth/");
+    const shouldAudit = isMutation && !isAuthRequest && env.db.enabled;
+    const auditWrite = shouldAudit
+      ? authRepository
+          .writeAudit({
+            actorUserId: res.locals.user?.id ?? null,
+            action: `api.${req.method.toLowerCase()}`.slice(0, 64),
+            entityType: req.path.slice(0, 48),
+            metadata: {
+              method: req.method,
+              path: req.path,
+              status:
+                res.statusCode < 400
+                  ? "Success"
+                  : res.statusCode < 500
+                    ? "Warning"
+                    : "Failure",
+              statusCode: res.statusCode,
+              ipAddress: req.ip,
+            },
+          })
+          .catch((error: unknown) => {
+            console.error(
+              "[audit] Failed to record API mutation:",
+              error instanceof Error ? error.message : error
+            );
+          })
+      : Promise.resolve();
+
     if (isMutation && !isAuthRequest && res.statusCode >= 200 && res.statusCode < 300) {
       const clientId = req.header("x-client-id");
-      void publishRealtimeUpdate(
-        clientId && /^[a-zA-Z0-9-]{1,64}$/.test(clientId) ? clientId : undefined
+      void auditWrite.then(() =>
+        publishRealtimeUpdate(
+          clientId && /^[a-zA-Z0-9-]{1,64}$/.test(clientId) ? clientId : undefined
+        )
       );
+    } else {
+      void auditWrite;
     }
   });
   next();

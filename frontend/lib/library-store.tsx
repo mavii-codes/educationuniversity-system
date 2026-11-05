@@ -23,12 +23,25 @@ import {
   OVERDUE_FINES,
   RESERVATIONS,
 } from "@/data/mock-data";
-import { SessionUser } from "./auth";
+import { SessionUser, useAuth } from "./auth";
 import {
   API_CONFIG,
+  approveLibraryRequest,
+  cancelLibraryRequest,
+  cancelLibraryReservation,
+  createLibraryReservation,
+  createLibraryRequest as createLiveLibraryRequest,
   getLibraryBooks,
   getLibraryFines,
+  getLibraryNotifications,
+  getLibraryRequests,
+  getLibraryReservations,
+  getLibraryTransactions,
   payLibraryFine,
+  markAllLibraryNotificationsRead as markAllLiveLibraryNotificationsRead,
+  markLibraryNotificationRead as markLiveLibraryNotificationRead,
+  rejectLibraryRequest,
+  returnLibraryTransaction,
 } from "./api";
 
 interface LibraryStoreContextValue {
@@ -214,7 +227,12 @@ export function LibraryStoreProvider({
 }: {
   children: React.ReactNode;
 }) {
+  const { isAuthenticated } = useAuth();
+
   const [books, setBooks] = useState<LibraryBook[]>(() => {
+    // Live mode starts empty and is populated by the authenticated fetch;
+    // localStorage seeds are only meaningful for the mock demo store.
+    if (API_CONFIG.useLiveApi) return [];
     if (typeof window === "undefined") return LIBRARY_BOOKS;
     try {
       const stored = window.localStorage.getItem(STORAGE_KEYS.BOOKS);
@@ -229,6 +247,7 @@ export function LibraryStoreProvider({
   const [borrowingRequests, setBorrowingRequests] = useState<
     BorrowingRequest[]
   >(() => {
+    if (API_CONFIG.useLiveApi) return [];
     if (typeof window === "undefined") return INITIAL_BORROWING_REQUESTS;
     try {
       const stored = window.localStorage.getItem(STORAGE_KEYS.REQUESTS);
@@ -240,6 +259,7 @@ export function LibraryStoreProvider({
 
   const [transactions, setTransactions] = useState<BorrowingTransaction[]>(
     () => {
+      if (API_CONFIG.useLiveApi) return [];
       if (typeof window === "undefined") return BORROWING_TRANSACTIONS;
       try {
         const stored = window.localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
@@ -251,6 +271,7 @@ export function LibraryStoreProvider({
   );
 
   const [reservations, setReservations] = useState<ReservationRecord[]>(() => {
+    if (API_CONFIG.useLiveApi) return [];
     if (typeof window === "undefined") return RESERVATIONS;
     try {
       const stored = window.localStorage.getItem(STORAGE_KEYS.RESERVATIONS);
@@ -261,6 +282,7 @@ export function LibraryStoreProvider({
   });
 
   const [fines, setFines] = useState<OverdueFineRecord[]>(() => {
+    if (API_CONFIG.useLiveApi) return [];
     if (typeof window === "undefined") return OVERDUE_FINES;
     try {
       const stored = window.localStorage.getItem(STORAGE_KEYS.FINES);
@@ -273,6 +295,7 @@ export function LibraryStoreProvider({
   const [notifications, setNotifications] = useState<
     StudentNotificationItem[]
   >(() => {
+    if (API_CONFIG.useLiveApi) return [];
     if (typeof window === "undefined") return INITIAL_NOTIFICATIONS;
     try {
       const stored = window.localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
@@ -282,29 +305,73 @@ export function LibraryStoreProvider({
     }
   });
 
+  const refreshLiveLibraryData = useCallback(async () => {
+    const results = await Promise.allSettled([
+      getLibraryBooks(),
+      getLibraryFines(),
+      getLibraryRequests(),
+      getLibraryTransactions(),
+      getLibraryReservations(),
+      getLibraryNotifications(),
+    ]);
+    const [
+      catalogResult,
+      finesResult,
+      requestsResult,
+      transactionsResult,
+      reservationsResult,
+      notificationsResult,
+    ] = results;
+    if (catalogResult.status === "fulfilled") {
+      setBooks(catalogResult.value.map(addMockCoverUrl));
+    } else {
+      console.error("[Library] Failed to load catalog from the live API:", catalogResult.reason);
+    }
+    if (finesResult.status === "fulfilled") {
+      setFines(finesResult.value);
+    } else {
+      console.error("[Library] Failed to load fines from the live API:", finesResult.reason);
+    }
+    if (requestsResult.status === "fulfilled") {
+      setBorrowingRequests(requestsResult.value);
+    } else {
+      console.error(
+        "[Library] Failed to load borrowing requests from the live API:",
+        requestsResult.reason
+      );
+    }
+    if (transactionsResult.status === "fulfilled") {
+      setTransactions(transactionsResult.value);
+    } else {
+      console.error(
+        "[Library] Failed to load transactions from the live API:",
+        transactionsResult.reason
+      );
+    }
+    if (reservationsResult.status === "fulfilled") {
+      setReservations(reservationsResult.value);
+    } else {
+      console.error(
+        "[Library] Failed to load reservations from the live API:",
+        reservationsResult.reason
+      );
+    }
+    if (notificationsResult.status === "fulfilled") {
+      setNotifications(notificationsResult.value);
+    } else {
+      console.error(
+        "[Library] Failed to load notifications from the live API:",
+        notificationsResult.reason
+      );
+    }
+  }, []);
+
   useEffect(() => {
-    if (!API_CONFIG.useLiveApi) return;
+    // Authenticated endpoints must never fire from the public login page.
+    if (!API_CONFIG.useLiveApi || !isAuthenticated) return;
     let active = true;
     const loadLibraryData = async () => {
-      const results = await Promise.allSettled([getLibraryBooks(), getLibraryFines()]);
-      if (!active) return;
-      const [catalogResult, finesResult] = results;
-      if (catalogResult.status === "fulfilled") {
-        setBooks(catalogResult.value.map(addMockCoverUrl));
-      } else {
-        console.error(
-          "[Library] Failed to load catalog from the live API:",
-          catalogResult.reason
-        );
-      }
-      if (finesResult.status === "fulfilled") {
-        setFines(finesResult.value);
-      } else {
-        console.error(
-          "[Library] Failed to load fines from the live API:",
-          finesResult.reason
-        );
-      }
+      await refreshLiveLibraryData();
     };
     void loadLibraryData();
     const reloadFines = () => {
@@ -324,6 +391,89 @@ export function LibraryStoreProvider({
       window.removeEventListener("focus", reloadFines);
       document.removeEventListener("visibilitychange", reloadFines);
     };
+  }, [refreshLiveLibraryData, isAuthenticated]);
+
+  // Drop cached live records on sign-out so a different account never sees
+  // the previous session's data.
+  useEffect(() => {
+    if (!API_CONFIG.useLiveApi || isAuthenticated) return;
+    setBooks([]);
+    setBorrowingRequests([]);
+    setTransactions([]);
+    setReservations([]);
+    setFines([]);
+    setNotifications([]);
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (API_CONFIG.useLiveApi) return;
+
+    const syncStoredValue = (key: string, value: string | null) => {
+      try {
+        switch (key) {
+          case STORAGE_KEYS.BOOKS:
+            setBooks(
+              value
+                ? mergeStoredBooksWithCatalog(JSON.parse(value) as LibraryBook[])
+                : LIBRARY_BOOKS.map(addMockCoverUrl)
+            );
+            break;
+          case STORAGE_KEYS.REQUESTS:
+            setBorrowingRequests(
+              value
+                ? (JSON.parse(value) as BorrowingRequest[])
+                : INITIAL_BORROWING_REQUESTS
+            );
+            break;
+          case STORAGE_KEYS.TRANSACTIONS:
+            setTransactions(
+              value
+                ? (JSON.parse(value) as BorrowingTransaction[])
+                : BORROWING_TRANSACTIONS
+            );
+            break;
+          case STORAGE_KEYS.RESERVATIONS:
+            setReservations(
+              value
+                ? (JSON.parse(value) as ReservationRecord[])
+                : RESERVATIONS
+            );
+            break;
+          case STORAGE_KEYS.FINES:
+            setFines(
+              value
+                ? (JSON.parse(value) as OverdueFineRecord[])
+                : OVERDUE_FINES
+            );
+            break;
+          case STORAGE_KEYS.NOTIFICATIONS:
+            setNotifications(
+              value
+                ? (JSON.parse(value) as StudentNotificationItem[])
+                : INITIAL_NOTIFICATIONS
+            );
+            break;
+        }
+      } catch (error) {
+        console.error(`[Library] Failed to sync stored data for ${key}:`, error);
+      }
+    };
+
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.storageArea !== window.localStorage) return;
+
+      if (event.key === null) {
+        Object.values(STORAGE_KEYS).forEach((key) =>
+          syncStoredValue(key, window.localStorage.getItem(key))
+        );
+        return;
+      }
+
+      syncStoredValue(event.key, event.newValue);
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
   useEffect(() => {
@@ -363,14 +513,17 @@ export function LibraryStoreProvider({
     );
   }, [books]);
 
-  // Sync state changes to localStorage
+  // Sync state changes to localStorage (mock demo mode only; live data must
+  // not be mirrored locally or deleted rows can resurrect from stale cache).
   useEffect(() => {
+    if (API_CONFIG.useLiveApi) return;
     try {
       window.localStorage.setItem(STORAGE_KEYS.BOOKS, JSON.stringify(books));
     } catch {}
   }, [books]);
 
   useEffect(() => {
+    if (API_CONFIG.useLiveApi) return;
     try {
       window.localStorage.setItem(
         STORAGE_KEYS.REQUESTS,
@@ -380,6 +533,7 @@ export function LibraryStoreProvider({
   }, [borrowingRequests]);
 
   useEffect(() => {
+    if (API_CONFIG.useLiveApi) return;
     try {
       window.localStorage.setItem(
         STORAGE_KEYS.TRANSACTIONS,
@@ -389,6 +543,7 @@ export function LibraryStoreProvider({
   }, [transactions]);
 
   useEffect(() => {
+    if (API_CONFIG.useLiveApi) return;
     try {
       window.localStorage.setItem(
         STORAGE_KEYS.RESERVATIONS,
@@ -398,12 +553,14 @@ export function LibraryStoreProvider({
   }, [reservations]);
 
   useEffect(() => {
+    if (API_CONFIG.useLiveApi) return;
     try {
       window.localStorage.setItem(STORAGE_KEYS.FINES, JSON.stringify(fines));
     } catch {}
   }, [fines]);
 
   useEffect(() => {
+    if (API_CONFIG.useLiveApi) return;
     try {
       window.localStorage.setItem(
         STORAGE_KEYS.NOTIFICATIONS,
@@ -486,7 +643,29 @@ export function LibraryStoreProvider({
         status: "Pending",
       };
 
-      setBorrowingRequests((prev) => [newRequest, ...prev]);
+      if (API_CONFIG.useLiveApi) {
+        try {
+          const createdRequest = await createLiveLibraryRequest({
+            bookId: book.id,
+            bookTitle: book.title,
+            author: book.author,
+            isbn: book.isbn,
+            category: book.category,
+            programCode: user.programCode || "BSIT",
+          });
+          setBorrowingRequests((prev) => [createdRequest, ...prev]);
+        } catch (error) {
+          return {
+            ok: false,
+            message:
+              error instanceof Error
+                ? error.message
+                : "Failed to submit borrowing request.",
+          };
+        }
+      } else {
+        setBorrowingRequests((prev) => [newRequest, ...prev]);
+      }
 
       // Add Notification
       const newNotif: StudentNotificationItem = {
@@ -513,6 +692,18 @@ export function LibraryStoreProvider({
   // Cancel Pending Borrow Request
   const cancelBorrowRequest = useCallback(
     async (requestId: string): Promise<{ ok: boolean; message: string }> => {
+      if (API_CONFIG.useLiveApi) {
+        try {
+          const result = await cancelLibraryRequest(requestId);
+          await refreshLiveLibraryData();
+          return { ok: result.success, message: result.message };
+        } catch (error) {
+          return {
+            ok: false,
+            message: error instanceof Error ? error.message : "Failed to cancel request.",
+          };
+        }
+      }
       setBorrowingRequests((prev) =>
         prev.map((r) =>
           r.id === requestId && r.status === "Pending"
@@ -522,7 +713,7 @@ export function LibraryStoreProvider({
       );
       return { ok: true, message: "Borrowing request cancelled." };
     },
-    []
+    [refreshLiveLibraryData]
   );
 
   // Submit Reservation
@@ -570,7 +761,20 @@ export function LibraryStoreProvider({
         status: "Pending",
       };
 
-      setReservations((prev) => [newReservation, ...prev]);
+      if (API_CONFIG.useLiveApi) {
+        try {
+          const reservation = await createLibraryReservation(bookId);
+          setReservations((prev) => [reservation, ...prev]);
+        } catch (error) {
+          return {
+            ok: false,
+            message:
+              error instanceof Error ? error.message : "Failed to place reservation.",
+          };
+        }
+      } else {
+        setReservations((prev) => [newReservation, ...prev]);
+      }
 
       const newNotif: StudentNotificationItem = {
         id: `notif-${Date.now()}`,
@@ -597,6 +801,19 @@ export function LibraryStoreProvider({
     async (
       reservationId: string
     ): Promise<{ ok: boolean; message: string }> => {
+      if (API_CONFIG.useLiveApi) {
+        try {
+          const result = await cancelLibraryReservation(reservationId);
+          await refreshLiveLibraryData();
+          return { ok: result.success, message: result.message };
+        } catch (error) {
+          return {
+            ok: false,
+            message:
+              error instanceof Error ? error.message : "Failed to cancel reservation.",
+          };
+        }
+      }
       setReservations((prev) =>
         prev.map((r) =>
           r.id === reservationId ? { ...r, status: "Cancelled" } : r
@@ -604,7 +821,7 @@ export function LibraryStoreProvider({
       );
       return { ok: true, message: "Reservation cancelled." };
     },
-    []
+    [refreshLiveLibraryData]
   );
 
   // Admin approves borrowing request
@@ -622,6 +839,19 @@ export function LibraryStoreProvider({
           ok: false,
           message: "Cannot approve: no copies available in inventory.",
         };
+      }
+
+      if (API_CONFIG.useLiveApi) {
+        try {
+          const result = await approveLibraryRequest(requestId);
+          await refreshLiveLibraryData();
+          return { ok: result.success, message: result.message };
+        } catch (error) {
+          return {
+            ok: false,
+            message: error instanceof Error ? error.message : "Failed to approve request.",
+          };
+        }
       }
 
       const pickupDue = new Date();
@@ -697,7 +927,7 @@ export function LibraryStoreProvider({
         message: `Request approved. Active loan generated for ${request.studentName}.`,
       };
     },
-    [books, borrowingRequests]
+    [books, borrowingRequests, refreshLiveLibraryData]
   );
 
   // Admin rejects borrowing request
@@ -709,6 +939,19 @@ export function LibraryStoreProvider({
     ): Promise<{ ok: boolean; message: string }> => {
       const request = borrowingRequests.find((r) => r.id === requestId);
       if (!request) return { ok: false, message: "Request not found." };
+
+      if (API_CONFIG.useLiveApi) {
+        try {
+          const result = await rejectLibraryRequest(requestId, reason);
+          await refreshLiveLibraryData();
+          return { ok: result.success, message: result.message };
+        } catch (error) {
+          return {
+            ok: false,
+            message: error instanceof Error ? error.message : "Failed to reject request.",
+          };
+        }
+      }
 
       setBorrowingRequests((prev) =>
         prev.map((r) =>
@@ -738,7 +981,7 @@ export function LibraryStoreProvider({
 
       return { ok: true, message: "Request rejected with reason." };
     },
-    [borrowingRequests]
+    [borrowingRequests, refreshLiveLibraryData]
   );
 
   // Admin confirms return of a book
@@ -748,6 +991,25 @@ export function LibraryStoreProvider({
     ): Promise<{ ok: boolean; fineAccrued: number; message: string }> => {
       const tx = transactions.find((t) => t.id === transactionId);
       if (!tx) return { ok: false, fineAccrued: 0, message: "Transaction not found." };
+
+      if (API_CONFIG.useLiveApi) {
+        try {
+          const result = await returnLibraryTransaction(transactionId);
+          await refreshLiveLibraryData();
+          return {
+            ok: result.success,
+            fineAccrued: result.fineAccrued,
+            message: result.message,
+          };
+        } catch (error) {
+          return {
+            ok: false,
+            fineAccrued: 0,
+            message:
+              error instanceof Error ? error.message : "Failed to confirm return.",
+          };
+        }
+      }
 
       const now = new Date();
       const dueDate = new Date(tx.dueDate);
@@ -837,19 +1099,29 @@ export function LibraryStoreProvider({
           : `Book return confirmed. Inventory restored to Available.`,
       };
     },
-    [transactions]
+    [refreshLiveLibraryData, transactions]
   );
 
   const markNotificationRead = useCallback((id: string) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
+    if (API_CONFIG.useLiveApi) {
+      void markLiveLibraryNotificationRead(id).catch((error: unknown) => {
+        console.error("[Library] Failed to mark notification as read:", error);
+      });
+    }
   }, []);
 
   const markAllNotificationsRead = useCallback((studentId: string) => {
     setNotifications((prev) =>
       prev.map((n) => (n.studentId === studentId ? { ...n, read: true } : n))
     );
+    if (API_CONFIG.useLiveApi) {
+      void markAllLiveLibraryNotificationsRead().catch((error: unknown) => {
+        console.error("[Library] Failed to mark notifications as read:", error);
+      });
+    }
   }, []);
 
   const settleFine = useCallback(

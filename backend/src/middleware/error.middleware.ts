@@ -17,13 +17,23 @@ export function notFoundHandler(req: Request, res: Response): void {
   });
 }
 
+function resolveStatusCode(err: Error | ApiError): number {
+  if (err instanceof ApiError) return err.statusCode;
+
+  const candidate = err as Error & { status?: unknown; statusCode?: unknown };
+  const status = candidate.status ?? candidate.statusCode;
+  return typeof status === "number" && status >= 400 && status <= 499
+    ? status
+    : 500;
+}
+
 export function errorHandler(
   err: Error | ApiError,
   _req: Request,
   res: Response,
   _next: NextFunction
 ): void {
-  const statusCode = err instanceof ApiError ? err.statusCode : 500;
+  const statusCode = resolveStatusCode(err);
   const isServerError = statusCode >= 500;
 
   if (isServerError) {

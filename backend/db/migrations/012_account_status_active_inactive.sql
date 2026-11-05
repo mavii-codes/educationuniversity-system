@@ -1,0 +1,10 @@
+ALTER TABLE users
+  DROP CONSTRAINT IF EXISTS users_status_check;
+
+UPDATE users
+   SET status = 'Inactive'
+ WHERE status = 'Invited';
+
+ALTER TABLE users
+  ADD CONSTRAINT users_status_check
+  CHECK (status IN ('Active', 'Inactive'));

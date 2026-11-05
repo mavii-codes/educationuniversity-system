@@ -14,10 +14,26 @@ router.get("/admin/dashboard", (req, res, next) =>
 router.get("/admin/users", (req, res, next) =>
   adminController.getUsers(req, res, next)
 );
+router.post("/admin/users", (req, res, next) =>
+  adminController.createLibraryStaff(req, res, next)
+);
+router.patch("/admin/users/:id/status", (req, res, next) =>
+  adminController.updateUserStatus(req, res, next)
+);
+router.get("/admin/settings", (req, res, next) =>
+  adminController.getSettings(req, res, next)
+);
+router.put("/admin/settings", (req, res, next) =>
+  adminController.updateSettings(req, res, next)
+);
 
 // GET /api/admin/sync-history
 router.get("/admin/sync-history", (req, res, next) =>
   adminController.getSyncHistory(req, res, next)
+);
+
+router.get("/audit-logs", (req, res, next) =>
+  adminController.getAuditLogs(req, res, next)
 );
 
 export default router;

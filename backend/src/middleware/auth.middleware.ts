@@ -1,6 +1,8 @@
 import crypto from "node:crypto";
 import { NextFunction, Request, Response } from "express";
 import { AuthorizedRole } from "../models";
+import { env } from "../config/env";
+import * as authRepository from "../repositories/auth.repository";
 import {
   ACCESS_COOKIE,
   AuthContext,
@@ -41,20 +43,41 @@ export function currentUser(res: Response): AuthContext | undefined {
   return res.locals.user as AuthContext | undefined;
 }
 
-export function requireAuth(
+async function requireActiveAccount(
+  res: Response,
+  next: NextFunction
+): Promise<boolean> {
+  if (!env.db.enabled || res.locals.activeAccountVerified === true) return true;
+
+  const user = currentUser(res);
+  if (!user) return false;
+  try {
+    if (!(await authRepository.isUserActive(user.id))) {
+      res.status(401).json({ success: false, message: "Account is not active." });
+      return false;
+    }
+    res.locals.activeAccountVerified = true;
+    return true;
+  } catch (error) {
+    next(error);
+    return false;
+  }
+}
+
+export async function requireAuth(
   _req: Request,
   res: Response,
   next: NextFunction
-): void {
+): Promise<void> {
   if (!currentUser(res)) {
     res.status(401).json({ success: false, message: "Authentication required." });
     return;
   }
-  next();
+  if (await requireActiveAccount(res, next)) next();
 }
 
 export function requireRoles(...allowedRoles: AuthorizedRole[]) {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const user = currentUser(res);
     if (!user) {
       res.status(401).json({ success: false, message: "Authentication required." });
@@ -69,6 +92,7 @@ export function requireRoles(...allowedRoles: AuthorizedRole[]) {
       return;
     }
 
+    if (!(await requireActiveAccount(res, next))) return;
     next();
   };
 }

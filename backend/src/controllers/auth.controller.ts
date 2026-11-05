@@ -20,6 +20,7 @@ import {
   getSessionUser,
   login,
   logout,
+  changePassword as changeAccountPassword,
   registerStudent,
   refresh,
   sessionCookies,
@@ -50,6 +51,11 @@ const resetPasswordSchema = z.object({
     .trim()
     .regex(/^\d{6}$/, "Enter the 6-digit verification code from your email."),
   password: z.string().min(12).max(200),
+});
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1).max(200),
+  newPassword: z.string().min(12).max(200),
 });
 
 function applySessionCookies(res: Response, session: IssuedSession): void {
@@ -161,6 +167,7 @@ export class AuthController {
         dbEnabled: env.db.enabled,
       });
 
+      clearLoginFailures(loginAttemptKey(req));
       applySessionCookies(res, session);
       res.json({ user: session.user, csrfToken: session.csrfToken });
     } catch (error) {
@@ -215,6 +222,37 @@ export class AuthController {
       }
 
       res.json({ user });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async changePassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const parsed = changePasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      next(
+        new ApiError(
+          400,
+          "Enter your current password and a new password with at least 12 characters."
+        )
+      );
+      return;
+    }
+    const user = currentUser(res);
+    if (!user) {
+      next(new ApiError(401, "Authentication required."));
+      return;
+    }
+    try {
+      await changeAccountPassword({
+        userId: user.id,
+        ...parsed.data,
+      });
+      res.json({
+        success: true,
+        message:
+          "Password updated. Your current session and other devices will need to sign in again after the access token expires.",
+      });
     } catch (error) {
       next(error);
     }

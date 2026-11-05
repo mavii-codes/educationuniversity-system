@@ -28,9 +28,13 @@ export default function AdminAuditLogsPage() {
       try {
         const data = await getAuditLogs();
         setLogs(data);
-      } catch {
+      } catch (loadError) {
         setLogs([]);
-        setError("Audit logging endpoint is not available in this build");
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Unable to load audit logs."
+        );
       } finally {
         setLoading(false);
       }
@@ -100,7 +104,7 @@ export default function AdminAuditLogsPage() {
         </div>
       </div>
 
-      {/* Endpoint Unavailable Fallback */}
+      {/* Audit Log Load Error */}
       {error && (
         <div className="rounded-xl border border-slate-200/80 bg-white p-6 text-center shadow-card">
           <div className="flex flex-col items-center gap-2">
@@ -156,7 +160,21 @@ export default function AdminAuditLogsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {filteredLogs.map((log) => (
+            {loading ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
+                  Loading audit logs...
+                </td>
+              </tr>
+            ) : filteredLogs.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
+                  {error
+                    ? "Audit log records could not be loaded."
+                    : "No audit events have been recorded yet."}
+                </td>
+              </tr>
+            ) : filteredLogs.map((log) => (
               <tr key={log.id} className="hover:bg-slate-50/60 transition">
                 <td className="px-4 py-3 text-slate-500 whitespace-nowrap">
                   {log.timestamp}

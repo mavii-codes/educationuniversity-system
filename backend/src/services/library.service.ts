@@ -1226,6 +1226,18 @@ class LibraryETLService {
     return newReq;
   }
 
+  public cancelBorrowingRequest(
+    id: string,
+    studentId: string
+  ): boolean {
+    const request = this.borrowingRequests.find(
+      (item) => item.id === id && item.studentId === studentId && item.status === "Pending"
+    );
+    if (!request) return false;
+    request.status = "Cancelled";
+    return true;
+  }
+
   public approveBorrowingRequest(
     id: string,
     reviewedBy = "Administrator"

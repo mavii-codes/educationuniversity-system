@@ -56,6 +56,7 @@ interface AuthContextValue {
   registerStudent: (
     params: RegisterStudentParams
   ) => Promise<{ ok: boolean; error?: string }>;
+  updateSessionUser: (updates: Partial<SessionUser>) => void;
   signOut: (targetUrl?: string | React.MouseEvent) => void;
 }
 
@@ -151,6 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           body: JSON.stringify({
             identifier: identifier.trim(),
             password,
+            ...(rememberMe ? { rememberMe } : {}),
           }),
         });
         if (!data.user) {
@@ -215,6 +217,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const updateSessionUser = useCallback((updates: Partial<SessionUser>) => {
+    setUser((previous) => {
+      if (!previous) return previous;
+      const updated = { ...previous, ...updates };
+      try {
+        const storedLocally = window.localStorage.getItem(STORAGE_KEY) !== null;
+        const storage = storedLocally ? window.localStorage : window.sessionStorage;
+        storage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch (error) {
+        console.error("[Auth] Failed to persist updated session profile:", error);
+      }
+      return updated;
+    });
+  }, []);
+
   const signOut = useCallback((targetUrl?: string | React.MouseEvent) => {
     const wasAdmin =
       user?.role === "Administrator" ||
@@ -257,6 +274,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isInitializing,
         signIn,
         registerStudent,
+        updateSessionUser,
         signOut,
       }}
     >

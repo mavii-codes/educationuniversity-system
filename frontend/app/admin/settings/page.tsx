@@ -15,6 +15,13 @@ import {
 import { Badge } from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useAuth } from "@/lib/auth";
+import {
+  API_CONFIG,
+  AdminSettingsRecord,
+  changeAccountPassword,
+  getAdminSettings,
+  saveAdminSettings,
+} from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 type SettingsTab = "profile" | "account" | "security";
@@ -22,8 +29,10 @@ type SettingsTab = "profile" | "account" | "security";
 function AdminSettingsContent() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab") as SettingsTab | null;
-  const { user } = useAuth();
+  const { user, updateSessionUser } = useAuth();
   const { showToast } = useToast();
+  const [saving, setSaving] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
 
@@ -52,21 +61,128 @@ function AdminSettingsContent() {
   const [libraryName, setLibraryName] = useState("University Library");
   const [dueDateReminders, setDueDateReminders] = useState(true);
   const [fineNotifications, setFineNotifications] = useState(true);
+  const userId = user?.id;
+  const userName = user?.name;
+  const userEmail = user?.email;
+  const userDepartment = user?.department;
 
   // Security State
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [mfaEnabled, setMfaEnabled] = useState(true);
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (!userId) return;
+    setAdminName(userName ?? "Administrator");
+    setAdminEmail(userEmail ?? "admin@university.edu");
+    setDepartment(userDepartment ?? "Library Services");
+    if (!API_CONFIG.useLiveApi) return;
+    let active = true;
+    getAdminSettings()
+      .then((settings) => {
+        if (!active) return;
+        setAdminName(settings.profile.name);
+        setAdminEmail(settings.profile.email);
+        setDepartment(settings.profile.department);
+        setLibraryName(settings.library.libraryName);
+        setOfficeLocation(settings.library.officeLocation);
+        setDueDateReminders(settings.library.dueDateReminders);
+        setFineNotifications(settings.library.fineNotifications);
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        showToast({
+          title: "Unable to load saved settings",
+          description:
+            error instanceof Error ? error.message : "Please try again.",
+          type: "warning",
+        });
+      });
+    return () => {
+      active = false;
+    };
+  }, [showToast, userDepartment, userEmail, userId, userName]);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setCurrentPassword("");
-    setNewPassword("");
-    showToast({
-      title: "Settings updated",
-      description: "Your administrator preferences and security settings have been saved.",
-      type: "success",
-    });
+    if (!API_CONFIG.useLiveApi) {
+      showToast({
+        title: "Live API required",
+        description: "Connect PostgreSQL to save administrator settings.",
+        type: "warning",
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const settings: AdminSettingsRecord = {
+        profile: {
+          name: adminName.trim(),
+          email: adminEmail.trim().toLowerCase(),
+          department: department.trim(),
+        },
+        library: {
+          libraryName: libraryName.trim(),
+          officeLocation: officeLocation.trim(),
+          dueDateReminders,
+          fineNotifications,
+        },
+      };
+      const saved = await saveAdminSettings(settings);
+      setAdminName(saved.profile.name);
+      setAdminEmail(saved.profile.email);
+      setDepartment(saved.profile.department);
+      updateSessionUser({
+        name: saved.profile.name,
+        email: saved.profile.email,
+        department: saved.profile.department,
+      });
+      showToast({
+        title: "Settings saved",
+        description: "Your profile and library preferences are now saved.",
+        type: "success",
+      });
+    } catch (error) {
+      showToast({
+        title: "Unable to save settings",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+        type: "warning",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    if (!currentPassword || newPassword.length < 12) {
+      showToast({
+        title: "Check password fields",
+        description: "Enter your current password and a new password with at least 12 characters.",
+        type: "warning",
+      });
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      await changeAccountPassword({ currentPassword, newPassword });
+      setCurrentPassword("");
+      setNewPassword("");
+      showToast({
+        title: "Password updated",
+        description: "Other devices will require sign-in again when their current access token expires.",
+        type: "success",
+      });
+    } catch (error) {
+      showToast({
+        title: "Unable to change password",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+        type: "warning",
+      });
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   const tabs: { id: SettingsTab; label: string; icon: React.ElementType }[] = [
@@ -264,30 +380,54 @@ function AdminSettingsContent() {
 
               <div className="mt-5 space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700">
+                  <label htmlFor="admin-current-password" className="block text-xs font-semibold text-slate-700">
                     Current Password
                   </label>
                   <input
-                    type="password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    placeholder="Enter current password"
+                  id="admin-current-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  disabled={changingPassword}
+                  required
+                  placeholder="Enter current password"
                     className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 focus:border-indigo-400 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700">
+                  <label htmlFor="admin-new-password" className="block text-xs font-semibold text-slate-700">
                     New Password
                   </label>
                   <input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Minimum 8 characters with symbol"
-                    className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 focus:border-indigo-400 focus:outline-none"
+                  id="admin-new-password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  minLength={12}
+                  maxLength={200}
+                  disabled={changingPassword}
+                  required
+                  placeholder="At least 12 characters"
+                  className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 focus:border-indigo-400 focus:outline-none"
                   />
                 </div>
+                <button
+                  type="button"
+                  onClick={handlePasswordChange}
+                  disabled={
+                  changingPassword ||
+                  !API_CONFIG.useLiveApi ||
+                  !currentPassword ||
+                  newPassword.length < 12
+                  }
+                  className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Lock className="h-3.5 w-3.5" />
+                  {changingPassword ? "Updating password..." : "Update Password"}
+                </button>
               </div>
             </div>
 
@@ -300,32 +440,19 @@ function AdminSettingsContent() {
               </div>
 
               <div className="mt-5 space-y-4">
-                <label className="flex cursor-pointer items-center justify-between rounded-xl border border-emerald-200/70 bg-emerald-50/40 p-4">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                    <div>
-                      <span className="block text-xs font-semibold text-slate-900">
-                        Institutional Two-Factor Authentication (MFA)
-                      </span>
-                      <span className="mt-0.5 block text-xs text-slate-600">
-                        Protects administrative access to external Library LMS and centralized university data.
-                      </span>
-                    </div>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={mfaEnabled}
-                    onChange={(e) => setMfaEnabled(e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                  />
-                </label>
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">
+                  <p className="font-semibold">Multi-factor authentication</p>
+                  <p className="mt-1">
+                    MFA verification is not configured in the current sign-in flow, so it cannot be enabled from this page.
+                  </p>
+                </div>
 
                 <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-4 text-xs text-slate-600">
                   <p className="font-semibold text-slate-900">
                     Active Session Governance
                   </p>
                   <p className="mt-1">
-                    Signed in as <strong>{adminEmail}</strong> · Prepared for Express.js + JWT + PostgreSQL session verification.
+                    Signed in as <strong>{adminEmail}</strong> · Password changes revoke refresh sessions on other devices.
                   </p>
                 </div>
               </div>
@@ -336,12 +463,18 @@ function AdminSettingsContent() {
         <div className="flex justify-end">
           <button
             type="submit"
-            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+            disabled={saving || !API_CONFIG.useLiveApi}
+            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Save className="h-4 w-4" />
-            <span>Save Changes</span>
+            <span>{saving ? "Saving..." : "Save Changes"}</span>
           </button>
         </div>
+        {!API_CONFIG.useLiveApi && (
+          <p className="text-right text-xs text-amber-700">
+            Connect the live API and PostgreSQL to load or save settings.
+          </p>
+        )}
       </form>
     </div>
   );
