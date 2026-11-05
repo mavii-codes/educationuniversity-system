@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { BookOpen, Search, ShieldCheck } from "lucide-react";
 import { useLibraryStore } from "@/lib/library-store";
+import { BookCover } from "@/components/library/BookCover";
 
 export default function StaffBooksPage() {
   const { books } = useLibraryStore();
@@ -69,8 +70,13 @@ export default function StaffBooksPage() {
               {filtered.map((b) => (
                 <tr key={b.id} className="hover:bg-slate-50/50 transition">
                   <td className="px-5 py-3.5">
-                    <p className="font-bold text-slate-900">{b.title}</p>
-                    <p className="text-[11px] text-slate-500">By {b.author} · ISBN: {b.isbn}</p>
+                    <div className="flex items-center gap-3">
+                      <BookCover src={b.cover_url} title={b.title} size="sm" />
+                      <div>
+                        <p className="font-bold text-slate-900">{b.title}</p>
+                        <p className="text-[11px] text-slate-500">By {b.author} · ISBN: {b.isbn}</p>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-4 py-3.5 text-slate-700">{b.category}</td>
                   <td className="px-4 py-3.5 font-mono text-[11px] text-slate-600">{b.location}</td>

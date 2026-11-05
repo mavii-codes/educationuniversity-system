@@ -3,11 +3,8 @@
 import React, { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { GraduationCap, LogOut, User, X } from "lucide-react";
-import {
-  ADMIN_NAVIGATION_GROUPS,
-  isAdminNavActive,
-} from "./admin-navigation";
+import { BookOpen, LogOut, User, X } from "lucide-react";
+import { getAdminNavigationGroups, isAdminNavActive } from "./admin-navigation";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +16,7 @@ interface AdminMobileDrawerProps {
 export function AdminMobileDrawer({ open, onClose }: AdminMobileDrawerProps) {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
+  const navigationGroups = getAdminNavigationGroups(user?.role === "Librarian");
 
   useEffect(() => {
     onClose();
@@ -39,11 +37,11 @@ export function AdminMobileDrawer({ open, onClose }: AdminMobileDrawerProps) {
         <div className="flex h-16 items-center justify-between border-b border-slate-100 px-5">
           <div className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white">
-              <GraduationCap className="h-4 w-4" />
+              <BookOpen className="h-4 w-4" />
             </div>
             <div className="min-w-0">
               <span className="block text-[13px] font-bold leading-snug text-slate-900">
-                University Data Integration System
+                University Library System
               </span>
             </div>
           </div>
@@ -59,7 +57,7 @@ export function AdminMobileDrawer({ open, onClose }: AdminMobileDrawerProps) {
 
         {/* Navigation Links */}
         <nav className="flex-1 space-y-5 overflow-y-auto px-3.5 py-5">
-          {ADMIN_NAVIGATION_GROUPS.map((group) => (
+          {navigationGroups.map((group) => (
             <div key={group.groupLabel}>
               <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                 {group.groupLabel}

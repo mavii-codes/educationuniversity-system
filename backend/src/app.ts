@@ -16,6 +16,7 @@ import analyticsRoutes from "./routes/analytics.routes";
 import integrationRoutes from "./routes/integration.routes";
 import adminRoutes from "./routes/admin.routes";
 import libraryRoutes from "./routes/library.routes";
+import { uploadsDirectory } from "./utils/book-cover-storage";
 
 const app = express();
 
@@ -37,6 +38,12 @@ app.use(
 );
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
+app.use("/uploads", express.static(uploadsDirectory, {
+  fallthrough: false,
+  dotfiles: "deny",
+  index: false,
+  maxAge: env.isProduction ? "7d" : 0,
+}));
 app.use(requestLogger);
 app.use(attachAuthContext);
 app.use(csrfGuard);
@@ -70,7 +77,7 @@ app.get("/api/health", async (_req, res) => {
     const dbStatus = await verifyDatabaseConnection();
     res.json({
       status: "ok",
-      service: "University DataHub API",
+      service: "University Library Management API",
       environment: env.nodeEnv,
       database: dbStatus,
       timestamp: new Date().toISOString(),
@@ -78,7 +85,7 @@ app.get("/api/health", async (_req, res) => {
   } catch (err) {
     res.status(503).json({
       status: "degraded",
-      service: "University DataHub API",
+      service: "University Library Management API",
       database: "disconnected",
       error: err instanceof Error ? err.message : "Database check failed",
     });

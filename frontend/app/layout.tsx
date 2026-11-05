@@ -15,9 +15,9 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "University Data Integration System",
+  title: "University Library Management System",
   description:
-    "Securely connect, manage, and understand university data integrated with the Library Management System via REST API and ETL pipelines.",
+    "Browse the library catalog, manage borrowing and reservations, and support everyday library operations.",
 };
 
 export default function RootLayout({

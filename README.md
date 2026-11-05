@@ -1,14 +1,14 @@
-# University Data Integration System (University DataHub)
+# University Library Management System
 
-A modern, unified **Student Lifecycle & Academic Analytics** platform structured with a strictly separated **Next.js Frontend** and **Express.js Backend**, prepared for **PostgreSQL**.
+A library system for managing the book catalog, student member accounts, borrowing, reservations, returns, and fines. It uses a **Next.js frontend**, an **Express.js API**, and **PostgreSQL**.
 
 ## Project Architecture
 
 ```text
 EducationUniversitySystems/
 ├── frontend/          # Next.js 14 + TypeScript + Tailwind CSS + Recharts + Lucide React
-│   ├── app/           # App Router pages (dashboard, students, lifecycle, data-sources, integration, analytics, alumni, reports, notifications, settings)
-│   ├── components/    # Modular UI (layout, dashboard, students, lifecycle, integration, analytics, alumni, ui)
+│   ├── app/           # App Router pages for the catalog, member accounts, circulation, and administration
+│   ├── components/    # Modular library, dashboard, account, and shared UI components
 │   ├── data/          # Separated realistic mock data (mock-data.ts)
 │   ├── lib/           # REST API client (api.ts) & formatting helpers (utils.ts)
 │   ├── types/         # Shared frontend TypeScript models (index.ts)
@@ -17,7 +17,7 @@ EducationUniversitySystems/
 ├── backend/           # Node.js + Express.js + TypeScript REST API foundation
 │   ├── src/
 │   │   ├── config/        # Environment & PostgreSQL pool setup (database.ts)
-│   │   ├── controllers/   # Request handlers (student, analytics, alumni, integration)
+│   │   ├── controllers/   # Request handlers for authentication, members, and library operations
 │   │   ├── services/      # Business logic layer ready for PostgreSQL queries
 │   │   ├── routes/        # Modular Express REST endpoints (/api/*)
 │   │   ├── middleware/    # Logger, auth foundation, and centralized error handling
@@ -66,7 +66,25 @@ Apply the schema and seed the demo dataset:
 ```bash
 npm run db:migrate
 npm run db:seed
+npm run db:backfill-book-covers
 ```
+
+The library migration adds persistent catalog metadata and `cover_url`. The
+backfill looks up covers for existing PostgreSQL books, waiting 300 ms between
+books. Administrator and Registrar book edits are available from Library Management;
+PostgreSQL must be enabled for changes to persist across
+sessions. Student, Administrator, and Registrar book views use the same catalog
+cover URLs. The built-in catalog contains 30 titles with all copies available.
+After adding these seed records to an existing database, run the three commands
+above; the backfill also replaces old unvalidated Open Library cover links.
+
+Administrator and Registrar book forms also accept JPG/JPEG, PNG, and WebP
+cover uploads up to 2 MB. Files are stored under `backend/uploads/covers` and
+served from `/uploads`; the existing `NEXT_PUBLIC_API_URL` must point to the
+backend API (for example `http://localhost:5000/api`) and `CORS_ORIGIN` must
+allow the frontend origin. On hosted deployments, mount persistent storage at
+`backend/uploads` so uploaded covers survive restarts and are shared by all
+backend instances.
 
 ### Authentication
 
@@ -74,12 +92,15 @@ All data endpoints require a session. Authentication uses JWT access tokens plus
 
 | Endpoint | Method | Notes |
 | --- | --- | --- |
+| `/api/auth/register` | POST | Body: `{ studentId, name, email, password, programCode, yearLevel }`; creates a student account (password must be at least 12 characters) |
 | `/api/auth/login` | POST | Body: `{ identifier, password, rememberMe? }` |
 | `/api/auth/forgot-password` | POST | Body: `{ email }`; sends a one-time reset link with Resend |
 | `/api/auth/reset-password` | POST | Body: `{ token, password }`; reset links expire after 30 minutes |
 | `/api/auth/refresh` | POST | Rotates the refresh token; reuse revokes the session family |
 | `/api/auth/logout` | POST | Revokes the refresh token and clears cookies |
 | `/api/auth/me` | GET | Returns the current session user |
+
+Student self-registration creates an active student account and profile, then signs the student in. It requires PostgreSQL to be enabled and the programs seeded; run `npm run db:migrate` and `npm run db:seed` in `backend`. Registration currently does not verify email ownership.
 
 Seeded demo accounts (passwords come from `SEED_ADMIN_PASSWORD` / `SEED_REGISTRAR_PASSWORD`):
 

@@ -29,10 +29,12 @@ export interface AuthContext {
   name: string;
 }
 
-// Explicit allowlist of the real DB role strings (see db/migrations/003_auth.sql).
+// Explicit allowlist of the real DB role strings (see db/migrations).
 const PORTAL_ROLE_BY_ACCESS_ROLE: Record<string, AuthorizedRole> = {
   "System Administrator": "Administrator",
-  "University Registrar Admin": "Registrar",
+  "Library Staff": "Librarian",
+  "University Registrar Admin": "Librarian",
+  Student: "Student",
   // These roles operate the admin/integration consoles, so they keep the
   // Administrator portal access they had before this allowlist existed.
   "Data Integration Engineer": "Administrator",
@@ -40,7 +42,7 @@ const PORTAL_ROLE_BY_ACCESS_ROLE: Record<string, AuthorizedRole> = {
 };
 
 export function toPortalRole(accessRole: string): AuthorizedRole {
-  return accessRole === "University Registrar Admin" ? "Registrar" : "Administrator";
+  return PORTAL_ROLE_BY_ACCESS_ROLE[accessRole] ?? "Administrator";
 }
 
 export function toSessionUser(user: authRepository.UserRow): SessionUser {
@@ -62,6 +64,32 @@ export function hashPassword(password: string): string {
 export function comparePassword(password: string, hash: string): boolean {
   if (!hash || hash.startsWith("!")) return false;
   return bcrypt.compareSync(password, hash);
+}
+
+export async function registerStudent(input: {
+  studentId: string;
+  name: string;
+  email: string;
+  password: string;
+  programCode: string;
+  yearLevel: string;
+  dbEnabled: boolean;
+}): Promise<SessionUser> {
+  if (!input.dbEnabled) {
+    throw new ApiError(503, "Student registration requires the PostgreSQL database (DB_ENABLED=true).");
+  }
+
+  const user = await authRepository.registerStudent({
+    id: input.studentId,
+    name: input.name,
+    email: input.email,
+    passwordHash: hashPassword(input.password),
+    programCode: input.programCode,
+    yearLevel: input.yearLevel,
+  });
+
+  await safeAudit(null, "auth.student_registered", { userId: user.id });
+  return toSessionUser(user);
 }
 
 const DUMMY_PASSWORD_HASH = bcrypt.hashSync("udis-invalid-password", 12);
@@ -98,7 +126,7 @@ export function verifyAccessToken(token: string): AuthContext | null {
     }
     return {
       id: decoded.id,
-      portalRole: decoded.portalRole as AuthorizedRole,
+      portalRole: toPortalRole(decoded.accessRole),
       accessRole: decoded.accessRole,
       email: String(decoded.email ?? ""),
       name: String(decoded.name ?? ""),

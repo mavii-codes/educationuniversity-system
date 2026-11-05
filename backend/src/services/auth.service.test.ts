@@ -9,8 +9,13 @@ import {
 } from "./auth.service";
 
 describe("toPortalRole", () => {
-  it("maps the registrar role to the Registrar portal role", () => {
-    expect(toPortalRole("University Registrar Admin")).toBe("Registrar");
+  it("maps the library staff role to the Librarian portal role", () => {
+    expect(toPortalRole("Library Staff")).toBe("Librarian");
+    expect(toPortalRole("University Registrar Admin")).toBe("Librarian");
+  });
+
+  it("maps student accounts to the Student portal role", () => {
+    expect(toPortalRole("Student")).toBe("Student");
   });
 
   it("maps every other role to Administrator", () => {

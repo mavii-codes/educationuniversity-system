@@ -1,9 +1,8 @@
 import React from "react";
-import { GraduationCap } from "lucide-react";
+import { BookOpen } from "lucide-react";
 
 /**
- * Extremely subtle background SVG network motif evoking connected university
- * systems and academic data flow without competing with the centered login card.
+ * Subtle background motif that keeps the login screen calm and unobtrusive.
  */
 export function LoginSubtleBackground() {
   return (
@@ -62,14 +61,14 @@ export function LoginBrandingPanel() {
   return (
     <div className="mb-7 flex flex-col items-center text-center">
       <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-sm shadow-indigo-600/20 ring-4 ring-indigo-50">
-        <GraduationCap className="h-6 w-6" />
+      <BookOpen className="h-6 w-6" />
       </div>
 
       <h1 className="mt-4 text-lg font-bold tracking-tight text-slate-900 sm:text-xl">
-        University Data Integration System
+        University Library Management System
       </h1>
       <p className="mt-1 text-xs font-medium text-slate-500 sm:text-sm">
-        Institutional Data &amp; Analytics Platform
+        Books, borrowing, and library services
       </p>
     </div>
   );

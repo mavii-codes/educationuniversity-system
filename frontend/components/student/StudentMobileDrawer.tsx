@@ -3,7 +3,7 @@
 import React, { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { BookOpen, LogOut, User, X } from "lucide-react";
+import { BookOpen, User, X } from "lucide-react";
 import { STUDENT_NAVIGATION_GROUPS } from "./student-navigation";
 import { useAuth } from "@/lib/auth";
 import { useLibraryStore } from "@/lib/library-store";
@@ -64,7 +64,7 @@ export function StudentMobileDrawer({
             </div>
             <div>
               <span className="block text-xs font-bold text-slate-900">
-                University Data Integration
+                University Library System
               </span>
               <span className="block text-[10px] font-medium text-indigo-600">
                 Student Library Portal
@@ -139,20 +139,6 @@ export function StudentMobileDrawer({
             </div>
           ))}
 
-          {/* Explicit Logout Nav Item for Mobile */}
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                signOut();
-              }}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50/80 transition-colors"
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Logout</span>
-            </button>
-          </div>
         </nav>
 
         <div className="border-t border-slate-100 p-4">
@@ -176,7 +162,6 @@ export function StudentMobileDrawer({
             }}
             className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200/80 bg-white py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 transition"
           >
-            <LogOut className="h-3.5 w-3.5" />
             <span>Sign Out</span>
           </button>
         </div>

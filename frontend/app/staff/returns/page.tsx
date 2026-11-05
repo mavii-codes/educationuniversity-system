@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { CheckCircle2, RotateCcw, Search } from "lucide-react";
 import { useLibraryStore } from "@/lib/library-store";
 import { useToast } from "@/components/ui/ToastProvider";
+import { BookCover } from "@/components/library/BookCover";
 
 export default function StaffReturnsPage() {
   const { transactions, confirmBookReturn } = useLibraryStore();
@@ -73,7 +74,12 @@ export default function StaffReturnsPage() {
               ) : (
                 filtered.map((t) => (
                   <tr key={t.id} className="hover:bg-slate-50/50 transition">
-                    <td className="px-5 py-3.5 font-bold text-slate-900">{t.bookTitle}</td>
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <BookCover src={t.cover_url} title={t.bookTitle} size="sm" />
+                        <span className="font-bold text-slate-900">{t.bookTitle}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-3.5">
                       <p className="font-semibold text-slate-800">{t.studentName}</p>
                       <p className="text-[11px] text-slate-500">{t.studentId}</p>

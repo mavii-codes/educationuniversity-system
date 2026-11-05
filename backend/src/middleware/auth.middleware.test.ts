@@ -94,7 +94,7 @@ describe("attachAuthContext", () => {
 
     expect((res.locals as { user?: unknown }).user).toMatchObject({
       id: "u2",
-      portalRole: "Registrar",
+      portalRole: "Librarian",
     });
   });
 
@@ -149,7 +149,7 @@ describe("requireRoles", () => {
     const middleware = requireRoles("Administrator");
     const req = createReq();
     const res = createRes();
-    (res.locals as { user?: unknown }).user = { id: "u2", portalRole: "Registrar" };
+    (res.locals as { user?: unknown }).user = { id: "u2", portalRole: "Librarian" };
 
     middleware(req, res, next);
 
@@ -190,6 +190,16 @@ describe("csrfGuard", () => {
     expect(res.status).not.toHaveBeenCalled();
   });
 
+  it("skips the student registration endpoint", () => {
+    const req = createReq({ originalUrl: "/api/auth/register" });
+    const res = createRes();
+
+    csrfGuard(req, res, next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.status).not.toHaveBeenCalled();
+  });
+
   it("skips public password reset endpoints", () => {
     const req = createReq({
       originalUrl: "/api/auth/forgot-password?source=form",
@@ -215,6 +225,7 @@ describe("csrfGuard", () => {
   it("rejects missing CSRF tokens with 403", () => {
     const req = createReq();
     const res = createRes();
+    res.locals.authSource = "cookie";
 
     csrfGuard(req, res, next);
 
@@ -233,6 +244,7 @@ describe("csrfGuard", () => {
       "x-csrf-token": headerToken,
     };
     const res = createRes();
+    res.locals.authSource = "cookie";
 
     csrfGuard(req, res, next);
 
@@ -250,6 +262,7 @@ describe("csrfGuard", () => {
       "x-csrf-token": token,
     };
     const res = createRes();
+    res.locals.authSource = "cookie";
 
     csrfGuard(req, res, next);
 

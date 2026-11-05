@@ -24,13 +24,21 @@ import {
   RESERVATIONS,
 } from "@/data/mock-data";
 import { SessionUser } from "./auth";
+import {
+  API_CONFIG,
+  getLibraryBooks,
+  getLibraryFines,
+  payLibraryFine,
+} from "./api";
 
 interface LibraryStoreContextValue {
   books: LibraryBook[];
+  upsertBook: (book: LibraryBook) => void;
   borrowingRequests: BorrowingRequest[];
   transactions: BorrowingTransaction[];
   reservations: ReservationRecord[];
   fines: OverdueFineRecord[];
+  settleFine: (fineId: string) => Promise<{ ok: boolean; message: string }>;
   notifications: StudentNotificationItem[];
 
   // Student Actions
@@ -82,6 +90,31 @@ const STORAGE_KEYS = {
   FINES: "udis_library_fines",
   NOTIFICATIONS: "udis_student_notifications",
 };
+
+function addMockCoverUrl(book: LibraryBook): LibraryBook {
+  const needsEducationCoverRepair =
+    book.id === "bk-009" && book.isbn === "978-0134444581";
+  if (book.cover_url && !needsEducationCoverRepair) return book;
+  const isbn = (needsEducationCoverRepair ? "978-0132996297" : book.isbn).replace(
+    /[-\s]/g,
+    ""
+  );
+  return {
+    ...book,
+    ...(needsEducationCoverRepair ? { isbn: "978-0132996297" } : {}),
+    cover_url: isbn
+      ? `https://covers.openlibrary.org/b/isbn/${encodeURIComponent(isbn)}-M.jpg?default=false`
+      : null,
+  };
+}
+
+function mergeStoredBooksWithCatalog(storedBooks: LibraryBook[]): LibraryBook[] {
+  const storedIds = new Set(storedBooks.map((book) => book.id));
+  return [
+    ...storedBooks.map(addMockCoverUrl),
+    ...LIBRARY_BOOKS.filter((book) => !storedIds.has(book.id)).map(addMockCoverUrl),
+  ];
+}
 
 // Initial default borrowing requests
 const INITIAL_BORROWING_REQUESTS: BorrowingRequest[] = [
@@ -185,9 +218,11 @@ export function LibraryStoreProvider({
     if (typeof window === "undefined") return LIBRARY_BOOKS;
     try {
       const stored = window.localStorage.getItem(STORAGE_KEYS.BOOKS);
-      return stored ? JSON.parse(stored) : LIBRARY_BOOKS;
+      return stored
+        ? mergeStoredBooksWithCatalog(JSON.parse(stored) as LibraryBook[])
+        : LIBRARY_BOOKS.map(addMockCoverUrl);
     } catch {
-      return LIBRARY_BOOKS;
+      return LIBRARY_BOOKS.map(addMockCoverUrl);
     }
   });
 
@@ -247,6 +282,87 @@ export function LibraryStoreProvider({
     }
   });
 
+  useEffect(() => {
+    if (!API_CONFIG.useLiveApi) return;
+    let active = true;
+    const loadLibraryData = async () => {
+      const results = await Promise.allSettled([getLibraryBooks(), getLibraryFines()]);
+      if (!active) return;
+      const [catalogResult, finesResult] = results;
+      if (catalogResult.status === "fulfilled") {
+        setBooks(catalogResult.value.map(addMockCoverUrl));
+      } else {
+        console.error(
+          "[Library] Failed to load catalog from the live API:",
+          catalogResult.reason
+        );
+      }
+      if (finesResult.status === "fulfilled") {
+        setFines(finesResult.value);
+      } else {
+        console.error(
+          "[Library] Failed to load fines from the live API:",
+          finesResult.reason
+        );
+      }
+    };
+    void loadLibraryData();
+    const reloadFines = () => {
+      if (document.visibilityState !== "visible") return;
+      getLibraryFines()
+        .then((liveFines) => {
+          if (active) setFines(liveFines);
+        })
+        .catch((error: unknown) => {
+          console.error("[Library] Failed to refresh fines from the live API:", error);
+        });
+    };
+    window.addEventListener("focus", reloadFines);
+    document.addEventListener("visibilitychange", reloadFines);
+    return () => {
+      active = false;
+      window.removeEventListener("focus", reloadFines);
+      document.removeEventListener("visibilitychange", reloadFines);
+    };
+  }, []);
+
+  useEffect(() => {
+    const findCover = (isbn: string, title: string) => {
+      const byIsbn = books.find((book) => book.isbn === isbn);
+      const matchingBook =
+        byIsbn ??
+        books.find(
+          (book) =>
+            book.title.trim().toLowerCase() === title.trim().toLowerCase()
+        );
+      return matchingBook ? matchingBook.cover_url ?? null : undefined;
+    };
+    setBorrowingRequests((previous) =>
+      previous.map((request) => {
+        const cover = findCover(request.isbn, request.bookTitle);
+        return cover === undefined || cover === request.cover_url
+          ? request
+          : { ...request, cover_url: cover };
+      })
+    );
+    setTransactions((previous) =>
+      previous.map((transaction) => {
+        const cover = findCover(transaction.isbn, transaction.bookTitle);
+        return cover === undefined || cover === transaction.cover_url
+          ? transaction
+          : { ...transaction, cover_url: cover };
+      })
+    );
+    setReservations((previous) =>
+      previous.map((reservation) => {
+        const cover = findCover(reservation.isbn, reservation.bookTitle);
+        return cover === undefined || cover === reservation.cover_url
+          ? reservation
+          : { ...reservation, cover_url: cover };
+      })
+    );
+  }, [books]);
+
   // Sync state changes to localStorage
   useEffect(() => {
     try {
@@ -297,6 +413,15 @@ export function LibraryStoreProvider({
   }, [notifications]);
 
   // Submit a Borrow Request
+  const upsertBook = useCallback((book: LibraryBook) => {
+    setBooks((previous) => {
+      const exists = previous.some((item) => item.id === book.id);
+      return exists
+        ? previous.map((item) => (item.id === book.id ? book : item))
+        : [book, ...previous];
+    });
+  }, []);
+
   const submitBorrowRequest = useCallback(
     async (
       bookId: string,
@@ -352,6 +477,7 @@ export function LibraryStoreProvider({
         bookTitle: book.title,
         author: book.author,
         isbn: book.isbn,
+        cover_url: book.cover_url ?? null,
         category: book.category,
         studentId,
         studentName: user.name,
@@ -435,6 +561,7 @@ export function LibraryStoreProvider({
         bookId: book.id,
         bookTitle: book.title,
         isbn: book.isbn,
+        cover_url: book.cover_url ?? null,
         studentId,
         studentName: user.name,
         programCode: user.programCode || "BSIT",
@@ -540,6 +667,7 @@ export function LibraryStoreProvider({
         bookId: book.id,
         bookTitle: book.title,
         isbn: book.isbn,
+        cover_url: book.cover_url ?? null,
         studentId: request.studentId,
         studentName: request.studentName,
         programCode: request.programCode,
@@ -724,6 +852,36 @@ export function LibraryStoreProvider({
     );
   }, []);
 
+  const settleFine = useCallback(
+    async (fineId: string): Promise<{ ok: boolean; message: string }> => {
+      const fine = fines.find((item) => item.id === fineId);
+      if (!fine) return { ok: false, message: "Fine record not found." };
+      if (fine.paymentStatus === "Paid") {
+        return { ok: true, message: "Fine is already paid." };
+      }
+
+      try {
+        const result = await payLibraryFine(fineId);
+        if (!result.success) {
+          return { ok: false, message: result.message || "Unable to record fine payment." };
+        }
+        setFines((current) =>
+          current.map((item) =>
+            item.id === fineId ? { ...item, paymentStatus: "Paid" } : item
+          )
+        );
+        return { ok: true, message: result.message };
+      } catch (error) {
+        return {
+          ok: false,
+          message:
+            error instanceof Error ? error.message : "Unable to record fine payment.",
+        };
+      }
+    },
+    [fines]
+  );
+
   // Summary helper
   const getStudentSummary = useCallback(
     (studentId: string): StudentLibraryDashboardSummary => {
@@ -798,10 +956,12 @@ export function LibraryStoreProvider({
     <LibraryStoreContext.Provider
       value={{
         books,
+        upsertBook,
         borrowingRequests,
         transactions,
         reservations,
         fines,
+        settleFine,
         notifications,
         submitBorrowRequest,
         cancelBorrowRequest,
@@ -834,4 +994,3 @@ export function useLibraryStore() {
   }
   return ctx;
 }
-

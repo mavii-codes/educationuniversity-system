@@ -6,13 +6,10 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   ArrowRight,
   Bell,
-  ChevronDown,
   Menu,
   Search,
-  User,
 } from "lucide-react";
 import { getAdminPageMeta } from "./admin-navigation";
-import { AdminProfileMenu } from "./AdminProfileMenu";
 import { NotificationPanel } from "@/components/layout/NotificationPanel";
 import { NOTIFICATIONS, STUDENTS } from "@/data/mock-data";
 import { NotificationItem } from "@/types";
@@ -23,16 +20,12 @@ interface AdminHeaderProps {
 }
 
 const ADMIN_QUICK_LINKS = [
-  { label: "Admin Dashboard", href: "/admin/dashboard" },
-  { label: "Library Management Hub", href: "/admin/library" },
-  { label: "Integrated Library Records", href: "/admin/library/records" },
-  { label: "Students Directory", href: "/admin/students" },
-  { label: "Student Lifecycle", href: "/admin/lifecycle" },
-  { label: "Data Sources", href: "/admin/data-sources" },
-  { label: "Sync History", href: "/admin/sync-history" },
-  { label: "Academic Analytics", href: "/admin/analytics" },
-  { label: "Reports", href: "/admin/reports" },
+  { label: "Library Dashboard", href: "/admin/dashboard" },
+  { label: "Library Management", href: "/admin/library" },
+  { label: "Catalog Records", href: "/admin/library/records" },
+  { label: "Borrower Accounts", href: "/admin/students" },
   { label: "User Management", href: "/admin/users" },
+  { label: "Audit Logs", href: "/admin/audit-logs" },
   { label: "Notifications", href: "/admin/notifications" },
   { label: "Settings", href: "/admin/settings" },
 ];
@@ -46,13 +39,11 @@ export function AdminHeader({ onOpenMobileMenu }: AdminHeaderProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
   const [notifications, setNotifications] =
     useState<NotificationItem[]>(NOTIFICATIONS);
 
   const searchRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
-  const profileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -61,9 +52,6 @@ export function AdminHeader({ onOpenMobileMenu }: AdminHeaderProps) {
       }
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
         setNotifOpen(false);
-      }
-      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
-        setProfileOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -81,8 +69,10 @@ export function AdminHeader({ onOpenMobileMenu }: AdminHeaderProps) {
       ).slice(0, 4)
     : [];
 
+  const quickLinks = ADMIN_QUICK_LINKS;
+
   const matchingPages = searchQuery.trim()
-    ? ADMIN_QUICK_LINKS.filter((l) =>
+    ? quickLinks.filter((l) =>
         l.label.toLowerCase().includes(searchQuery.toLowerCase())
       ).slice(0, 3)
     : [];
@@ -135,7 +125,7 @@ export function AdminHeader({ onOpenMobileMenu }: AdminHeaderProps) {
                   setSearchQuery(e.target.value);
                   setSearchOpen(true);
                 }}
-                placeholder="Search students, sources, or modules..."
+                placeholder="Search members, books, or library pages..."
                 className="h-9 w-52 rounded-lg border border-slate-200/90 bg-slate-50/70 pl-9 pr-3 text-xs text-slate-800 placeholder:text-slate-400 transition focus:w-72 focus:border-indigo-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/15 xl:w-72"
               />
             </form>
@@ -151,7 +141,7 @@ export function AdminHeader({ onOpenMobileMenu }: AdminHeaderProps) {
                     {matchingStudents.length > 0 && (
                       <div className="p-2">
                         <p className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                          Students
+                          Members
                         </p>
                         {matchingStudents.map((student) => (
                           <Link
@@ -179,7 +169,7 @@ export function AdminHeader({ onOpenMobileMenu }: AdminHeaderProps) {
                     {matchingPages.length > 0 && (
                       <div className="p-2">
                         <p className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                          Admin Modules
+                          Library Pages
                         </p>
                         {matchingPages.map((page) => (
                           <Link
@@ -207,18 +197,16 @@ export function AdminHeader({ onOpenMobileMenu }: AdminHeaderProps) {
           <div ref={notifRef} className="relative">
             <button
               type="button"
-              onClick={() => {
-                setNotifOpen((prev) => !prev);
-                setProfileOpen(false);
-              }}
-              className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200/80 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
-              aria-label="Notifications"
+              onClick={() => setNotifOpen((prev) => !prev)}
+              className="relative inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-indigo-700 transition hover:border-indigo-300 hover:bg-indigo-100"
+              aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
+              aria-expanded={notifOpen}
             >
-              <Bell className="h-4 w-4" />
+              <Bell className="h-5 w-5" aria-hidden="true" />
+              <span className="text-xs font-semibold">Notifications</span>
               {unreadCount > 0 && (
-                <span className="absolute right-1.5 top-1.5 flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-600" />
+                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-indigo-600 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+                  {unreadCount}
                 </span>
               )}
             </button>
@@ -241,40 +229,8 @@ export function AdminHeader({ onOpenMobileMenu }: AdminHeaderProps) {
             )}
           </div>
 
-          <div className="hidden h-6 w-px bg-slate-200 sm:block" />
-
-          {/* Administrator Profile Trigger & Dropdown */}
-          <div ref={profileRef} className="relative">
-            <button
-              type="button"
-              onClick={() => {
-                setProfileOpen((prev) => !prev);
-                setNotifOpen(false);
-              }}
-              className="flex items-center gap-2.5 rounded-xl py-1 pl-1.5 pr-2 text-left transition hover:bg-slate-50"
-            >
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600/10 text-indigo-700 ring-1 ring-inset ring-indigo-600/20">
-                <User className="h-4 w-4" />
-              </div>
-              <div className="hidden leading-tight sm:block">
-                <p className="text-xs font-semibold text-slate-900">
-                  {user?.name || "Administrator"}
-                </p>
-                <p className="text-[11px] text-slate-500">Administrator</p>
-              </div>
-              <ChevronDown className="hidden h-3.5 w-3.5 text-slate-400 sm:block" />
-            </button>
-
-            {profileOpen && (
-              <AdminProfileMenu
-                placement="header"
-                onClose={() => setProfileOpen(false)}
-              />
-            )}
-          </div>
         </div>
       </div>
     </header>
   );
 }
-

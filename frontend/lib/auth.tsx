@@ -33,7 +33,7 @@ export interface SignInParams {
   identifier: string;
   password: string;
   rememberMe: boolean;
-  expectedRole?: "Administrator" | "Student";
+  expectedRole?: "Administrator" | "Librarian" | "Student";
 }
 
 export interface RegisterStudentParams {
@@ -83,7 +83,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (raw) {
         const parsed = JSON.parse(raw) as SessionUser;
         if (parsed && parsed.email) {
-          setUser(parsed);
+          const restoredUser =
+            (parsed as { role: string }).role === "Registrar"
+              ? { ...parsed, role: "Librarian" as const, accessRole: "Library Staff" }
+              : parsed;
+          setUser(restoredUser);
         }
       }
     } catch {
@@ -145,7 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }>("/auth/login", {
           method: "POST",
           body: JSON.stringify({
-            identifier: identifier.trim().toLowerCase(),
+            identifier: identifier.trim(),
             password,
           }),
         });
@@ -175,21 +179,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const registerStudent = useCallback(
     async (
-      _params: RegisterStudentParams
+      params: RegisterStudentParams
     ): Promise<{ ok: boolean; error?: string }> => {
-      // Only real accounts exist now: the backend does not expose a
-      // self-registration endpoint, so mock/local registrations are disabled.
-      return {
-        ok: false,
-        error:
-          "Online student registration is currently unavailable. Please ask the registrar or an administrator to create your account in the system.",
-      };
+      if (!API_CONFIG.useLiveApi) {
+        return {
+          ok: false,
+          error:
+            "Student registration requires the live backend. Set NEXT_PUBLIC_API_URL in frontend/.env and enable PostgreSQL in backend/.env.",
+        };
+      }
+
+      try {
+        await fetchJson("/auth/register", {
+          method: "POST",
+          body: JSON.stringify({
+            studentId: params.studentId,
+            name: params.name,
+            email: params.email.trim().toLowerCase(),
+            password: params.password,
+            programCode: params.programCode,
+            yearLevel: params.yearLevel,
+          }),
+        });
+        return { ok: true };
+      } catch (error) {
+        return {
+          ok: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Unable to register your account. Please try again.",
+        };
+      }
     },
     []
   );
 
   const signOut = useCallback((targetUrl?: string | React.MouseEvent) => {
-    const wasAdmin = user?.role === "Administrator" || user?.role === "Registrar";
+    const wasAdmin =
+      user?.role === "Administrator" ||
+      user?.role === "Librarian" ||
+      (user?.role as string) === "Registrar";
 
     // Best-effort backend logout (clears the httpOnly cookie server-side).
     // Fire-and-forget: never block local sign-out on the network response.
@@ -208,12 +238,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Ignore
     }
     setUser(null);
-    if (typeof targetUrl === "string") {
-      router.push(targetUrl);
-    } else {
-      router.push(wasAdmin ? "/admin/login" : "/login");
-    }
-  }, [user, router]);
+    const destination =
+      typeof targetUrl === "string"
+        ? targetUrl
+        : user?.role === "Librarian" || (user?.role as string) === "Registrar"
+          ? "/admin/login"
+          : wasAdmin
+            ? "/admin/login"
+            : "/login";
+    window.location.replace(destination);
+  }, [user]);
 
   return (
     <AuthContext.Provider

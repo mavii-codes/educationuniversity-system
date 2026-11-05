@@ -34,6 +34,11 @@ const STAGE_STYLES: Record<
     badgeBg: "bg-emerald-50 ring-emerald-100",
     iconColor: "text-emerald-600",
   },
+  Alumni: {
+    icon: Award,
+    badgeBg: "bg-amber-50 ring-amber-100",
+    iconColor: "text-amber-600",
+  },
 };
 
 export function StudentLifecycleOverviewSection({
@@ -63,7 +68,7 @@ export function StudentLifecycleOverviewSection({
 
       <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
         {stages.map((item, index) => {
-          const style = STAGE_STYLES[item.stage];
+          const style = STAGE_STYLES[item.stage] ?? STAGE_STYLES.Graduation;
           const Icon = style.icon;
           const isLast = index === stages.length - 1;
 
@@ -113,4 +118,3 @@ export function StudentLifecycleOverviewSection({
     </section>
   );
 }
-

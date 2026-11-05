@@ -9,13 +9,13 @@ async function startServer() {
     await startRealtimeListener();
     const server = app.listen(env.port, () => {
       console.log(
-        `[University DataHub Backend] Server running on port ${env.port} (${env.nodeEnv})`
+        `[University Library Backend] Server running on port ${env.port} (${env.nodeEnv})`
       );
-      console.log(`[University DataHub Backend] Database mode: ${dbStatus}`);
+      console.log(`[University Library Backend] Database mode: ${dbStatus}`);
     });
 
     const shutdown = async () => {
-      console.log("[University DataHub Backend] Shutting down gracefully...");
+      console.log("[University Library Backend] Shutting down gracefully...");
       stopRealtimeListener();
       server.close(async () => {
         const pool = getDbPool();
@@ -29,7 +29,7 @@ async function startServer() {
     process.on("SIGINT", shutdown);
     process.on("SIGTERM", shutdown);
   } catch (error) {
-    console.error("[University DataHub Backend] Failed to start server:", error);
+    console.error("[University Library Backend] Failed to start server:", error);
     process.exit(1);
   }
 }

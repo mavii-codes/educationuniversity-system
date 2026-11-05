@@ -11,6 +11,7 @@ const MAX_ATTEMPTS = 5;
 const ANONYMOUS_MAX_ATTEMPTS = 5;
 const attempts = new Map<string, Attempt>();
 const resetAttempts = new Map<string, Attempt>();
+const registrationAttempts = new Map<string, Attempt>();
 
 setInterval(() => {
   const now = Date.now();
@@ -20,7 +21,40 @@ setInterval(() => {
   for (const [key, value] of resetAttempts) {
     if (value.resetAt <= now) resetAttempts.delete(key);
   }
+  for (const [key, value] of registrationAttempts) {
+    if (value.resetAt <= now) registrationAttempts.delete(key);
+  }
 }, 5 * 60 * 1000).unref();
+
+export function studentRegistrationRateLimit(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
+  const key = req.ip ?? "unknown";
+  const now = Date.now();
+  const attempt = registrationAttempts.get(key);
+  const windowMs = 60 * 60 * 1000;
+  const maxAttempts = 5;
+
+  if (!attempt || attempt.resetAt <= now) {
+    registrationAttempts.set(key, { count: 1, resetAt: now + windowMs });
+    next();
+    return;
+  }
+
+  if (attempt.count >= maxAttempts) {
+    res.setHeader("Retry-After", String(Math.ceil((attempt.resetAt - now) / 1000)));
+    res.status(429).json({
+      success: false,
+      message: "Too many registration attempts. Please try again later.",
+    });
+    return;
+  }
+
+  attempt.count += 1;
+  next();
+}
 
 export function passwordResetRateLimit(
   req: Request,

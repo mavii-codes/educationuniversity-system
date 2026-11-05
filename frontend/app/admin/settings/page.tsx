@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import {
   Building,
   CheckCircle2,
-  Database,
   KeyRound,
   Lock,
   Save,
@@ -44,21 +43,15 @@ function AdminSettingsContent() {
     user?.email || "admin@university.edu"
   );
   const [department, setDepartment] = useState(
-    user?.department || "Office of Institutional Data & Systems"
+    user?.department || "Library Services"
   );
   const [officeLocation, setOfficeLocation] = useState(
-    "Administration Building, Suite 304"
+    "Library Office"
   );
 
-  // Account & Platform State
-  const [institutionName, setInstitutionName] = useState(
-    "Metropolitan State University"
-  );
-  const [academicYear, setAcademicYear] = useState("AY 2026-2027");
-  const [semester, setSemester] = useState("1st Semester");
-  const [syncInterval, setSyncInterval] = useState("15");
-  const [dailyDigest, setDailyDigest] = useState(true);
-  const [syncFailureAlerts, setSyncFailureAlerts] = useState(true);
+  const [libraryName, setLibraryName] = useState("University Library");
+  const [dueDateReminders, setDueDateReminders] = useState(true);
+  const [fineNotifications, setFineNotifications] = useState(true);
 
   // Security State
   const [currentPassword, setCurrentPassword] = useState("");
@@ -87,10 +80,10 @@ function AdminSettingsContent() {
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h2 className="text-xl font-semibold tracking-tight text-slate-900">
-            Administrator &amp; Platform Settings
+            Library Account Settings
           </h2>
           <p className="mt-0.5 text-sm text-slate-500">
-            Manage your administrator profile, institutional sync preferences, and account security.
+            Manage your library profile, member reminders, and account security.
           </p>
         </div>
       </div>
@@ -127,7 +120,7 @@ function AdminSettingsContent() {
               <div className="flex items-center gap-2.5">
                 <User className="h-4 w-4 text-indigo-600" />
                 <h3 className="text-base font-semibold text-slate-900">
-                  Administrator Profile
+                  Library Administrator Profile
                 </h3>
               </div>
               <Badge variant="brand">Role: Administrator</Badge>
@@ -185,99 +178,54 @@ function AdminSettingsContent() {
           </div>
         )}
 
-        {/* TAB 2: ACCOUNT SETTINGS */}
+        {/* TAB 2: LIBRARY SETTINGS */}
         {activeTab === "account" && (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-card">
               <div className="flex items-center gap-2.5 border-b border-slate-100 pb-4">
                 <Building className="h-4 w-4 text-indigo-600" />
                 <h3 className="text-base font-semibold text-slate-900">
-                  Institution &amp; Term Defaults
+                  Library Details
                 </h3>
               </div>
 
               <div className="mt-5 space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700">
-                    University Name
+                    Library Name
                   </label>
                   <input
                     type="text"
-                    value={institutionName}
-                    onChange={(e) => setInstitutionName(e.target.value)}
+                    value={libraryName}
+                    onChange={(e) => setLibraryName(e.target.value)}
                     className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 focus:border-indigo-400 focus:outline-none"
                   />
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700">
-                      Active Academic Year
-                    </label>
-                    <select
-                      value={academicYear}
-                      onChange={(e) => setAcademicYear(e.target.value)}
-                      className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:border-indigo-400 focus:outline-none"
-                    >
-                      <option value="AY 2026-2027">AY 2026-2027</option>
-                      <option value="AY 2025-2026">AY 2025-2026</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700">
-                      Active Semester
-                    </label>
-                    <select
-                      value={semester}
-                      onChange={(e) => setSemester(e.target.value)}
-                      className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:border-indigo-400 focus:outline-none"
-                    >
-                      <option value="1st Semester">1st Semester</option>
-                      <option value="2nd Semester">2nd Semester</option>
-                    </select>
-                  </div>
                 </div>
               </div>
             </div>
 
             <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-card">
               <div className="flex items-center gap-2.5 border-b border-slate-100 pb-4">
-                <Database className="h-4 w-4 text-indigo-600" />
+                <CheckCircle2 className="h-4 w-4 text-indigo-600" />
                 <h3 className="text-base font-semibold text-slate-900">
-                  Synchronization &amp; Alert Preferences
+                  Member Reminder Preferences
                 </h3>
               </div>
 
               <div className="mt-5 space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700">
-                    Scheduled Connector Sync Interval
-                  </label>
-                  <select
-                    value={syncInterval}
-                    onChange={(e) => setSyncInterval(e.target.value)}
-                    className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:border-indigo-400 focus:outline-none"
-                  >
-                    <option value="15">Every 15 minutes (Recommended)</option>
-                    <option value="30">Every 30 minutes</option>
-                    <option value="60">Hourly</option>
-                  </select>
-                </div>
-
                 <label className="flex cursor-pointer items-center justify-between rounded-lg border border-slate-100 bg-slate-50/70 p-3">
                   <div>
                     <span className="block text-xs font-semibold text-slate-900">
-                      Daily Integration Summary Digest
+                      Due-date reminders
                     </span>
                     <span className="text-[11px] text-slate-500">
-                      Send morning sync report to {adminEmail}
+                      Send upcoming return reminders to library members
                     </span>
                   </div>
                   <input
                     type="checkbox"
-                    checked={dailyDigest}
-                    onChange={(e) => setDailyDigest(e.target.checked)}
+                    checked={dueDateReminders}
+                    onChange={(e) => setDueDateReminders(e.target.checked)}
                     className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                   />
                 </label>
@@ -285,16 +233,16 @@ function AdminSettingsContent() {
                 <label className="flex cursor-pointer items-center justify-between rounded-lg border border-slate-100 bg-slate-50/70 p-3">
                   <div>
                     <span className="block text-xs font-semibold text-slate-900">
-                      Immediate Connector Warning Alerts
+                      Fine and overdue notices
                     </span>
                     <span className="text-[11px] text-slate-500">
-                      Alert on schema mismatch or disconnected campus sources
+                      Notify members when a loan is overdue or a fine is updated
                     </span>
                   </div>
                   <input
                     type="checkbox"
-                    checked={syncFailureAlerts}
-                    onChange={(e) => setSyncFailureAlerts(e.target.checked)}
+                    checked={fineNotifications}
+                    onChange={(e) => setFineNotifications(e.target.checked)}
                     className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                   />
                 </label>
@@ -412,4 +360,3 @@ export default function AdminSettingsPage() {
     </Suspense>
   );
 }
-

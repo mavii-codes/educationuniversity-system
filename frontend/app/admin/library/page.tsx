@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
+  Plus,
   AlertCircle,
   AlertTriangle,
   ArrowRight,
@@ -27,11 +28,15 @@ import {
   getLibraryOverview,
   getLibraryReservations,
   getLibraryTransactions,
-  runLibraryETL,
+  API_CONFIG,
+  createLibraryBook,
+  lookupLibraryBookCover,
+  updateLibraryBook,
 } from "@/lib/api";
 import {
   BorrowingTransaction,
   LibraryBook,
+  LibraryBookInput,
   LibraryOverview,
   OverdueFineRecord,
   ReservationRecord,
@@ -41,6 +46,8 @@ import { useToast } from "@/components/ui/ToastProvider";
 import { formatNumber } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { useLibraryStore } from "@/lib/library-store";
+import { BookCover } from "@/components/library/BookCover";
+import { LibraryBookForm } from "@/components/admin/LibraryBookForm";
 
 type LibraryTab =
   | "overview"
@@ -57,6 +64,7 @@ export default function AdminLibraryPage() {
     borrowingRequests,
     transactions: storeTransactions,
     books: storeBooks,
+    upsertBook,
     reservations: storeReservations,
     fines: storeFines,
     approveBorrowRequest,
@@ -64,7 +72,7 @@ export default function AdminLibraryPage() {
     confirmBookReturn,
   } = useLibraryStore();
 
-  const [activeTab, setActiveTab] = useState<LibraryTab>("overview");
+  const [activeTab, setActiveTab] = useState<LibraryTab>("books");
   const [overview, setOverview] = useState<LibraryOverview | null>(null);
   const [books, setBooks] = useState<LibraryBook[]>([]);
   const [transactions, setTransactions] = useState<BorrowingTransaction[]>([]);
@@ -72,12 +80,13 @@ export default function AdminLibraryPage() {
   const [reservations, setReservations] = useState<ReservationRecord[]>([]);
   const [fines, setFines] = useState<OverdueFineRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [syncing, setSyncing] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("All");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [rejectModalReqId, setRejectModalReqId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [bookEditor, setBookEditor] = useState<LibraryBook | null | undefined>();
+  const [bookSaving, setBookSaving] = useState(false);
   const { showToast } = useToast();
 
   const loadData = useCallback(async () => {
@@ -101,7 +110,7 @@ export default function AdminLibraryPage() {
     } catch {
       showToast({
         title: "Connection Alert",
-        description: "Failed to load latest Library API records.",
+        description: "Unable to load current library records.",
         type: "warning",
       });
     } finally {
@@ -112,33 +121,6 @@ export default function AdminLibraryPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
-
-  const handleTriggerETL = async () => {
-    setSyncing(true);
-    showToast({
-      title: "ETL Pipeline Triggered",
-      description: "Extracting, validating, deduplicating, and matching library records...",
-      type: "info",
-    });
-
-    try {
-      const log = await runLibraryETL("Admin Console");
-      await loadData();
-      showToast({
-        title: "Library Synchronization Complete",
-        description: `Ingested ${log.recordsLoaded} records. Cleaned ${log.duplicatesCleaned} duplicates. Matched ${log.studentsMatched} students.`,
-        type: "success",
-      });
-    } catch {
-      showToast({
-        title: "ETL Sync Interrupted",
-        description: "Unable to complete Library ETL pipeline.",
-        type: "warning",
-      });
-    } finally {
-      setSyncing(false);
-    }
-  };
 
   const effectiveTransactions =
     storeTransactions.length > 0 ? storeTransactions : transactions;
@@ -180,6 +162,80 @@ export default function AdminLibraryPage() {
       type: res.fineAccrued > 0 ? "warning" : "success",
     });
   };
+
+  const handleSaveBook = async (
+    input: LibraryBookInput,
+    coverFile?: File | null
+  ) => {
+    setBookSaving(true);
+    try {
+      if (coverFile && !API_CONFIG.useLiveApi) {
+        throw new Error("Cover uploads require the live API to be enabled.");
+      }
+      let savedBook = API_CONFIG.useLiveApi
+        ? bookEditor
+          ? await updateLibraryBook(bookEditor.id, input, coverFile)
+          : await createLibraryBook(input, coverFile)
+        : {
+            ...input,
+            id: bookEditor?.id ?? `local-book-${Date.now()}`,
+            cover_url: input.cover_url,
+            borrowedCopies: input.totalCopies - input.availableCopies,
+            status:
+              input.availableCopies === 0
+                ? ("Checked Out" as const)
+                : input.availableCopies < input.totalCopies
+                  ? ("Partially Available" as const)
+                  : ("Available" as const),
+            lastSyncedAt: new Date().toISOString(),
+          };
+      if (!API_CONFIG.useLiveApi) {
+        const identityChanged =
+          !bookEditor ||
+          input.isbn !== bookEditor.isbn ||
+          input.title !== bookEditor.title ||
+          input.author !== bookEditor.author;
+        const manualOverride =
+          input.cover_url && input.cover_url !== bookEditor?.cover_url;
+        const cover_url =
+          manualOverride || (!identityChanged && input.cover_url)
+            ? input.cover_url
+            : identityChanged
+              ? await handleRefreshBookCover(input)
+              : input.cover_url;
+        savedBook = { ...savedBook, cover_url };
+      }
+      upsertBook(savedBook);
+      setBooks((previous) => {
+        const found = previous.some((book) => book.id === savedBook.id);
+        return found
+          ? previous.map((book) => (book.id === savedBook.id ? savedBook : book))
+          : [savedBook, ...previous];
+      });
+      setBookEditor(undefined);
+      showToast({
+        title: bookEditor ? "Book updated" : "Book added",
+        description: `${savedBook.title} is saved in the catalog.`,
+        type: "success",
+      });
+    } catch (error) {
+      showToast({
+        title: "Unable to save book",
+        description:
+          error instanceof Error ? error.message : "The book could not be saved.",
+        type: "warning",
+      });
+    } finally {
+      setBookSaving(false);
+    }
+  };
+
+  const handleRefreshBookCover = (input: LibraryBookInput) =>
+    lookupLibraryBookCover({
+      isbn: input.isbn,
+      title: input.title,
+      author: input.author,
+    });
 
   // Filtered Books
   const filteredBooks = effectiveBooks.filter((b) => {
@@ -230,115 +286,50 @@ export default function AdminLibraryPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header and Live Status */}
+      {/* Library operations overview */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-              First Working Integration · Active
-            </span>
-            <span className="text-xs text-slate-400">·</span>
-            <span className="text-xs font-medium text-slate-500">
-              Library LMS REST API Adapter
-            </span>
-          </div>
           <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
-            Library Management System Integration
+            Library Management
           </h2>
           <p className="mt-1 text-sm text-slate-600">
-            Centralized ingestion of catalog books, borrowing transactions, student borrowers, reservations, and fine ledger.
+            Manage the catalog, borrower requests, active loans, reservations, and fines.
           </p>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            disabled={syncing || loading}
-            onClick={handleTriggerETL}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-60"
-          >
-            <RefreshCw
-              className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`}
-            />
-            <span>{syncing ? "Running ETL Pipeline..." : "Sync Library API"}</span>
-          </button>
         </div>
       </div>
 
-      {/* Scope & Governance Notice (Strict EDM Compliance Boundary) */}
-      <div className="rounded-xl border border-blue-200/80 bg-blue-50/60 p-4 text-xs text-blue-900">
-        <div className="flex items-start gap-3">
-          <Shield className="mt-0.5 h-4 w-4 shrink-0 text-blue-700" />
-          <div className="space-y-1">
-            <p className="font-semibold text-blue-950">
-              Platform Integration Scope &amp; Privacy Governance
-            </p>
-            <p className="leading-relaxed text-blue-800">
-              Circulation desks, checkout scans, physical book returns, and fine payments are operated directly within the external Library Management System.
-              Our platform extracts, cleans, deduplicates, and cross-references library records with the student master for academic analytics and institutional audit.
-              Privacy controls are informed by FERPA and GDPR principles (data minimization and role-based access). This does not claim formal legal compliance certification.
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[
+          { label: "Catalog titles", value: effectiveBooks.length },
+          {
+            label: "Available copies",
+            value: effectiveBooks.reduce((total, book) => total + book.availableCopies, 0),
+          },
+          {
+            label: "Pending requests",
+            value: borrowingRequests.filter((request) => request.status === "Pending").length,
+          },
+          {
+            label: "Overdue loans",
+            value: effectiveTransactions.filter((transaction) => transaction.status === "Overdue").length,
+          },
+        ].map((metric) => (
+          <div
+            key={metric.label}
+            className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-card"
+          >
+            <p className="text-[11px] font-medium text-slate-500">{metric.label}</p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-slate-900">
+              {formatNumber(metric.value)}
             </p>
           </div>
-        </div>
-      </div>
-
-      {/* Quick KPIs Summary */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-card">
-          <span className="text-[11px] font-medium text-slate-500">Integrated Books</span>
-          <p className="mt-1 text-xl font-bold text-slate-900 tabular-nums">
-            {formatNumber(overview?.kpis.totalIntegratedBooks || 14850)}
-          </p>
-          <span className="text-[10px] text-emerald-600 font-medium">Catalog synced</span>
-        </div>
-
-        <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-card">
-          <span className="text-[11px] font-medium text-slate-500">Student Borrowers</span>
-          <p className="mt-1 text-xl font-bold text-slate-900 tabular-nums">
-            {formatNumber(overview?.kpis.totalStudentBorrowers || 3420)}
-          </p>
-          <span className="text-[10px] text-indigo-600 font-medium">Matched by Student ID</span>
-        </div>
-
-        <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-card">
-          <span className="text-[11px] font-medium text-slate-500">Total Transactions</span>
-          <p className="mt-1 text-xl font-bold text-slate-900 tabular-nums">
-            {formatNumber(overview?.kpis.totalBorrowingTransactions || 8920)}
-          </p>
-          <span className="text-[10px] text-slate-500">Circulation loans</span>
-        </div>
-
-        <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-card">
-          <span className="text-[11px] font-medium text-slate-500">Shelf Availability</span>
-          <p className="mt-1 text-xl font-bold text-slate-900 tabular-nums">
-            {formatNumber(overview?.kpis.availableBooks || 11250)}
-          </p>
-          <span className="text-[10px] text-slate-500">3,600 currently on loan</span>
-        </div>
-
-        <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-card">
-          <span className="text-[11px] font-medium text-slate-500">Overdue Items</span>
-          <p className="mt-1 text-xl font-bold text-rose-600 tabular-nums">
-            {formatNumber(overview?.kpis.overdueTransactions || 64)}
-          </p>
-          <span className="text-[10px] text-rose-500 font-medium">Clearance required</span>
-        </div>
-
-        <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-card">
-          <span className="text-[11px] font-medium text-slate-500">API Connection</span>
-          <p className="mt-1 text-sm font-bold text-emerald-600">
-            REST Ingestion
-          </p>
-          <span className="text-[10px] text-slate-400">9-stage automated ETL</span>
-        </div>
+        ))}
       </div>
 
       {/* Navigation Tabs */}
       <div className="border-b border-slate-200">
         <nav className="flex space-x-6">
           {[
-            { id: "overview", label: "Overview & Health", icon: Database },
             {
               id: "requests",
               label: `Borrowing Requests (${borrowingRequests.filter((r) => r.status === "Pending").length})`,
@@ -356,7 +347,7 @@ export default function AdminLibraryPage() {
             },
             {
               id: "borrowers",
-              label: `Student Patrons (${borrowers.length})`,
+              label: `Borrowers (${borrowers.length})`,
               icon: UserCheck,
             },
             {
@@ -442,7 +433,7 @@ export default function AdminLibraryPage() {
                   className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100"
                 >
                   <BookMarked className="h-4 w-4" />
-                  <span>View Integrated Library Records</span>
+                  <span>View Catalog Records</span>
                 </Link>
               </div>
             </div>
@@ -524,8 +515,13 @@ export default function AdminLibraryPage() {
                           {req.requestCode}
                         </td>
                         <td className="px-4 py-3">
-                          <p className="font-semibold text-slate-900">{req.bookTitle}</p>
-                          <p className="text-[11px] text-slate-400 font-mono">ISBN: {req.isbn}</p>
+                          <div className="flex items-center gap-3">
+                            <BookCover src={req.cover_url} title={req.bookTitle} size="sm" />
+                            <div>
+                              <p className="font-semibold text-slate-900">{req.bookTitle}</p>
+                              <p className="text-[11px] text-slate-400 font-mono">ISBN: {req.isbn}</p>
+                            </div>
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           <p className="font-medium text-slate-800">{req.studentName}</p>
@@ -629,6 +625,14 @@ export default function AdminLibraryPage() {
                 <option value="Partially Available">Partially Available</option>
                 <option value="Checked Out">Checked Out</option>
               </select>
+              <button
+                type="button"
+                onClick={() => setBookEditor(null)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add Book
+              </button>
             </div>
           </div>
 
@@ -644,14 +648,20 @@ export default function AdminLibraryPage() {
                   <th className="px-4 py-3 font-semibold">Copies (Avail / Total)</th>
                   <th className="px-4 py-3 font-semibold">Shelf Location</th>
                   <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredBooks.map((b) => (
                   <tr key={b.id} className="hover:bg-slate-50/60 transition">
                     <td className="px-4 py-3">
-                      <p className="font-semibold text-slate-900">{b.title}</p>
-                      <p className="text-[11px] text-slate-500">{b.author} · {b.publicationYear}</p>
+                      <div className="flex items-center gap-3">
+                        <BookCover src={b.cover_url} title={b.title} size="sm" />
+                        <div>
+                          <p className="font-semibold text-slate-900">{b.title}</p>
+                          <p className="text-[11px] text-slate-500">{b.author} · {b.publicationYear}</p>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-slate-700">{b.category}</td>
                     <td className="px-4 py-3 font-mono text-[11px] text-slate-600">{b.isbn}</td>
@@ -672,6 +682,15 @@ export default function AdminLibraryPage() {
                       >
                         {b.status}
                       </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() => setBookEditor(b)}
+                        className="rounded-lg border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-50"
+                      >
+                        Edit
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -729,7 +748,12 @@ export default function AdminLibraryPage() {
                     <td className="px-4 py-3 font-mono text-[11px] font-semibold text-slate-700">
                       {tx.transactionCode}
                     </td>
-                    <td className="px-4 py-3 font-semibold text-slate-900">{tx.bookTitle}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <BookCover src={tx.cover_url} title={tx.bookTitle} size="sm" />
+                        <span className="font-semibold text-slate-900">{tx.bookTitle}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-slate-800">{tx.studentName}</p>
                       <p className="font-mono text-[11px] text-slate-400">{tx.studentId}</p>
@@ -875,7 +899,12 @@ export default function AdminLibraryPage() {
                     <td className="px-4 py-3 font-mono text-[11px] font-semibold text-slate-700">
                       {r.reservationCode}
                     </td>
-                    <td className="px-4 py-3 font-semibold text-slate-900">{r.bookTitle}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <BookCover src={r.cover_url} title={r.bookTitle} size="sm" />
+                        <span className="font-semibold text-slate-900">{r.bookTitle}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-slate-800">{r.studentName}</p>
                       <p className="font-mono text-[11px] text-slate-400">{r.studentId}</p>
@@ -1000,6 +1029,15 @@ export default function AdminLibraryPage() {
             </div>
           </div>
         </div>
+      )}
+      {bookEditor !== undefined && (
+        <LibraryBookForm
+          book={bookEditor}
+          saving={bookSaving}
+          onCancel={() => setBookEditor(undefined)}
+          onRefresh={handleRefreshBookCover}
+          onSubmit={handleSaveBook}
+        />
       )}
     </div>
   );

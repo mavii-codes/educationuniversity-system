@@ -26,6 +26,7 @@ const stageIcons: Record<LifecycleStageKey, React.ElementType> = {
   enrollment: ClipboardCheck,
   "academic-progress": BookOpenCheck,
   graduation: GraduationCap,
+  alumni: Award,
 };
 
 export function LifecycleTimeline({ stages }: LifecycleTimelineProps) {
@@ -52,7 +53,7 @@ export function LifecycleTimeline({ stages }: LifecycleTimelineProps) {
           {stages.map((stage, idx) => {
             const isSelected = stage.key === selectedKey;
             const isLast = idx === stages.length - 1;
-            const Icon = stageIcons[stage.key];
+            const Icon = stageIcons[stage.key] ?? Database;
 
             return (
               <div key={stage.key} className="relative">
@@ -258,4 +259,3 @@ export function LifecycleTimeline({ stages }: LifecycleTimelineProps) {
     </div>
   );
 }
-

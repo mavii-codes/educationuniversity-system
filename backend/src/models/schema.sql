@@ -68,7 +68,8 @@ CREATE TABLE IF NOT EXISTS library_books (
   borrowed_copies INTEGER NOT NULL DEFAULT 0,
   location VARCHAR(80),
   status VARCHAR(32) NOT NULL DEFAULT 'Available',
-  last_synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  cover_url TEXT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS library_borrowers (
@@ -129,6 +130,12 @@ CREATE TABLE IF NOT EXISTS library_fines (
   days_overdue INTEGER NOT NULL DEFAULT 0,
   fine_amount NUMERIC(8, 2) NOT NULL DEFAULT 0.00,
   payment_status VARCHAR(24) NOT NULL DEFAULT 'Unpaid'
+);
+
+CREATE TABLE IF NOT EXISTS library_fine_payments (
+  fine_id VARCHAR(64) PRIMARY KEY,
+  payment_status VARCHAR(16) NOT NULL CHECK (payment_status IN ('Paid')),
+  paid_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS library_etl_logs (

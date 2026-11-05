@@ -1,22 +1,29 @@
 "use client";
 
 import React, { useState } from "react";
-import { AlertCircle, CheckCircle2, Coins } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { useLibraryStore } from "@/lib/library-store";
 import { useToast } from "@/components/ui/ToastProvider";
 
 export default function StaffFinesPage() {
-  const { fines } = useLibraryStore();
+  const { fines, settleFine } = useLibraryStore();
   const { showToast } = useToast();
-  const [settledIds, setSettledIds] = useState<string[]>([]);
+  const [processingIds, setProcessingIds] = useState<string[]>([]);
 
-  const handlePay = (id: string, amount: number) => {
-    setSettledIds((prev) => [...prev, id]);
-    showToast({
-      title: "Fine Settled",
-      description: `Payment of ₱${amount.toFixed(2)} recorded successfully at circulation desk.`,
-      type: "success",
-    });
+  const handlePay = async (id: string, amount: number) => {
+    setProcessingIds((current) => [...current, id]);
+    try {
+      const result = await settleFine(id);
+      showToast({
+        title: result.ok ? "Fine Settled" : "Payment Failed",
+        description: result.ok
+          ? `Payment of ₱${amount.toFixed(2)} recorded successfully at circulation desk.`
+          : result.message,
+        type: result.ok ? "success" : "warning",
+      });
+    } finally {
+      setProcessingIds((current) => current.filter((fineId) => fineId !== id));
+    }
   };
 
   return (
@@ -41,7 +48,8 @@ export default function StaffFinesPage() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {fines.map((f) => {
-                const isSettled = settledIds.includes(f.id) || f.paymentStatus === "Paid";
+                const isSettled = f.paymentStatus === "Paid";
+                const isProcessing = processingIds.includes(f.id);
                 return (
                   <tr key={f.id} className="hover:bg-slate-50/50 transition">
                     <td className="px-5 py-3.5 font-bold text-slate-900">{f.bookTitle}</td>
@@ -66,11 +74,12 @@ export default function StaffFinesPage() {
                       {!isSettled ? (
                         <button
                           type="button"
-                          onClick={() => handlePay(f.id, f.fineAmount)}
-                          className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-700 shadow-xs transition"
+                          disabled={isProcessing}
+                          onClick={() => void handlePay(f.id, f.fineAmount)}
+                          className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-700 shadow-xs transition disabled:cursor-wait disabled:opacity-60"
                         >
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                          <span>Settle Fine</span>
+                          {!isProcessing && <CheckCircle2 className="h-3.5 w-3.5" />}
+                          <span>{isProcessing ? "Saving..." : "Settle Fine"}</span>
                         </button>
                       ) : (
                         <span className="text-[11px] text-slate-400">Settled</span>

@@ -9,7 +9,7 @@ interface ErrorStateProps {
 
 export function ErrorState({
   title = "We couldn't load the requested records.",
-  description = "Please try again in a moment. If this continues, check your connection to the University DataHub service.",
+  description = "Please try again in a moment. If this continues, check your connection to the library service.",
   onRetry,
 }: ErrorStateProps) {
   return (
@@ -32,4 +32,3 @@ export function ErrorState({
     </div>
   );
 }
-

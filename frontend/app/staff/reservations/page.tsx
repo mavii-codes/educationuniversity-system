@@ -3,6 +3,7 @@
 import React from "react";
 import { Bookmark, Clock } from "lucide-react";
 import { useLibraryStore } from "@/lib/library-store";
+import { BookCover } from "@/components/library/BookCover";
 
 export default function StaffReservationsPage() {
   const { reservations } = useLibraryStore();
@@ -30,7 +31,12 @@ export default function StaffReservationsPage() {
             <tbody className="divide-y divide-slate-100">
               {reservations.map((r) => (
                 <tr key={r.id} className="hover:bg-slate-50/50 transition">
-                  <td className="px-5 py-3.5 font-bold text-slate-900">{r.bookTitle}</td>
+                  <td className="px-5 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <BookCover src={r.cover_url} title={r.bookTitle} size="sm" />
+                      <span className="font-bold text-slate-900">{r.bookTitle}</span>
+                    </div>
+                  </td>
                   <td className="px-4 py-3.5">
                     <p className="font-semibold text-slate-800">{r.studentName}</p>
                     <p className="text-[11px] text-slate-500">{r.studentId}</p>

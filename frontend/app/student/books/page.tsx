@@ -16,6 +16,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { useLibraryStore } from "@/lib/library-store";
 import { BookDetailModal } from "@/components/student/BookDetailModal";
+import { BookCover } from "@/components/library/BookCover";
 import { LibraryBook } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -189,6 +190,9 @@ function BooksContent() {
                 className="group flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm hover:border-indigo-200 hover:shadow-md transition"
               >
                 <div>
+                  <div className="mb-4 flex justify-center">
+                    <BookCover src={book.cover_url} title={book.title} size="md" />
+                  </div>
                   {/* Top Category & Status Pill */}
                   <div className="flex items-center justify-between gap-2">
                     <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600 uppercase tracking-wide">
@@ -288,4 +292,3 @@ export default function StudentBrowseBooksPage() {
     </Suspense>
   );
 }
-

@@ -25,10 +25,10 @@ export function LibraryBrandShowcase() {
           </div>
           <div>
             <h1 className="text-base font-bold tracking-tight text-slate-900 sm:text-lg">
-              University Data Integration System
+              University Library Management System
             </h1>
             <p className="text-xs font-medium text-slate-500">
-              Institutional Data &amp; Analytics Platform
+              Books, borrowing, and library services
             </p>
           </div>
         </div>

@@ -3,11 +3,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { GraduationCap, LogOut, User } from "lucide-react";
-import {
-  ADMIN_NAVIGATION_GROUPS,
-  isAdminNavActive,
-} from "./admin-navigation";
+import { BookOpen, LogOut, User } from "lucide-react";
+import { getAdminNavigationGroups, isAdminNavActive } from "./admin-navigation";
 import { AdminProfileMenu } from "./AdminProfileMenu";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -29,24 +26,25 @@ export function AdminSidebar() {
   }, []);
 
   const adminName = user?.name || "Administrator";
+  const navigationGroups = getAdminNavigationGroups(user?.role === "Librarian");
 
   return (
     <aside className="hidden lg:fixed lg:inset-y-0 lg:z-30 lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-slate-200/80 lg:bg-white">
       {/* Top Brand Section */}
       <div className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-100 px-5">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm shadow-indigo-600/20">
-          <GraduationCap className="h-5 w-5" />
+          <BookOpen className="h-5 w-5" />
         </div>
         <div className="min-w-0">
           <span className="block text-[13px] font-bold leading-snug tracking-tight text-slate-900">
-            University Data Integration System
+            University Library System
           </span>
         </div>
       </div>
 
       {/* Navigation Groups */}
       <nav className="flex-1 space-y-5 overflow-y-auto px-3.5 py-5">
-        {ADMIN_NAVIGATION_GROUPS.map((group) => (
+        {navigationGroups.map((group) => (
           <div key={group.groupLabel}>
             <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
               {group.groupLabel}
@@ -118,7 +116,7 @@ export function AdminSidebar() {
                 {adminName}
               </p>
               <p className="truncate text-[11px] text-slate-500">
-                Role: Administrator
+                Role: {user?.role || "Administrator"}
               </p>
             </div>
           </button>

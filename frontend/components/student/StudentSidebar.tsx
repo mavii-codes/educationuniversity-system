@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { BookOpen, LogOut, User } from "lucide-react";
+import { BookOpen, ChevronDown, User } from "lucide-react";
 import { STUDENT_NAVIGATION_GROUPS } from "./student-navigation";
 import { useAuth } from "@/lib/auth";
 import { useLibraryStore } from "@/lib/library-store";
@@ -58,7 +58,7 @@ export function StudentSidebar() {
         </div>
         <div className="min-w-0">
           <span className="block text-[13px] font-bold leading-snug tracking-tight text-slate-900 truncate">
-            University Data Integration
+            University Library System
           </span>
           <span className="block text-[11px] font-medium text-indigo-600">
             Student Library Portal
@@ -138,17 +138,6 @@ export function StudentSidebar() {
           </div>
         ))}
 
-        {/* Explicit Logout Nav Item */}
-        <div className="pt-2">
-          <button
-            type="button"
-            onClick={() => signOut()}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50/80 transition-colors"
-          >
-            <LogOut className="h-[17px] w-[17px] shrink-0" />
-            <span>Logout</span>
-          </button>
-        </div>
       </nav>
 
       {/* Bottom Student Profile Card */}
@@ -171,14 +160,14 @@ export function StudentSidebar() {
               <span>View Library Profile</span>
             </Link>
             <button
+              aria-label="Sign out"
               onClick={() => {
                 setMenuOpen(false);
                 signOut();
               }}
               className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50"
             >
-              <LogOut className="h-3.5 w-3.5" />
-              <span>Logout</span>
+              <span>Sign out</span>
             </button>
           </div>
         )}
@@ -200,13 +189,7 @@ export function StudentSidebar() {
               </p>
             </div>
           </button>
-          <button
-            onClick={() => signOut()}
-            title="Logout"
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-rose-600 transition"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
+          <ChevronDown className="mr-1 h-4 w-4 text-slate-400" />
         </div>
       </div>
     </aside>

@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { analyticsController } from "../controllers/analytics.controller";
-import { requireAuth } from "../middleware/auth.middleware";
+import { requireRoles } from "../middleware/auth.middleware";
 
 const router = Router();
-router.use(requireAuth);
+router.use(requireRoles("Administrator", "Librarian"));
 
 // GET /api/analytics
 router.get("/analytics", (req, res, next) =>

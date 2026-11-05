@@ -5,6 +5,7 @@ import { CheckCircle2, Clock, Filter, Search, XCircle } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useLibraryStore } from "@/lib/library-store";
 import { useToast } from "@/components/ui/ToastProvider";
+import { BookCover } from "@/components/library/BookCover";
 
 export default function StaffRequestsPage() {
   const { user } = useAuth();
@@ -79,8 +80,13 @@ export default function StaffRequestsPage() {
               {filtered.map((req) => (
                 <tr key={req.id} className="hover:bg-slate-50/50 transition">
                   <td className="px-5 py-3.5">
-                    <p className="font-bold text-slate-900">{req.bookTitle}</p>
-                    <p className="text-[11px] text-slate-500">By {req.author}</p>
+                    <div className="flex items-center gap-3">
+                      <BookCover src={req.cover_url} title={req.bookTitle} size="sm" />
+                      <div>
+                        <p className="font-bold text-slate-900">{req.bookTitle}</p>
+                        <p className="text-[11px] text-slate-500">By {req.author}</p>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-4 py-3.5">
                     <p className="font-semibold text-slate-800">{req.studentName}</p>

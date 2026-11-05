@@ -34,7 +34,7 @@ function buildPoolConfig(): PoolConfig {
 export function createPgPool(): Pool {
   const created = new Pool(buildPoolConfig());
   created.on("error", (error) => {
-    console.error("[University DataHub Backend] Unexpected database client error:", error.message);
+    console.error("[University Library Backend] Unexpected database client error:", error.message);
   });
   return created;
 }

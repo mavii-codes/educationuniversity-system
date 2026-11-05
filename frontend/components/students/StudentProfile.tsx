@@ -50,7 +50,7 @@ type ProfileTab =
   | "lifecycle";
 
 export function StudentProfile({ student }: { student: Student }) {
-  const [activeTab, setActiveTab] = useState<ProfileTab>("overview");
+  const [activeTab, setActiveTab] = useState<ProfileTab>("library");
   const { showToast } = useToast();
   const pathname = usePathname();
   const backHref = pathname?.startsWith("/admin") ? "/admin/students" : "/students";
@@ -63,12 +63,7 @@ export function StudentProfile({ student }: { student: Student }) {
     .join("");
 
   const tabs: { id: ProfileTab; label: string; icon: React.ElementType }[] = [
-    { id: "overview", label: "Overview", icon: User },
-    { id: "academic", label: "Academic Records", icon: GraduationCap },
-    { id: "attendance", label: "Attendance", icon: CalendarCheck },
-    { id: "lms", label: "LMS Activity", icon: Laptop },
-    { id: "library", label: "Library", icon: BookMarked },
-    { id: "lifecycle", label: "Student Lifecycle", icon: Milestone },
+    { id: "library", label: "Library Account", icon: BookMarked },
   ];
 
   return (
@@ -83,7 +78,7 @@ export function StudentProfile({ student }: { student: Student }) {
           Back to Students Directory
         </Link>
         <span className="text-xs text-slate-400">
-          Last unified sync: {student.lastSyncedAt}
+          Library member account
         </span>
       </div>
 
@@ -105,62 +100,17 @@ export function StudentProfile({ student }: { student: Student }) {
                 >
                   {student.status} Student
                 </Badge>
-                <Badge variant={getRiskVariant(student.riskLevel)}>
-                  {student.riskLevel} Risk
-                </Badge>
               </div>
               <p className="mt-1 text-sm text-slate-600">
                 <span className="font-mono font-medium text-slate-700">
                   Student ID: {student.id}
                 </span>
                 <span className="mx-2 text-slate-300">·</span>
-                <span>
-                  {student.programName} · {student.yearLevel}
-                </span>
+                <span>{student.email}</span>
               </p>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                {student.syncedSystems.map((sys) => (
-                  <span
-                    key={sys}
-                    className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600"
-                  >
-                    <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                    {sys} Synced
-                  </span>
-                ))}
-              </div>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
-            <button
-              type="button"
-              onClick={() =>
-                showToast({
-                  title: "Student profile refreshed",
-                  description: `Pulled latest Library circulation and borrower records for ${student.name}.`,
-                  type: "success",
-                })
-              }
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              Sync Record
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                showToast({
-                  title: "Academic summary prepared",
-                  description: `Unified advising sheet for ${student.id} is ready for download.`,
-                  type: "info",
-                })
-              }
-              className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-indigo-700"
-            >
-              Export Advising Summary
-            </button>
-          </div>
         </div>
 
         {/* Navigation Tabs */}
@@ -915,7 +865,7 @@ export function StudentProfile({ student }: { student: Student }) {
                         student.academicRecords.totalUnitsRequired -
                         student.academicRecords.totalUnitsEarned
                       } units and library clearance hold audit.`,
-                system: "Registrar & Library Clearance Audit",
+                system: "Staff Librarian & Library Clearance Audit",
               },
             ].map((item, idx, arr) => (
               <div key={item.stage} className="relative flex items-start gap-4">
@@ -965,4 +915,3 @@ export function StudentProfile({ student }: { student: Student }) {
     </div>
   );
 }
-

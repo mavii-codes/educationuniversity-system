@@ -101,6 +101,8 @@ export function LoginFormCard() {
 
     if (result.role === "Student") {
       router.push("/student/dashboard");
+    } else if (result.role === "Librarian") {
+      router.push("/staff/dashboard");
     } else {
       router.push("/admin/dashboard");
     }

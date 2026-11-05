@@ -3,7 +3,7 @@
 import React, { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CheckCircle2, GraduationCap, X } from "lucide-react";
+import { BookOpen, CheckCircle2, X } from "lucide-react";
 import { isNavItemActive, NAVIGATION_GROUPS } from "./navigation";
 import { cn } from "@/lib/utils";
 
@@ -34,14 +34,14 @@ export function MobileNavigation({ open, onClose }: MobileNavigationProps) {
         <div className="flex h-16 items-center justify-between border-b border-slate-100 px-5">
           <div className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white">
-              <GraduationCap className="h-4 w-4" />
+              <BookOpen className="h-4 w-4" />
             </div>
             <div>
               <span className="block text-sm font-bold text-slate-900">
-                University DataHub
+                University Library System
               </span>
               <span className="block text-[11px] text-slate-500">
-                Academic Integration
+                Catalog &amp; Circulation
               </span>
             </div>
           </div>
@@ -98,8 +98,8 @@ export function MobileNavigation({ open, onClose }: MobileNavigationProps) {
           <div className="flex items-center gap-2.5 rounded-xl bg-slate-50 px-3.5 py-2.5">
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             <div className="text-xs">
-              <p className="font-semibold text-slate-800">All 5 Sources Active</p>
-              <p className="text-slate-500">AY 2026-2027 · 1st Semester</p>
+              <p className="font-semibold text-slate-800">Library Services</p>
+              <p className="text-slate-500">Catalog · Loans · Returns</p>
             </div>
           </div>
         </div>
@@ -107,4 +107,3 @@ export function MobileNavigation({ open, onClose }: MobileNavigationProps) {
     </div>
   );
 }
-

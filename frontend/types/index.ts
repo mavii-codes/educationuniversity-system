@@ -6,7 +6,8 @@ export type LifecycleStageKey =
   | "admission"
   | "enrollment"
   | "academic-progress"
-  | "graduation";
+  | "graduation"
+  | "alumni";
 
 export interface Program {
   id: string;
@@ -67,6 +68,7 @@ export interface LmsCourseProgress {
 
 export interface LibraryBookRecord {
   id: string;
+  cover_url?: string | null;
   title: string;
   author: string;
   category: string;
@@ -281,8 +283,6 @@ export type AdminUserRole =
   | "Head Administrator"
   | "System Administrator"
   | "Library Staff"
-  | "Librarian"
-  | "University Registrar Admin"
   | "Data Integration Engineer"
   | "Institutional Data Steward";
 
@@ -312,7 +312,7 @@ export interface AdminDataSourceOverviewItem {
 }
 
 export interface AdminLifecycleStageStat {
-  stage: "Admission" | "Enrollment" | "Learning" | "Graduation";
+  stage: "Admission" | "Enrollment" | "Learning" | "Graduation" | "Alumni";
   count: number;
   subtitle: string;
   sourceLabel: string;
@@ -374,7 +374,7 @@ export interface AdminDashboardOverview {
   };
 }
 
-export type PortalAuthorizedRole = "Administrator" | "Librarian" | "Student" | "Registrar";
+export type PortalAuthorizedRole = "Administrator" | "Librarian" | "Student";
 
 // -------------------------------------------------------------
 // Library Integration Models & ETL Types
@@ -383,6 +383,7 @@ export type PortalAuthorizedRole = "Administrator" | "Librarian" | "Student" | "
 export interface LibraryBook {
   id: string;
   isbn: string;
+  cover_url?: string | null;
   title: string;
   author: string;
   publisher: string;
@@ -428,6 +429,7 @@ export interface BorrowingTransaction {
   bookId: string;
   bookTitle: string;
   isbn: string;
+  cover_url?: string | null;
   studentId: string;
   studentName: string;
   programCode: string;
@@ -445,6 +447,7 @@ export interface ReservationRecord {
   bookId: string;
   bookTitle: string;
   isbn: string;
+  cover_url?: string | null;
   studentId: string;
   studentName: string;
   programCode: string;
@@ -546,6 +549,7 @@ export interface BorrowingRequest {
   bookTitle: string;
   author: string;
   isbn: string;
+  cover_url?: string | null;
   category: string;
   studentId: string;
   studentName: string;
@@ -556,6 +560,20 @@ export interface BorrowingRequest {
   reviewedBy?: string;
   reviewedDate?: string;
   pickupDueDate?: string;
+}
+
+export interface LibraryBookInput {
+  isbn: string;
+  title: string;
+  author: string;
+  publisher: string;
+  publicationYear: number;
+  category: string;
+  callNumber: string;
+  totalCopies: number;
+  availableCopies: number;
+  location: string;
+  cover_url: string | null;
 }
 
 export type StudentReservationStatus =

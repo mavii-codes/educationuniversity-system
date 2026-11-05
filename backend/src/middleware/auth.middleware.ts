@@ -82,6 +82,7 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 export function csrfGuard(req: Request, res: Response, next: NextFunction): void {
   const publicAuthMutations = new Set([
     "/api/auth/login",
+    "/api/auth/register",
     "/api/auth/refresh",
     "/api/auth/forgot-password",
     "/api/auth/reset-password",

@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
-  title: University DataHub API
+  title: University Library Management API
   version: 0.2.0
   description: >
-    Institutional data platform API. Authentication uses HttpOnly cookies
+    Library catalog and circulation API. Authentication uses HttpOnly cookies
     (`udis_at` access token, `udis_rt` refresh token). Mutations additionally
     require the `X-CSRF-Token` header matching the readable `udis_csrf` cookie.
 servers:
@@ -15,7 +15,150 @@ tags:
   - name: Integration
   - name: Alumni
   - name: Admin
+  - name: Library
 paths:
+  /library/books:
+    get:
+      tags: [Library]
+      summary: List catalog books, including cover_url
+      responses:
+        "200":
+          description: Catalog books
+    post:
+      tags: [Library]
+      summary: Add a book (Administrator or Librarian)
+      parameters:
+        - $ref: "#/components/parameters/CsrfHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LibraryBookInput"
+      responses:
+        "201":
+          description: Book created with an automatically looked-up or manually supplied cover_url
+        "400":
+          description: Invalid book data
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator or Librarian role required
+  /library/books/cover-lookup:
+    post:
+      tags: [Library]
+      summary: Look up a cover for the book form (Administrator or Librarian)
+      parameters:
+        - $ref: "#/components/parameters/CsrfHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isbn: { type: string }
+                title: { type: string }
+                author: { type: string }
+      responses:
+        "200":
+          description: Cover lookup result (cover_url may be null)
+  /library/books/{id}:
+    put:
+      tags: [Library]
+      summary: Edit a book (Administrator or Librarian)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: "#/components/parameters/CsrfHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LibraryBookInput"
+      responses:
+        "200":
+          description: Updated book
+        "404":
+          description: Book not found
+  /library/books/{id}/refresh-cover:
+    post:
+      tags: [Library]
+      summary: Re-run cover lookup and save the result (Administrator or Librarian)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: "#/components/parameters/CsrfHeader"
+      responses:
+        "200":
+          description: Updated book and cover_url result
+        "404":
+          description: Book not found
+  /library/fines/{id}/pay:
+    put:
+      tags: [Library]
+      summary: Record payment for a fine (Administrator or Librarian)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: "#/components/parameters/CsrfHeader"
+      responses:
+        "200":
+          description: Fine payment recorded
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator or Librarian role required
+        "404":
+          description: Fine not found
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Create a student account
+      description: Creates an active student profile and account. Requires the database to be enabled.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [studentId, name, email, password, programCode, yearLevel]
+              properties:
+                studentId:
+                  type: string
+                  maxLength: 32
+                name:
+                  type: string
+                  maxLength: 160
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 12
+                programCode:
+                  type: string
+                  enum: [BSIT, BSCS, BSBA, BSN, BSCE, BSED]
+                yearLevel:
+                  type: string
+                  enum: ["1st Year", "2nd Year", "3rd Year", "4th Year", Graduate]
+      responses:
+        "201":
+          description: Student account created
+        "400":
+          description: Invalid registration details or program
+        "409":
+          description: Email address or student ID is already registered
+        "429":
+          description: Too many registration attempts
   /auth/login:
     post:
       tags: [Auth]
@@ -321,6 +464,31 @@ components:
       required: true
       schema: { type: string }
   schemas:
+    LibraryBookInput:
+      type: object
+      required:
+        - isbn
+        - title
+        - author
+        - publisher
+        - publicationYear
+        - category
+        - callNumber
+        - totalCopies
+        - availableCopies
+        - location
+      properties:
+        isbn: { type: string, maxLength: 32 }
+        title: { type: string, maxLength: 200 }
+        author: { type: string, maxLength: 160 }
+        publisher: { type: string, maxLength: 160 }
+        publicationYear: { type: integer, minimum: 0, maximum: 3000 }
+        category: { type: string, maxLength: 80 }
+        callNumber: { type: string, maxLength: 64 }
+        totalCopies: { type: integer, minimum: 1 }
+        availableCopies: { type: integer, minimum: 0 }
+        location: { type: string, maxLength: 80 }
+        cover_url: { type: string, format: uri, nullable: true }
     SessionUser:
       type: object
       properties:
@@ -329,7 +497,7 @@ components:
         email: { type: string }
         role:
           type: string
-          enum: [Administrator, Registrar]
+          enum: [Administrator, Librarian]
         accessRole: { type: string }
         department: { type: string }
         lastLogin: { type: string }

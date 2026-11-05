@@ -1,357 +1,219 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   AlertCircle,
   ArrowRight,
-  Award,
   BookMarked,
   BookOpen,
   BookmarkCheck,
-  CheckCircle2,
-  Clock,
-  Database,
-  GraduationCap,
-  ShieldAlert,
-  UserCheck,
+  Clock3,
   Users,
 } from "lucide-react";
-import { getAdminDashboardOverview, syncDataSource } from "@/lib/api";
-import { AdminDashboardOverview } from "@/types";
-import { StatCard } from "@/components/dashboard/StatCard";
-import { DataSourceOverviewSection } from "@/components/admin/DataSourceOverviewSection";
-import { StudentLifecycleOverviewSection } from "@/components/admin/StudentLifecycleOverviewSection";
-import { RecentSyncTableSection } from "@/components/admin/RecentSyncTableSection";
-import { LibraryUsageAnalyticsSection } from "@/components/admin/LibraryUsageAnalyticsSection";
-import {
-  AcademicPerformancePreviewChart,
-  EnrollmentTrendsPreviewChart,
-  GraduationTrendsPreviewChart,
-  StudentsAtRiskPreviewChart,
-} from "@/components/charts/AdminAnalyticsCharts";
-import { CardSkeleton, ChartSkeleton, TableSkeleton } from "@/components/ui/Skeleton";
-import { ErrorState } from "@/components/ui/ErrorState";
-import {
-  DemoViewState,
-  ViewStateControl,
-} from "@/components/ui/ViewStateControl";
-import { useToast } from "@/components/ui/ToastProvider";
+import { useAuth } from "@/lib/auth";
+import { useLibraryStore } from "@/lib/library-store";
 import { formatNumber } from "@/lib/utils";
 
 export default function AdminDashboardPage() {
-  const [overview, setOverview] = useState<AdminDashboardOverview | null>(null);
-  const [viewState, setViewState] = useState<DemoViewState>("loading");
-  const { showToast } = useToast();
+  const { user } = useAuth();
+  const { books, borrowingRequests, transactions, reservations, fines } =
+    useLibraryStore();
+  const isLibrarian = user?.role === "Librarian";
+  const libraryPath = isLibrarian ? "/staff/books" : "/admin/library";
+  const recordsPath = isLibrarian ? "/staff/books" : "/admin/library/records";
 
-  const loadDashboard = useCallback(
-    async (notify = false) => {
-      setViewState("loading");
-      try {
-        const data = await getAdminDashboardOverview();
-        setOverview(data);
-        setViewState("ready");
-        if (notify) {
-          showToast({
-            title: "Admin dashboard refreshed",
-            description:
-              "Synchronized latest metrics across Library LMS, central master records, and data pipeline.",
-            type: "success",
-          });
-        }
-      } catch {
-        setViewState("error");
-      }
-    },
-    [showToast]
+  const availableCopies = books.reduce(
+    (total, book) => total + book.availableCopies,
+    0
   );
+  const activeLoans = transactions.filter(
+    (transaction) =>
+      transaction.status === "Borrowed" || transaction.status === "Overdue"
+  ).length;
+  const pendingRequests = borrowingRequests.filter(
+    (request) => request.status === "Pending"
+  ).length;
+  const overdueItems = transactions.filter(
+    (transaction) => transaction.status === "Overdue"
+  ).length;
+  const activeReservations = reservations.filter(
+    (reservation) =>
+      reservation.status === "Pending" ||
+      reservation.status === "Ready for Pickup"
+  ).length;
+  const unpaidFines = fines.filter(
+    (fine) => fine.paymentStatus === "Unpaid"
+  ).length;
 
-  useEffect(() => {
-    loadDashboard(false);
-  }, [loadDashboard]);
+  const metrics = [
+    {
+      label: "Catalog titles",
+      value: books.length,
+      detail: "Books listed in the catalog",
+      icon: BookOpen,
+      tone: "bg-indigo-50 text-indigo-600",
+    },
+    {
+      label: "Available copies",
+      value: availableCopies,
+      detail: "Copies currently available",
+      icon: BookMarked,
+      tone: "bg-emerald-50 text-emerald-600",
+    },
+    {
+      label: "Active loans",
+      value: activeLoans,
+      detail: "Books checked out",
+      icon: BookmarkCheck,
+      tone: "bg-sky-50 text-sky-600",
+    },
+    {
+      label: "Requests to review",
+      value: pendingRequests,
+      detail: "Pending borrowing requests",
+      icon: Clock3,
+      tone: "bg-amber-50 text-amber-600",
+    },
+  ];
 
-  const handleSyncSource = async (sourceId: string) => {
-    if (!overview) return;
-    const target = overview.dataSources.find((s) => s.id === sourceId);
-    if (!target) return;
-
-    if (target.isPlanned) {
-      showToast({
-        title: `${target.name} is a Planned Integration`,
-        description: "API connector architecture is prepared for upcoming deployment phases.",
-        type: "info",
-      });
-      return;
-    }
-
-    setOverview((prev) =>
-      prev
-        ? {
-            ...prev,
-            dataSources: prev.dataSources.map((s) =>
-              s.id === sourceId ? { ...s, status: "Syncing" } : s
-            ),
-          }
-        : prev
-    );
-
-    try {
-      const res = await syncDataSource(sourceId);
-      setOverview((prev) =>
-        prev
-          ? {
-              ...prev,
-              summary: {
-                ...prev.summary,
-                lastSuccessfulSync: res.lastSynced,
-                lastSuccessfulSyncSubtext: `${target.shortLabel} manual sync completed`,
-              },
-              dataSources: prev.dataSources.map((s) =>
-                s.id === sourceId
-                  ? { ...s, status: "Connected", lastSync: res.lastSynced }
-                  : s
-              ),
-              recentSynchronization: prev.recentSynchronization.map((r) =>
-                r.dataSource === target.shortLabel
-                  ? { ...r, lastSync: res.lastSynced, status: "Connected" }
-                  : r
-              ),
-            }
-          : prev
-      );
-      showToast({
-        title: `${target.name} synchronized`,
-        description: `Verified ${formatNumber(target.records)} records with zero schema conflicts.`,
-        type: "success",
-      });
-    } catch {
-      setOverview((prev) =>
-        prev
-          ? {
-              ...prev,
-              dataSources: prev.dataSources.map((s) =>
-                s.id === sourceId ? { ...s, status: "Warning" } : s
-              ),
-            }
-          : prev
-      );
-    }
-  };
+  const shortcuts = [
+    {
+      label: "Manage library",
+      description: "Update titles and process borrowing, returns, reservations, and fines.",
+      href: libraryPath,
+      icon: BookOpen,
+    },
+    {
+      label: "Catalog records",
+      description: "Search titles, check availability, and review book details.",
+      href: recordsPath,
+      icon: BookMarked,
+    },
+    ...(!isLibrarian
+      ? [
+          {
+            label: "Borrower accounts",
+            description: "Review student library member accounts.",
+            href: "/admin/students",
+            icon: Users,
+          },
+        ]
+      : []),
+  ];
 
   return (
-    <div className="space-y-6">
-      {/* Admin Dashboard Welcome Header */}
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div>
+    <div className="space-y-7">
+      <section className="rounded-2xl bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 p-6 text-white shadow-sm sm:p-8">
+        <p className="text-sm font-semibold text-indigo-200">
+          University Library Management System
+        </p>
+        <h2 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+          Welcome, {user?.name || (isLibrarian ? "Staff Librarian" : "Administrator")}
+        </h2>
+        <p className="mt-2 max-w-2xl text-sm text-indigo-100/90">
+          Keep the catalog organized and library circulation moving. Review
+          requests, track loans, and manage borrower services from one place.
+        </p>
+        <Link
+          href={libraryPath}
+          className="mt-5 inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-indigo-800 transition hover:bg-indigo-50"
+        >
+          Open library management
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </section>
+
+      <section aria-label="Library activity" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {metrics.map((metric) => {
+          const Icon = metric.icon;
+          return (
+            <article
+              key={metric.label}
+              className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-card"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-slate-500">
+                    {metric.label}
+                  </p>
+                  <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">
+                    {formatNumber(metric.value)}
+                  </p>
+                </div>
+                <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${metric.tone}`}>
+                  <Icon className="h-5 w-5" />
+                </span>
+              </div>
+              <p className="mt-3 text-xs text-slate-500">{metric.detail}</p>
+            </article>
+          );
+        })}
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        <article className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-card">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-              Library LMS Connected
-            </span>
-            <span className="text-xs text-slate-400">·</span>
-            <span className="text-xs font-medium text-slate-500">
-              1st Working Integration Active
-            </span>
+            <Clock3 className="h-4 w-4 text-amber-600" />
+            <h3 className="text-sm font-semibold text-slate-900">
+              Circulation follow-up
+            </h3>
           </div>
-          <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
-            Good morning, Administrator
-          </h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Unified University Data Integration System · Institutional Data Fabric &amp; Academic Analytics
-          </p>
-        </div>
-        <div className="flex items-center gap-2.5 self-start sm:self-auto">
-          <ViewStateControl
-            current={viewState}
-            onChange={setViewState}
-            onRefresh={() => loadDashboard(true)}
-          />
-        </div>
-      </div>
+          <dl className="mt-4 divide-y divide-slate-100">
+            <div className="flex items-center justify-between py-3 text-sm">
+              <dt className="text-slate-600">Active reservations</dt>
+              <dd className="font-semibold tabular-nums text-slate-900">
+                {formatNumber(activeReservations)}
+              </dd>
+            </div>
+            <div className="flex items-center justify-between py-3 text-sm">
+              <dt className="flex items-center gap-2 text-slate-600">
+                <AlertCircle className="h-4 w-4 text-rose-500" />
+                Overdue loans
+              </dt>
+              <dd className="font-semibold tabular-nums text-slate-900">
+                {formatNumber(overdueItems)}
+              </dd>
+            </div>
+            <div className="flex items-center justify-between py-3 text-sm">
+              <dt className="text-slate-600">Unpaid fines</dt>
+              <dd className="font-semibold tabular-nums text-slate-900">
+                {formatNumber(unpaidFines)}
+              </dd>
+            </div>
+          </dl>
+        </article>
 
-      {/* Error State */}
-      {viewState === "error" && (
-        <ErrorState
-          title="Unable to load administrator overview"
-          description="Please retry to reconnect with the institutional data integration service."
-          onRetry={() => loadDashboard(true)}
-        />
-      )}
-
-      {/* Loading Skeleton State */}
-      {viewState === "loading" && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-            {Array.from({ length: 6 }).map((_, idx) => (
-              <CardSkeleton key={idx} />
-            ))}
+        <article className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-card">
+          <h3 className="text-sm font-semibold text-slate-900">
+            Library tools
+          </h3>
+          <div className="mt-3 divide-y divide-slate-100">
+            {shortcuts.map((shortcut) => {
+              const Icon = shortcut.icon;
+              return (
+                <Link
+                  key={shortcut.href}
+                  href={shortcut.href}
+                  className="flex items-center gap-3 py-3 transition hover:text-indigo-700"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium text-slate-900">
+                      {shortcut.label}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-slate-500">
+                      {shortcut.description}
+                    </span>
+                  </span>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-slate-400" />
+                </Link>
+              );
+            })}
           </div>
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <ChartSkeleton />
-            <ChartSkeleton />
-          </div>
-          <TableSkeleton rows={4} />
-        </div>
-      )}
-
-      {/* Ready Content */}
-      {viewState === "ready" && overview && (
-        <>
-          {/* Key Integration Metrics (Library Priority Integration) */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Library Integration KPIs (First Working Source)
-              </h3>
-              <Link
-                href="/admin/library"
-                className="text-xs font-medium text-indigo-600 hover:text-indigo-700 hover:underline"
-              >
-                View Library Hub →
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-              <StatCard
-                label="Total Integrated Books"
-                value={formatNumber(overview.summary.totalIntegratedBooks || 14850)}
-                supportingText={overview.summary.totalIntegratedBooksSubtext || "Catalog titles & holdings"}
-                trendDirection="up"
-                trendTone="positive"
-                icon={BookOpen}
-                iconTone="indigo"
-              />
-              <StatCard
-                label="Student Borrowers"
-                value={formatNumber(overview.summary.totalStudentBorrowers || 3420)}
-                supportingText={overview.summary.totalStudentBorrowersSubtext || "Registered student patrons"}
-                trendDirection="up"
-                trendTone="positive"
-                icon={UserCheck}
-                iconTone="emerald"
-              />
-              <StatCard
-                label="Borrowing Transactions"
-                value={formatNumber(overview.summary.totalBorrowingTransactions || 8920)}
-                supportingText={overview.summary.totalBorrowingTransactionsSubtext || "Cumulative loans logged"}
-                icon={BookMarked}
-                iconTone="sky"
-              />
-              <StatCard
-                label="Available vs Borrowed"
-                value={`${formatNumber(overview.summary.availableBooks || 11250)} / ${formatNumber(overview.summary.borrowedBooks || 3600)}`}
-                supportingText="75.8% shelf availability"
-                icon={BookmarkCheck}
-                iconTone="violet"
-              />
-              <StatCard
-                label="Overdue Transactions"
-                value={formatNumber(overview.summary.overdueTransactions || 64)}
-                supportingText={overview.summary.overdueTransactionsSubtext || "Pending clearance"}
-                trendDirection="neutral"
-                trendTone="warning"
-                icon={AlertCircle}
-                iconTone="amber"
-              />
-              <StatCard
-                label="Connection Status"
-                value={overview.summary.connectedDataSources}
-                supportingText={overview.summary.connectedDataSourcesSubtext}
-                icon={Database}
-                iconTone="emerald"
-              />
-            </div>
-          </div>
-
-          {/* Secondary Campus Records Strip */}
-          <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-card">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-xs font-semibold text-slate-900">
-                  Central University Master Records
-                </p>
-                <p className="text-[11px] text-slate-500">
-                  Institutional population matched with campus data fabric
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-6 text-xs">
-                <div>
-                  <span className="text-slate-400">Total Students: </span>
-                  <span className="font-semibold text-slate-800">{formatNumber(overview.summary.totalStudents)}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400">Active Enrolled: </span>
-                  <span className="font-semibold text-emerald-600">{formatNumber(overview.summary.activeStudents)}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400">Graduating Candidates: </span>
-                  <span className="font-semibold text-sky-600">{formatNumber(overview.summary.graduatingStudents)}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400">Library Patrons: </span>
-                  <span className="font-semibold text-violet-600">{formatNumber(overview.summary.totalStudentBorrowers ?? 0)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Data Source Overview (Library Management System) */}
-          <DataSourceOverviewSection
-            sources={overview.dataSources}
-            onTriggerSync={handleSyncSource}
-          />
-
-          {/* Library Usage Analytics Section (Monthly Trends, Program Borrows, Categories) */}
-          <LibraryUsageAnalyticsSection />
-
-          {/* Recent Synchronization Activity (Library ETL Ingestion) */}
-          <RecentSyncTableSection
-            rows={overview.recentSynchronization}
-          />
-
-          {/* Student Lifecycle Overview */}
-          <StudentLifecycleOverviewSection
-            stages={overview.lifecycleOverview}
-          />
-
-          {/* Academic Analytics Preview (4 Recharts Visuals) */}
-          <section className="space-y-4">
-            <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-              <div>
-                <h3 className="text-base font-semibold text-slate-900">
-                  Academic Analytics Preview
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Key institutional enrollment, performance, graduation, and retention indicators
-                </p>
-              </div>
-
-              <Link
-                href="/admin/analytics"
-                className="inline-flex items-center gap-1.5 self-start text-xs font-semibold text-indigo-600 transition hover:text-indigo-700 sm:self-auto"
-              >
-                <span>View Full Academic Analytics</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              <EnrollmentTrendsPreviewChart
-                data={overview.analyticsPreview.enrollmentTrends}
-              />
-              <AcademicPerformancePreviewChart
-                data={overview.analyticsPreview.academicPerformance}
-              />
-              <GraduationTrendsPreviewChart
-                data={overview.analyticsPreview.graduationTrends}
-              />
-              <StudentsAtRiskPreviewChart
-                data={overview.analyticsPreview.studentsAtRisk}
-              />
-            </div>
-          </section>
-        </>
-      )}
+        </article>
+      </section>
     </div>
   );
 }

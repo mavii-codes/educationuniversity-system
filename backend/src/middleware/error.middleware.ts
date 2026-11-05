@@ -27,7 +27,7 @@ export function errorHandler(
   const isServerError = statusCode >= 500;
 
   if (isServerError) {
-    console.error("[University DataHub Backend] Unhandled error:", err);
+    console.error("[University Library Backend] Unhandled error:", err);
   }
 
   res.status(statusCode).json({
@@ -39,4 +39,3 @@ export function errorHandler(
           "We couldn't complete the request right now. Please try again shortly.",
   });
 }
-

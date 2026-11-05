@@ -4,41 +4,64 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
+  AlertCircle,
   BookMarked,
   BookOpen,
   CheckCircle2,
   Download,
   Filter,
   Layers,
+  RefreshCw,
   Search,
 } from "lucide-react";
 import { getBookCategories, getLibraryBooks } from "@/lib/api";
 import { BookCategory, LibraryBook } from "@/types";
 import { formatNumber } from "@/lib/utils";
+import { BookCover } from "@/components/library/BookCover";
+import { useAuth } from "@/lib/auth";
 
 export default function IntegratedLibraryRecordsPage() {
+  const { user } = useAuth();
   const [books, setBooks] = useState<LibraryBook[]>([]);
   const [categories, setCategories] = useState<BookCategory[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [selectedStatus, setSelectedStatus] = useState<string>("All");
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
+    let active = true;
     async function load() {
+      setLoading(true);
+      setLoadError(null);
       try {
         const [bks, cats] = await Promise.all([
           getLibraryBooks(),
           getBookCategories(),
         ]);
-        setBooks(bks);
-        setCategories(cats);
+        if (active) {
+          setBooks(bks);
+          setCategories(cats);
+        }
+      } catch (error) {
+        if (active) {
+          setLoadError(
+            error instanceof Error
+              ? error.message
+              : "Unable to load library catalog records."
+          );
+        }
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     }
-    load();
-  }, []);
+    void load();
+    return () => {
+      active = false;
+    };
+  }, [loadAttempt]);
 
   const filteredBooks = books.filter((b) => {
     const matchesSearch =
@@ -61,7 +84,11 @@ export default function IntegratedLibraryRecordsPage() {
         <div>
           <div className="flex items-center gap-2">
             <Link
-              href="/admin/library"
+              href={
+                user?.role === "Librarian"
+                  ? "/staff/books"
+                  : "/admin/library"
+              }
               className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
@@ -71,10 +98,10 @@ export default function IntegratedLibraryRecordsPage() {
             <span className="text-xs text-slate-500 font-medium">Catalog Holdings</span>
           </div>
           <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
-            Integrated Library Records
+            Catalog Records
           </h2>
           <p className="mt-1 text-sm text-slate-600">
-            Centralized institutional holdings extracted from external Library LMS and matched to degree programs.
+            Browse and manage the books, copies, and availability in your library catalog.
           </p>
         </div>
 
@@ -89,6 +116,30 @@ export default function IntegratedLibraryRecordsPage() {
           <span>Export Catalog (CSV)</span>
         </button>
       </div>
+
+      {loadError && (
+        <div
+          role="alert"
+          className="flex flex-col gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="flex items-start gap-2">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <p className="font-semibold">Could not load catalog records</p>
+              <p className="mt-1 text-xs">{loadError}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Category Summary Badges */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -177,17 +228,22 @@ export default function IntegratedLibraryRecordsPage() {
             {filteredBooks.length === 0 ? (
               <tr>
                 <td colSpan={7} className="p-8 text-center text-slate-500">
-                  No integrated book records match your search criteria.
+                  No catalog records match your search criteria.
                 </td>
               </tr>
             ) : (
               filteredBooks.map((b) => (
                 <tr key={b.id} className="hover:bg-slate-50/60 transition">
                   <td className="px-4 py-3">
-                    <p className="font-semibold text-slate-900">{b.title}</p>
-                    <p className="text-[11px] text-slate-500">
-                      {b.author} · {b.publisher} ({b.publicationYear})
-                    </p>
+                    <div className="flex items-center gap-3">
+                      <BookCover src={b.cover_url} title={b.title} size="sm" />
+                      <div>
+                        <p className="font-semibold text-slate-900">{b.title}</p>
+                        <p className="text-[11px] text-slate-500">
+                          {b.author} · {b.publisher} ({b.publicationYear})
+                        </p>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-slate-700">{b.category}</td>
                   <td className="px-4 py-3 font-mono text-[11px] text-slate-600">{b.isbn}</td>
@@ -218,4 +274,3 @@ export default function IntegratedLibraryRecordsPage() {
     </div>
   );
 }
-

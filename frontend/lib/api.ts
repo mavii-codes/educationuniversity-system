@@ -38,6 +38,7 @@ import {
   IntegrationSummary,
   IntegrationSyncLog,
   LibraryBook,
+  LibraryBookInput,
   LibraryETLLog,
   LibraryOverview,
   LifecycleStage,
@@ -139,7 +140,9 @@ export async function fetchJson<T>(
   const clientId = getRealtimeClientId();
   if (clientId) headers.set("X-Client-Id", clientId);
 
-  if (init?.body && !headers.has("Content-Type")) {
+  const isFormData =
+    typeof FormData !== "undefined" && init?.body instanceof FormData;
+  if (init?.body && !isFormData && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
   if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
@@ -537,11 +540,24 @@ export async function getLibraryBooks(filters?: {
       if (filters?.status && filters.status !== "All") params.set("status", filters.status);
       const query = params.toString() ? `?${params.toString()}` : "";
       const res = await fetchJson<{ success: boolean; data: LibraryBook[] }>(`/library/books${query}`);
-      return res.data;
+      return res.data.map((book) => ({
+        ...book,
+        cover_url: book.cover_url ?? null,
+      }));
     },
     async () => {
       await simulateNetworkDelay(140);
-      let list = LIBRARY_BOOKS.map((b) => ({ ...b }));
+      let list = LIBRARY_BOOKS.map((book) => {
+        const isbn = book.isbn.replace(/[-\s]/g, "");
+        return {
+          ...book,
+          cover_url:
+            book.cover_url ??
+            (isbn
+              ? `https://covers.openlibrary.org/b/isbn/${encodeURIComponent(isbn)}-M.jpg?default=false`
+              : null),
+        };
+      });
       if (filters?.search) {
         const q = filters.search.toLowerCase();
         list = list.filter(
@@ -562,6 +578,82 @@ export async function getLibraryBooks(filters?: {
     },
     (data) => Array.isArray(data)
   );
+}
+
+export async function createLibraryBook(
+  book: LibraryBookInput,
+  coverFile?: File | null
+): Promise<LibraryBook> {
+  const body = createLibraryBookFormData(book, coverFile);
+  const response = await fetchJson<{ success: boolean; data: LibraryBook }>(
+    "/library/books",
+    { method: "POST", body }
+  );
+  return response.data;
+}
+
+export async function updateLibraryBook(
+  id: string,
+  book: LibraryBookInput,
+  coverFile?: File | null
+): Promise<LibraryBook> {
+  const body = createLibraryBookFormData(book, coverFile);
+  const response = await fetchJson<{ success: boolean; data: LibraryBook }>(
+    `/library/books/${encodeURIComponent(id)}`,
+    { method: "PUT", body }
+  );
+  return response.data;
+}
+
+function createLibraryBookFormData(
+  book: LibraryBookInput,
+  coverFile?: File | null
+): FormData {
+  const formData = new FormData();
+  for (const [key, value] of Object.entries(book)) {
+    formData.append(key, value == null ? "" : String(value));
+  }
+  if (coverFile) formData.append("cover", coverFile);
+  return formData;
+}
+
+export async function removeLibraryBookCover(id: string): Promise<LibraryBook> {
+  const response = await fetchJson<{ success: boolean; data: LibraryBook }>(
+    `/library/books/${encodeURIComponent(id)}/cover`,
+    { method: "DELETE" }
+  );
+  return response.data;
+}
+
+export async function refreshLibraryBookCover(
+  id: string
+): Promise<LibraryBook> {
+  const response = await fetchJson<{ success: boolean; data: LibraryBook }>(
+    `/library/books/${encodeURIComponent(id)}/refresh-cover`,
+    { method: "POST", body: JSON.stringify({}) }
+  );
+  return response.data;
+}
+
+export async function lookupLibraryBookCover(book: {
+  isbn: string;
+  title: string;
+  author: string;
+}): Promise<string | null> {
+  if (!API_CONFIG.useLiveApi) {
+    const isbn = book.isbn.replace(/[-\s]/g, "");
+    return isbn
+      ? `https://covers.openlibrary.org/b/isbn/${encodeURIComponent(isbn)}-M.jpg?default=false`
+      : null;
+  }
+  const response = await fetchJson<{
+    success: boolean;
+    data: { cover_url: string | null };
+  }>("/library/books/cover-lookup", {
+    method: "POST",
+    body: JSON.stringify(book),
+  });
+  return response.data.cover_url;
 }
 
 // GET /api/library/categories
@@ -725,6 +817,20 @@ export async function getLibraryFines(filters?: {
       return list;
     },
     (data) => Array.isArray(data)
+  );
+}
+
+// PUT /api/library/fines/:id/pay
+export async function payLibraryFine(
+  fineId: string
+): Promise<{ success: boolean; message: string }> {
+  if (!API_CONFIG.useLiveApi) {
+    await simulateNetworkDelay(80);
+    return { success: true, message: "Fine payment recorded successfully." };
+  }
+  return fetchJson<{ success: boolean; message: string }>(
+    `/library/fines/${encodeURIComponent(fineId)}/pay`,
+    { method: "PUT" }
   );
 }
 

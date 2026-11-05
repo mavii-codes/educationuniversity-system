@@ -52,12 +52,12 @@ export async function requestPasswordReset(email: string): Promise<void> {
   const { error } = await resend.emails.send({
     from: env.email.resendFromEmail,
     to: user.email,
-    subject: "Your University DataHub verification code",
+    subject: "Your University Library password reset code",
     text: `Hello ${user.name},\n\nYour password reset verification code is:\n\n${code}\n\nIt expires in 10 minutes and can only be used once.\n\nIf you did not request a reset, you can ignore this email.`,
     html: `<p>Hello ${escapeHtml(user.name)},</p><p>Use this 6-digit verification code to reset your password. It expires in 10 minutes and can only be used once.</p><p style="font-size:28px;line-height:1.4;font-weight:700;letter-spacing:8px;color:#312E81;">${code}</p><p>If you did not request a reset, you can ignore this email.</p>`,
   });
   if (error) {
-    console.error("[University DataHub Backend] Resend delivery failed:", error.message);
+    console.error("[University Library Backend] Resend delivery failed:", error.message);
     throw new ApiError(502, "Unable to send the password reset email right now.");
   }
 }

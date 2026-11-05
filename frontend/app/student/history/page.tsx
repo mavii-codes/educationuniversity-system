@@ -16,6 +16,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { useLibraryStore } from "@/lib/library-store";
 import { cn } from "@/lib/utils";
+import { BookCover } from "@/components/library/BookCover";
 
 export default function StudentBorrowingHistoryPage() {
   const { user } = useAuth();
@@ -157,10 +158,15 @@ export default function StudentBorrowingHistoryPage() {
                   return (
                     <tr key={tx.id} className="hover:bg-slate-50/60 transition-colors">
                       <td className="px-6 py-4">
-                        <p className="font-semibold text-slate-900">{tx.bookTitle}</p>
-                        <p className="font-mono text-[11px] text-slate-400 mt-0.5">
-                          ISBN: {tx.isbn}
-                        </p>
+                        <div className="flex items-center gap-3">
+                          <BookCover src={tx.cover_url} title={tx.bookTitle} size="sm" />
+                          <div>
+                            <p className="font-semibold text-slate-900">{tx.bookTitle}</p>
+                            <p className="font-mono text-[11px] text-slate-400 mt-0.5">
+                              ISBN: {tx.isbn}
+                            </p>
+                          </div>
+                        </div>
                       </td>
                       <td className="px-6 py-4 font-mono font-medium text-slate-600">
                         {tx.transactionCode}
@@ -225,4 +231,3 @@ export default function StudentBorrowingHistoryPage() {
     </div>
   );
 }
-

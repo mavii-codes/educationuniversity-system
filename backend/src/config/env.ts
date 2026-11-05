@@ -117,5 +117,8 @@ export const env = {
     frontendUrl: process.env.FRONTEND_URL || "",
   },
   seedAdminPassword: process.env.SEED_ADMIN_PASSWORD || "",
-  seedRegistrarPassword: process.env.SEED_REGISTRAR_PASSWORD || "",
+  seedLibraryStaffPassword:
+    process.env.SEED_LIBRARY_STAFF_PASSWORD ||
+    process.env.SEED_REGISTRAR_PASSWORD ||
+    "",
 };

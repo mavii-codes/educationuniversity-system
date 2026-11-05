@@ -3,6 +3,7 @@ import { createPgPool } from "../config/database";
 import { env } from "../config/env";
 import { seedDataset } from "../data/dataset";
 import { hashPassword } from "../services/auth.service";
+import { libraryETLService } from "../services/library.service";
 
 function parseRelative(label: string | undefined, fallbackMinutes = 0): Date {
   const now = Date.now();
@@ -42,6 +43,46 @@ async function main(): Promise<void> {
 
   try {
     await client.query("BEGIN");
+
+    await libraryETLService.runPipelineSync("Database Seed");
+    for (const book of libraryETLService.getBooks()) {
+      await client.query(
+        `INSERT INTO library_books
+           (id, isbn, title, author, publisher, publication_year, category,
+            call_number, total_copies, available_copies, borrowed_copies,
+            location, status, cover_url)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+         ON CONFLICT (id) DO UPDATE SET
+           isbn = EXCLUDED.isbn,
+           title = EXCLUDED.title,
+           author = EXCLUDED.author,
+           publisher = EXCLUDED.publisher,
+           publication_year = EXCLUDED.publication_year,
+           category = EXCLUDED.category,
+           call_number = EXCLUDED.call_number,
+           total_copies = EXCLUDED.total_copies,
+           available_copies = EXCLUDED.available_copies,
+           borrowed_copies = EXCLUDED.borrowed_copies,
+           location = EXCLUDED.location,
+           status = EXCLUDED.status`,
+        [
+          book.id,
+          book.isbn,
+          book.title,
+          book.author,
+          book.publisher,
+          book.publicationYear,
+          book.category,
+          book.callNumber,
+          book.totalCopies,
+          book.availableCopies,
+          book.borrowedCopies,
+          book.location,
+          book.status,
+          book.cover_url ?? null,
+        ]
+      );
+    }
 
     for (const [index, program] of seedDataset.programs.entries()) {
       await client.query(
@@ -654,13 +695,19 @@ async function main(): Promise<void> {
     for (const user of seedDataset.adminUsers) {
       let seedPassword = crypto.randomBytes(18).toString("base64url");
       let resetPassword = false;
+      const role =
+        user.role === "University Registrar Admin" ? "Library Staff" : user.role;
+      const department =
+        user.department === "Office of the University Registrar"
+          ? "Library Services"
+          : user.department;
 
-      if (user.role === "System Administrator") {
+      if (role === "System Administrator") {
         seedPassword = env.seedAdminPassword || seedPassword;
         resetPassword = Boolean(env.seedAdminPassword);
-      } else if (user.role === "University Registrar Admin") {
-        seedPassword = env.seedRegistrarPassword || seedPassword;
-        resetPassword = Boolean(env.seedRegistrarPassword);
+      } else if (role === "Library Staff") {
+        seedPassword = env.seedLibraryStaffPassword || seedPassword;
+        resetPassword = Boolean(env.seedLibraryStaffPassword);
       }
 
       await client.query(
@@ -685,8 +732,8 @@ async function main(): Promise<void> {
           user.name,
           user.email,
           hashPassword(seedPassword),
-          user.role,
-          user.department,
+          role,
+          department,
           user.status,
           user.mfaEnabled,
           parseRelative(user.lastActive, 60),

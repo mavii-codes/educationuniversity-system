@@ -5,6 +5,7 @@ import {
   LibraryBookModel,
   LibraryETLLogModel,
   LibraryOverviewModel,
+  LibraryBookWriteModel,
   OverdueFineModel,
   ReservationModel,
   StudentBorrowerModel,
@@ -163,7 +164,7 @@ class ExternalLibraryApiClient {
         shelf_loc: "Stack ENG-108",
       },
       {
-        isbn: "978-0134444581",
+        isbn: "978-0132996297",
         title: "Educational Psychology: Developing Learners",
         author: "Jeanne Ellis Ormrod",
         publisher: "Pearson",
@@ -188,7 +189,271 @@ class ExternalLibraryApiClient {
         copies_out: 3,
         shelf_loc: "Stack CS-215",
       },
-    ];
+      {
+        isbn: "978-0135957059",
+        title: "The Pragmatic Programmer (20th Anniversary Edition)",
+        author: "David Thomas, Andrew Hunt",
+        publisher: "Addison-Wesley Professional",
+        year: 2019,
+        category: "Computer Science",
+        call_no: "QA 76.6 .T455",
+        copies_total: 5,
+        copies_avail: 5,
+        copies_out: 0,
+        shelf_loc: "Stack CS-216",
+      },
+      {
+        isbn: "978-0596009205",
+        title: "Head First Java",
+        author: "Kathy Sierra, Bert Bates",
+        publisher: "O'Reilly Media",
+        year: 2005,
+        category: "Computer Science",
+        call_no: "QA 76.73 .J38 S54",
+        copies_total: 5,
+        copies_avail: 5,
+        copies_out: 0,
+        shelf_loc: "Stack CS-217",
+      },
+      {
+        isbn: "978-1718502703",
+        title: "Python Crash Course",
+        author: "Eric Matthes",
+        publisher: "No Starch Press",
+        year: 2023,
+        category: "Computer Science",
+        call_no: "QA 76.73 .P98 M38",
+        copies_total: 5,
+        copies_avail: 5,
+        copies_out: 0,
+        shelf_loc: "Stack CS-218",
+      },
+      {
+        isbn: "978-1593279509",
+        title: "Eloquent JavaScript (3rd Edition)",
+        author: "Marijn Haverbeke",
+        publisher: "No Starch Press",
+        year: 2018,
+        category: "Computer Science",
+        call_no: "QA 76.73 .J38 H38",
+        copies_total: 5,
+        copies_avail: 5,
+        copies_out: 0,
+        shelf_loc: "Stack CS-219",
+      },
+      {
+        isbn: "978-0134610993",
+        title: "Artificial Intelligence: A Modern Approach",
+        author: "Stuart Russell, Peter Norvig",
+        publisher: "Pearson",
+        year: 2021,
+        category: "Computer Science",
+        call_no: "Q 335 .R86",
+        copies_total: 5,
+        copies_avail: 5,
+        copies_out: 0,
+        shelf_loc: "Stack CS-220",
+      },
+      {
+        isbn: "978-0134492513",
+        title: "Principles of Marketing",
+        author: "Philip Kotler, Gary Armstrong",
+        publisher: "Pearson",
+        year: 2018,
+        category: "Business Administration",
+        call_no: "HF 5415 .K64",
+        copies_total: 5,
+        copies_avail: 5,
+        copies_out: 0,
+        shelf_loc: "Stack BA-111",
+      },
+      {
+        isbn: "978-0134725987",
+        title: "Financial Accounting",
+        author: "Jerry J. Weygandt, Paul D. Kimmel, Donald E. Kieso",
+        publisher: "Wiley",
+        year: 2018,
+        category: "Business Administration",
+        call_no: "HF 5635 .W49",
+        copies_total: 5,
+        copies_avail: 5,
+        copies_out: 0,
+        shelf_loc: "Stack BA-112",
+      },
+      {
+        isbn: "978-0134729329",
+        title: "Organizational Behavior",
+        author: "Stephen P. Robbins, Timothy A. Judge",
+        publisher: "Pearson",
+        year: 2018,
+        category: "Business Administration",
+        call_no: "HD 58.7 .R63",
+        copies_total: 5,
+        copies_avail: 5,
+        copies_out: 0,
+        shelf_loc: "Stack BA-113",
+      },
+      {
+        isbn: "978-0323810340",
+        title: "Fundamentals of Nursing",
+        author: "Patricia A. Potter, Anne Griffin Perry",
+        publisher: "Elsevier",
+        year: 2021,
+        category: "Health Sciences & Nursing",
+        call_no: "RT 41 .P68",
+        copies_total: 5,
+        copies_avail: 5,
+        copies_out: 0,
+        shelf_loc: "Stack NUR-403",
+      },
+      {
+        isbn: "978-1975161033",
+        title: "Brunner & Suddarth's Textbook of Medical-Surgical Nursing",
+        author: "Janice L. Hinkle, Kerry H. Cheever",
+        publisher: "Wolters Kluwer",
+        year: 2021,
+        category: "Health Sciences & Nursing",
+        call_no: "RT 41 .B78",
+        copies_total: 5,
+        copies_avail: 5,
+        copies_out: 0,
+        shelf_loc: "Stack NUR-404",
+      },
+      {
+        isbn: "978-1285741550",
+        title: "Calculus: Early Transcendentals",
+        author: "James Stewart",
+        publisher: "Cengage Learning",
+        year: 2015,
+        category: "Engineering & Mathematics",
+        call_no: "QA 303.2 .S74",
+        copies_total: 5,
+        copies_avail: 5,
+        copies_out: 0,
+        shelf_loc: "Stack ENG-109",
+      },
+      {
+        isbn: "978-0134438986",
+        title: "Thomas' Calculus: Early Transcendentals",
+        author: "George B. Thomas, Maurice D. Weir, Joel Hass",
+        publisher: "Pearson",
+        year: 2018,
+        category: "Engineering & Mathematics",
+        call_no: "QA 303.2 .T45",
+        copies_total: 5,
+        copies_avail: 5,
+        copies_out: 0,
+        shelf_loc: "Stack ENG-110",
+      },
+      {
+        isbn: "978-0133918922",
+        title: "Engineering Mechanics: Statics",
+        author: "Russell C. Hibbeler",
+        publisher: "Pearson",
+        year: 2016,
+        category: "Engineering & Mathematics",
+        call_no: "TA 350 .H52",
+        copies_total: 5,
+        copies_avail: 5,
+        copies_out: 0,
+        shelf_loc: "Stack ENG-111",
+      },
+      {
+        isbn: "978-0470484104",
+        title: "How Learning Works",
+        author: "Susan A. Ambrose, Michael W. Bridges, Michele DiPietro",
+        publisher: "Jossey-Bass",
+        year: 2010,
+        category: "Education & Pedagogy",
+        call_no: "LB 1025.3 .A43",
+        copies_total: 5,
+        copies_avail: 5,
+        copies_out: 0,
+        shelf_loc: "Stack EDU-206",
+      },
+      {
+        isbn: "978-0976423386",
+        title: "The First Days of School",
+        author: "Harry K. Wong, Rosemary T. Wong",
+        publisher: "Harry K. Wong Publications",
+        year: 2009,
+        category: "Education & Pedagogy",
+        call_no: "LB 1025.3 .W66",
+        copies_total: 5,
+        copies_avail: 5,
+        copies_out: 0,
+        shelf_loc: "Stack EDU-207",
+      },
+      {
+        isbn: "978-0307887894",
+        title: "The Lean Startup",
+        author: "Eric Ries",
+        publisher: "Crown Business",
+        year: 2011,
+        category: "Business Administration",
+        call_no: "HD 62.7 .R54",
+        copies_total: 5,
+        copies_avail: 5,
+        copies_out: 0,
+        shelf_loc: "Stack BA-114",
+      },
+      {
+        isbn: "978-0131103627",
+        title: "The C Programming Language",
+        author: "Brian W. Kernighan, Dennis M. Ritchie",
+        publisher: "Prentice Hall",
+        year: 1988,
+        category: "Computer Science",
+        call_no: "QA 76.73 .C15 K48",
+        copies_total: 5,
+        copies_avail: 5,
+        copies_out: 0,
+        shelf_loc: "Stack CS-221",
+      },
+      {
+        isbn: "978-0262035613",
+        title: "Deep Learning",
+        author: "Ian Goodfellow, Yoshua Bengio, Aaron Courville",
+        publisher: "MIT Press",
+        year: 2016,
+        category: "Computer Science",
+        call_no: "Q 325.5 .G66",
+        copies_total: 5,
+        copies_avail: 5,
+        copies_out: 0,
+        shelf_loc: "Stack CS-222",
+      },
+      {
+        isbn: "978-0134757599",
+        title: "Python Crash Course (2nd Edition)",
+        author: "Eric Matthes",
+        publisher: "No Starch Press",
+        year: 2019,
+        category: "Computer Science",
+        call_no: "QA 76.73 .P98 M382",
+        copies_total: 5,
+        copies_avail: 5,
+        copies_out: 0,
+        shelf_loc: "Stack CS-223",
+      },
+      {
+        isbn: "978-0134093413",
+        title: "Java How to Program: Early Objects",
+        author: "Paul Deitel, Harvey Deitel",
+        publisher: "Pearson",
+        year: 2016,
+        category: "Computer Science",
+        call_no: "QA 76.73 .J38 D44",
+        copies_total: 5,
+        copies_avail: 5,
+        copies_out: 0,
+        shelf_loc: "Stack CS-224",
+      },
+    ].map((book) => ({
+      ...book,
+      copies_avail: book.copies_total,
+      copies_out: 0,
+    }));
   }
 
   public async fetchRawBorrowers(): Promise<Array<{
@@ -545,6 +810,7 @@ class LibraryETLService {
       borrowedCopies: b.copies_out,
       location: b.shelf_loc,
       status: b.copies_avail === 0 ? "Checked Out" : b.copies_out > 0 ? "Partially Available" : "Available",
+      cover_url: null,
       lastSyncedAt: new Date().toISOString(),
     }));
 
@@ -724,7 +990,62 @@ class LibraryETLService {
     if (filters?.status && filters.status !== "All") {
       result = result.filter((b) => b.status === filters.status);
     }
-    return result;
+    return result.map((book) => ({ ...book, cover_url: book.cover_url ?? null }));
+  }
+
+  public getBookById(id: string): LibraryBookModel | null {
+    const book = this.books.find((item) => item.id === id);
+    return book ? { ...book, cover_url: book.cover_url ?? null } : null;
+  }
+
+  private findCoverUrl(isbn: string, title: string): string | null {
+    const book = this.books.find((item) => item.isbn === isbn) ??
+      this.books.find(
+        (item) => item.title.trim().toLowerCase() === title.trim().toLowerCase()
+      );
+    return book?.cover_url ?? null;
+  }
+
+  public createBook(input: LibraryBookWriteModel): LibraryBookModel {
+    const borrowedCopies = input.totalCopies - input.availableCopies;
+    const book: LibraryBookModel = {
+      ...input,
+      id: `book-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      borrowedCopies,
+      status:
+        input.availableCopies === 0
+          ? "Checked Out"
+          : borrowedCopies > 0
+            ? "Partially Available"
+            : "Available",
+      lastSyncedAt: new Date().toISOString(),
+    };
+    this.books.unshift(book);
+    return book;
+  }
+
+  public updateBook(
+    id: string,
+    input: LibraryBookWriteModel
+  ): LibraryBookModel | null {
+    const index = this.books.findIndex((book) => book.id === id);
+    if (index < 0) return null;
+
+    const borrowedCopies = input.totalCopies - input.availableCopies;
+    const updated: LibraryBookModel = {
+      ...input,
+      id,
+      borrowedCopies,
+      status:
+        input.availableCopies === 0
+          ? "Checked Out"
+          : borrowedCopies > 0
+            ? "Partially Available"
+            : "Available",
+      lastSyncedAt: new Date().toISOString(),
+    };
+    this.books[index] = updated;
+    return updated;
   }
 
   public getBorrowers(filters?: { search?: string; program?: string; status?: string }): StudentBorrowerModel[] {
@@ -762,7 +1083,10 @@ class LibraryETLService {
     if (filters?.status && filters.status !== "All") {
       result = result.filter((t) => t.status === filters.status);
     }
-    return result;
+    return result.map((transaction) => ({
+      ...transaction,
+      cover_url: this.findCoverUrl(transaction.isbn, transaction.bookTitle),
+    }));
   }
 
   public getReservations(filters?: { search?: string; status?: string }): ReservationModel[] {
@@ -780,7 +1104,10 @@ class LibraryETLService {
     if (filters?.status && filters.status !== "All") {
       result = result.filter((r) => r.status === filters.status);
     }
-    return result;
+    return result.map((reservation) => ({
+      ...reservation,
+      cover_url: this.findCoverUrl(reservation.isbn, reservation.bookTitle),
+    }));
   }
 
   public getFines(filters?: { search?: string; paymentStatus?: string }): OverdueFineModel[] {
@@ -798,6 +1125,13 @@ class LibraryETLService {
       result = result.filter((f) => f.paymentStatus === filters.paymentStatus);
     }
     return result;
+  }
+
+  public markFinePaid(fineId: string): boolean {
+    const fine = this.fines.find((item) => item.id === fineId);
+    if (!fine) return false;
+    fine.paymentStatus = "Paid";
+    return true;
   }
 
   public getETLLogs(): LibraryETLLogModel[] {
@@ -861,10 +1195,13 @@ class LibraryETLService {
   ];
 
   public getBorrowingRequests(studentId?: string): BorrowingRequestModel[] {
-    if (studentId) {
-      return this.borrowingRequests.filter((r) => r.studentId === studentId);
-    }
-    return this.borrowingRequests;
+    const requests = studentId
+      ? this.borrowingRequests.filter((r) => r.studentId === studentId)
+      : this.borrowingRequests;
+    return requests.map((request) => ({
+      ...request,
+      cover_url: this.findCoverUrl(request.isbn, request.bookTitle),
+    }));
   }
 
   public createBorrowingRequest(
@@ -877,6 +1214,7 @@ class LibraryETLService {
       bookTitle: req.bookTitle || "",
       author: req.author || "",
       isbn: req.isbn || "",
+      cover_url: this.findCoverUrl(req.isbn || "", req.bookTitle || ""),
       category: req.category || "",
       studentId: req.studentId || "",
       studentName: req.studentName || "",
@@ -918,6 +1256,7 @@ class LibraryETLService {
       bookId: book.id,
       bookTitle: book.title,
       isbn: book.isbn,
+      cover_url: book.cover_url ?? null,
       studentId: req.studentId,
       studentName: req.studentName,
       programCode: req.programCode,
@@ -1003,4 +1342,3 @@ class LibraryETLService {
 }
 
 export const libraryETLService = new LibraryETLService();
-

@@ -23,15 +23,11 @@ interface HeaderProps {
 }
 
 const QUICK_LINKS = [
-  { label: "Dashboard Overview", href: "/admin/dashboard", category: "Page" },
-  { label: "Library Management Hub", href: "/admin/library", category: "Page" },
-  { label: "Library Integrated Records", href: "/admin/library/records", category: "Page" },
-  { label: "Students Directory", href: "/students", category: "Page" },
-  { label: "Student Lifecycle", href: "/lifecycle", category: "Page" },
-  { label: "Data Sources (Library LMS)", href: "/data-sources", category: "Page" },
-  { label: "Academic Analytics", href: "/admin/analytics", category: "Page" },
-  { label: "Institutional Reports", href: "/admin/reports", category: "Page" },
-  { label: "Notifications & Alerts", href: "/admin/notifications", category: "Page" },
+  { label: "Library Dashboard", href: "/admin/dashboard", category: "Page" },
+  { label: "Library Management", href: "/admin/library", category: "Page" },
+  { label: "Catalog Records", href: "/admin/library/records", category: "Page" },
+  { label: "Borrower Accounts", href: "/admin/students", category: "Page" },
+  { label: "Notifications", href: "/admin/notifications", category: "Page" },
 ];
 
 export function Header({ onOpenMobileMenu }: HeaderProps) {
@@ -141,7 +137,7 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
                   setSearchQuery(e.target.value);
                   setSearchOpen(true);
                 }}
-                placeholder="Search students, IDs, or modules..."
+                placeholder="Search library members or pages..."
                 className="h-9 w-52 rounded-lg border border-slate-200/90 bg-slate-50/70 pl-9 pr-3 text-xs text-slate-800 placeholder:text-slate-400 transition focus:w-72 focus:border-indigo-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/15 xl:w-72"
               />
             </form>
@@ -185,7 +181,7 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
                     {matchingPages.length > 0 && (
                       <div className="p-2">
                         <p className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                          Platform Modules
+                          Library Pages
                         </p>
                         {matchingPages.map((page) => (
                           <Link
@@ -306,4 +302,3 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
     </header>
   );
 }
-

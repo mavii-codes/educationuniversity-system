@@ -118,6 +118,7 @@ export interface LmsCourseProgress {
 
 export interface LibraryBookRecord {
   id: string;
+  cover_url?: string | null;
   title: string;
   author: string;
   category: string;
@@ -250,7 +251,7 @@ export interface SyncHistoryModel {
   notes: string;
 }
 
-export type AuthorizedRole = "Administrator" | "Librarian" | "Student" | "Registrar";
+export type AuthorizedRole = "Administrator" | "Librarian" | "Student";
 
 export interface IntegratedAlumniModel {
   id: string;
@@ -275,6 +276,7 @@ export interface IntegratedAlumniModel {
 export interface LibraryBookModel {
   id: string;
   isbn: string;
+  cover_url?: string | null;
   title: string;
   author: string;
   publisher: string;
@@ -287,6 +289,20 @@ export interface LibraryBookModel {
   location: string;
   status: "Available" | "Partially Available" | "Checked Out";
   lastSyncedAt: string;
+}
+
+export interface LibraryBookWriteModel {
+  isbn: string;
+  title: string;
+  author: string;
+  publisher: string;
+  publicationYear: number;
+  category: string;
+  callNumber: string;
+  totalCopies: number;
+  availableCopies: number;
+  location: string;
+  cover_url: string | null;
 }
 
 export interface BookCategoryModel {
@@ -320,6 +336,7 @@ export interface BorrowingTransactionModel {
   bookId: string;
   bookTitle: string;
   isbn: string;
+  cover_url?: string | null;
   studentId: string;
   studentName: string;
   programCode: string;
@@ -337,6 +354,7 @@ export interface ReservationModel {
   bookId: string;
   bookTitle: string;
   isbn: string;
+  cover_url?: string | null;
   studentId: string;
   studentName: string;
   programCode: string;
@@ -434,6 +452,7 @@ export interface BorrowingRequestModel {
   bookTitle: string;
   author: string;
   isbn: string;
+  cover_url?: string | null;
   category: string;
   studentId: string;
   studentName: string;

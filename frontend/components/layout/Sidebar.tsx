@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CheckCircle2, GraduationCap } from "lucide-react";
+import { BookOpen, CheckCircle2 } from "lucide-react";
 import { isNavItemActive, NAVIGATION_GROUPS } from "./navigation";
 import { cn } from "@/lib/utils";
 
@@ -15,14 +15,14 @@ export function Sidebar() {
       {/* Brand Header */}
       <div className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-100 px-6">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm shadow-indigo-600/20">
-          <GraduationCap className="h-5 w-5" />
+          <BookOpen className="h-5 w-5" />
         </div>
         <div className="leading-tight">
           <span className="block text-sm font-bold tracking-tight text-slate-900">
-            University DataHub
+            University Library System
           </span>
           <span className="block text-[11px] font-medium text-slate-500">
-            Academic Integration
+            Catalog &amp; Circulation
           </span>
         </div>
       </div>
@@ -73,16 +73,16 @@ export function Sidebar() {
       {/* Subtle System Status Footer */}
       <div className="border-t border-slate-100 p-4">
         <Link
-          href="/data-sources"
+          href="/admin/library"
           className="flex items-center gap-3 rounded-xl border border-slate-200/70 bg-slate-50/70 px-3.5 py-2.5 transition hover:border-indigo-200 hover:bg-indigo-50/40"
         >
           <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-semibold text-slate-800">
-              5 Systems Connected
+              Library Services
             </p>
             <p className="truncate text-[11px] text-slate-500">
-              Last sync 5 mins ago
+              Catalog · Loans · Returns
             </p>
           </div>
         </Link>
@@ -90,4 +90,3 @@ export function Sidebar() {
     </aside>
   );
 }
-

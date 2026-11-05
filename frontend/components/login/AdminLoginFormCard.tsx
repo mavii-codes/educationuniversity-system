@@ -65,7 +65,7 @@ export function AdminLoginFormCard() {
       return;
     }
 
-    router.push("/admin/dashboard");
+    router.push(result.role === "Librarian" ? "/staff/dashboard" : "/admin/dashboard");
   };
 
   return (

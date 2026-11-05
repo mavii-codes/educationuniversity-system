@@ -42,13 +42,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       if (pathname === "/admin/login") {
         if (
           isAuthenticated &&
-          (user?.role === "Administrator" || user?.role === "Registrar" || (user?.role as string) === "Librarian")
+          (user?.role === "Administrator" || user?.role === "Librarian")
         ) {
-          router.replace(
-            (user?.role as string) === "Librarian"
-              ? "/staff/dashboard"
-              : "/admin/dashboard"
-          );
+          router.replace(user.role === "Librarian" ? "/staff/dashboard" : "/admin/dashboard");
         } else if (isAuthenticated && user?.role === "Student") {
           // User explicitly visited Admin Login while logged in as Student.
           // Sign out of student session so the Admin Login form is shown immediately.
@@ -60,7 +56,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         router.replace("/admin/login");
       } else if (user?.role === "Student") {
         router.replace("/student/dashboard");
-      } else if ((user?.role as string) === "Librarian") {
+      } else if (user?.role === "Librarian") {
         router.replace("/staff/dashboard");
       }
     } else if (isStaffPortal) {
@@ -74,14 +70,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         router.replace("/login");
       } else if (
         user?.role === "Administrator" ||
-        user?.role === "Registrar" ||
-        (user?.role as string) === "Librarian"
+        user?.role === "Librarian"
       ) {
-        router.replace(
-          (user?.role as string) === "Librarian"
-            ? "/staff/dashboard"
-            : "/admin/dashboard"
-        );
+        router.replace(user.role === "Librarian" ? "/staff/dashboard" : "/admin/dashboard");
       }
     } else if (pathname === "/login") {
       if (isAuthenticated && user?.role === "Student") {
@@ -89,12 +80,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       } else if (
         isAuthenticated &&
         (user?.role === "Administrator" ||
-          user?.role === "Registrar" ||
-          (user?.role as string) === "Librarian")
+          user?.role === "Librarian")
       ) {
-        // User explicitly visited Student Login while logged in as Admin/Staff.
-        // Sign out of administrative session so the Student Login form is shown.
-        signOut("/login");
+        router.replace(user.role === "Librarian" ? "/staff/dashboard" : "/admin/dashboard");
       }
     }
   }, [
@@ -152,9 +140,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </main>
           <footer className="mx-auto w-full max-w-[1440px] border-t border-slate-200/70 px-4 py-4 text-xs text-slate-400 sm:px-6 lg:px-8">
             <div className="flex flex-col items-center justify-between gap-2 sm:flex-row">
-              <p>University Data Integration System · Admin Portal</p>
+              <p>University Library Management System · Administrator Portal</p>
               <p>
-                Integrated External Data Source: Library Management System
+                Catalog, circulation, member accounts, and library operations
               </p>
             </div>
           </footer>
@@ -201,9 +189,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </main>
           <footer className="mx-auto w-full max-w-[1440px] border-t border-slate-200/70 px-4 py-4 text-xs text-slate-400 sm:px-6 lg:px-8">
             <div className="flex flex-col items-center justify-between gap-2 sm:flex-row">
-              <p>University Data Integration System · Library Staff Portal</p>
+              <p>University Library Management System · Library Staff Portal</p>
               <p>
-                Integrated External Data Source: Library Management System
+                Catalog, circulation, member accounts, and library operations
               </p>
             </div>
           </footer>
@@ -254,9 +242,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </main>
           <footer className="mx-auto w-full max-w-[1440px] border-t border-slate-200/70 px-4 py-4 text-xs text-slate-400 sm:px-6 lg:px-8">
             <div className="flex flex-col items-center justify-between gap-2 sm:flex-row">
-              <p>University Data Integration System · Student Library Portal</p>
+              <p>University Library Management System · Student Portal</p>
               <p>
-                Integrated External Data Source: Library Management System
+                Browse books, manage loans, and follow library activity
               </p>
             </div>
           </footer>
@@ -282,10 +270,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <footer className="mx-auto w-full max-w-[1440px] border-t border-slate-200/70 px-4 py-4 text-xs text-slate-400 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center justify-between gap-2 sm:flex-row">
             <p>
-              University Data Integration System · Unified Student Lifecycle &amp; Academic Analytics
+              University Library Management System
             </p>
             <p>
-              Integrated External Data Source: Library Management System
+              Catalog, circulation, member accounts, and library operations
             </p>
           </div>
         </footer>

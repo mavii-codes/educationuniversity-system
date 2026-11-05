@@ -23,6 +23,7 @@ import {
   StudentBorrower,
   SyncHistoryRecord,
 } from "@/types";
+import { ADDITIONAL_LIBRARY_BOOKS } from "@/data/additional-library-books";
 
 export const PROGRAMS: Program[] = [
   {
@@ -1804,7 +1805,7 @@ export const ADMIN_USERS: AdminUserRecord[] = [
     name: "Administrator",
     email: "admin@university.edu",
     role: "System Administrator",
-    department: "Office of Institutional Data & Systems",
+    department: "Library Administration",
     status: "Active",
     mfaEnabled: true,
     lastActive: "Online now",
@@ -1813,8 +1814,8 @@ export const ADMIN_USERS: AdminUserRecord[] = [
     id: "ADM-2026-002",
     name: "Dr. Helena Mendoza",
     email: "h.mendoza@university.edu",
-    role: "University Registrar Admin",
-    department: "Office of the University Registrar",
+    role: "Library Staff",
+    department: "Library Services",
     status: "Active",
     mfaEnabled: true,
     lastActive: "Today, 9:34 AM",
@@ -1823,8 +1824,8 @@ export const ADMIN_USERS: AdminUserRecord[] = [
     id: "ADM-2026-003",
     name: "Engr. Paolo Villanueva",
     email: "p.villanueva@university.edu",
-    role: "Data Integration Engineer",
-    department: "Enterprise Information Technology",
+    role: "Library Staff",
+    department: "Library Services",
     status: "Active",
     mfaEnabled: true,
     lastActive: "Today, 9:18 AM",
@@ -1833,8 +1834,8 @@ export const ADMIN_USERS: AdminUserRecord[] = [
     id: "ADM-2026-004",
     name: "Clarissa Navarro",
     email: "c.navarro@university.edu",
-    role: "Institutional Data Steward",
-    department: "Institutional Planning & Quality Assurance",
+    role: "Library Staff",
+    department: "Library Services",
     status: "Active",
     mfaEnabled: true,
     lastActive: "Yesterday, 5:12 PM",
@@ -1843,8 +1844,8 @@ export const ADMIN_USERS: AdminUserRecord[] = [
     id: "ADM-2026-005",
     name: "Raymond Castillo",
     email: "r.castillo@university.edu",
-    role: "Data Integration Engineer",
-    department: "Enterprise Information Technology",
+    role: "Library Staff",
+    department: "Library Services",
     status: "Active",
     mfaEnabled: false,
     lastActive: "Yesterday, 3:45 PM",
@@ -1853,7 +1854,7 @@ export const ADMIN_USERS: AdminUserRecord[] = [
     id: "ADM-2026-006",
     name: "Beatriz Soriano",
     email: "b.soriano@university.edu",
-    role: "Institutional Data Steward",
+    role: "Library Staff",
     department: "University Library Services & Archives",
     status: "Invited",
     mfaEnabled: false,
@@ -2066,7 +2067,7 @@ export const LIBRARY_BOOKS: LibraryBook[] = [
   },
   {
     id: "bk-009",
-    isbn: "978-0134444581",
+    isbn: "978-0132996297",
     title: "Educational Psychology: Developing Learners",
     author: "Jeanne Ellis Ormrod",
     publisher: "Pearson",
@@ -2096,7 +2097,13 @@ export const LIBRARY_BOOKS: LibraryBook[] = [
     status: "Partially Available",
     lastSyncedAt: "Just now",
   },
-];
+  ...ADDITIONAL_LIBRARY_BOOKS,
+].map((book) => ({
+  ...book,
+  availableCopies: book.totalCopies,
+  borrowedCopies: 0,
+  status: "Available" as const,
+}));
 
 export const STUDENT_BORROWERS: StudentBorrower[] = [
   {
@@ -2488,4 +2495,3 @@ export const AUDIT_LOG_RECORDS: AuditLogRecord[] = [
     details: "Applied pseudonymization masks to student contact columns for non-privileged viewer roles.",
   },
 ];
-

@@ -20,6 +20,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { useLibraryStore } from "@/lib/library-store";
 import { cn } from "@/lib/utils";
+import { BookCover } from "@/components/library/BookCover";
 
 type BorrowingTab = "current" | "requests" | "reservations";
 
@@ -176,28 +177,37 @@ function BorrowingContent() {
                     )}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={cn(
-                              "rounded-full px-2.5 py-0.5 text-[10px] font-semibold border",
-                              isOverdue
-                                ? "bg-rose-100 text-rose-800 border-rose-300"
-                                : "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            )}
-                          >
-                            {isOverdue ? "Overdue - Return Immediately" : "Active Loan"}
-                          </span>
-                          <span className="font-mono text-[11px] text-slate-400">
-                            {loan.transactionCode}
-                          </span>
+                      <div className="flex items-start gap-3">
+                        <BookCover
+                          src={loan.cover_url}
+                          title={loan.bookTitle}
+                          size="sm"
+                        />
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={cn(
+                                "rounded-full px-2.5 py-0.5 text-[10px] font-semibold border",
+                                isOverdue
+                                  ? "bg-rose-100 text-rose-800 border-rose-300"
+                                  : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              )}
+                            >
+                              {isOverdue
+                                ? "Overdue - Return Immediately"
+                                : "Active Loan"}
+                            </span>
+                            <span className="font-mono text-[11px] text-slate-400">
+                              {loan.transactionCode}
+                            </span>
+                          </div>
+                          <h4 className="text-sm font-bold text-slate-900 sm:text-base">
+                            {loan.bookTitle}
+                          </h4>
+                          <p className="text-xs text-slate-500 font-mono">
+                            ISBN: {loan.isbn} · Linked Data Source: {loan.sourceSystem}
+                          </p>
                         </div>
-                        <h4 className="text-sm font-bold text-slate-900 sm:text-base">
-                          {loan.bookTitle}
-                        </h4>
-                        <p className="text-xs text-slate-500 font-mono">
-                          ISBN: {loan.isbn} · Linked Data Source: {loan.sourceSystem}
-                        </p>
                       </div>
 
                       <div className="grid grid-cols-2 sm:grid-cols-2 gap-4 text-xs sm:text-right border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-100">
@@ -286,7 +296,13 @@ function BorrowingContent() {
                     className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                      <div>
+                      <div className="flex items-start gap-3">
+                        <BookCover
+                          src={req.cover_url}
+                          title={req.bookTitle}
+                          size="sm"
+                        />
+                        <div>
                         <div className="flex items-center gap-2">
                           <span
                             className={cn(
@@ -315,6 +331,7 @@ function BorrowingContent() {
                         <p className="text-xs text-slate-600 font-medium">
                           Author: {req.author} · Category: {req.category}
                         </p>
+                      </div>
                       </div>
 
                       <div className="text-xs sm:text-right text-slate-500">
@@ -399,7 +416,13 @@ function BorrowingContent() {
                     className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                      <div>
+                      <div className="flex items-start gap-3">
+                        <BookCover
+                          src={res.cover_url}
+                          title={res.bookTitle}
+                          size="sm"
+                        />
+                        <div>
                         <div className="flex items-center gap-2">
                           <span
                             className={cn(
@@ -421,6 +444,7 @@ function BorrowingContent() {
                         <p className="text-xs text-slate-500 font-mono">
                           ISBN: {res.isbn}
                         </p>
+                      </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3 text-xs sm:text-right">

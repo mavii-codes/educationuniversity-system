@@ -54,6 +54,75 @@ export async function findUserByEmail(email: string): Promise<UserRow | null> {
   return result.rows[0] ?? null;
 }
 
+export async function registerStudent(input: {
+  id: string;
+  name: string;
+  email: string;
+  passwordHash: string;
+  programCode: string;
+  yearLevel: string;
+}): Promise<UserRow> {
+  return withTransaction(async (client) => {
+    const duplicate = await client.query(
+      `SELECT 1
+         FROM users
+        WHERE lower(email) = lower($1) OR id = $2
+       UNION ALL
+       SELECT 1
+         FROM students
+        WHERE lower(email) = lower($1) OR id = $2
+       LIMIT 1`,
+      [input.email, input.id]
+    );
+    if (duplicate.rowCount) {
+      const error = new Error("An account already exists for that email or student ID.");
+      error.name = "DuplicateStudentAccountError";
+      throw error;
+    }
+
+    const program = await client.query<{ department: string }>(
+      `SELECT department FROM programs WHERE code = $1`,
+      [input.programCode]
+    );
+    if (!program.rows[0]) {
+      const error = new Error("Please choose a valid academic program.");
+      error.name = "InvalidStudentProgramError";
+      throw error;
+    }
+
+    await client.query(
+      `INSERT INTO students
+         (id, name, email, program_code, year_level, status, performance_score,
+          gpa, attendance_rate, risk_level, department)
+       VALUES ($1, $2, $3, $4, $5, 'Active', 0, 0, 0, 'Low', $6)`,
+      [
+        input.id,
+        input.name,
+        input.email,
+        input.programCode,
+        input.yearLevel,
+        program.rows[0].department,
+      ]
+    );
+
+    const result = await client.query<UserRow>(
+      `INSERT INTO users
+         (id, name, email, password_hash, role, department, status)
+       VALUES ($1, $2, $3, $4, 'Student', $5, 'Active')
+       RETURNING id, name, email, password_hash, role, department, status,
+                 mfa_enabled, last_login_at`,
+      [
+        input.id,
+        input.name,
+        input.email,
+        input.passwordHash,
+        program.rows[0].department,
+      ]
+    );
+    return result.rows[0];
+  });
+}
+
 export async function createPasswordResetToken(input: {
   userId: string;
   tokenHash: string;

@@ -36,10 +36,10 @@ export default function AdminUserManagementPage() {
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newRole, setNewRole] = useState<AdminUserRole>(
-    "Institutional Data Steward"
+    "Library Staff"
   );
   const [newDepartment, setNewDepartment] = useState(
-    "Office of Institutional Data & Systems"
+    "Library Services"
   );
 
   const { showToast } = useToast();
@@ -106,10 +106,10 @@ export default function AdminUserManagementPage() {
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h2 className="text-xl font-semibold tracking-tight text-slate-900">
-            Admin User Management
+            Library Staff Accounts
           </h2>
           <p className="mt-0.5 text-sm text-slate-500">
-            Manage authorized university administrators, registrar leads, and institutional data stewards.
+            Manage administrator and staff librarian access.
           </p>
         </div>
 
@@ -125,7 +125,7 @@ export default function AdminUserManagementPage() {
             className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-700"
           >
             <Plus className="h-4 w-4" />
-            <span>Invite Admin User</span>
+            <span>Invite Library Staff</span>
           </button>
         </div>
       </div>
@@ -184,7 +184,7 @@ export default function AdminUserManagementPage() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by name, university email, or department..."
+                placeholder="Search by name, email, or library department..."
                 className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50/60 pl-9 pr-3 text-xs text-slate-800 placeholder:text-slate-400 focus:border-indigo-300 focus:bg-white focus:outline-none"
               />
             </div>
@@ -193,20 +193,12 @@ export default function AdminUserManagementPage() {
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                aria-label="Filter by admin role"
+                aria-label="Filter by library staff role"
                 className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 focus:border-indigo-300 focus:outline-none"
               >
-                <option value="All">All Admin Roles</option>
+                <option value="All">All Staff Roles</option>
                 <option value="System Administrator">System Administrator</option>
-                <option value="University Registrar Admin">
-                  University Registrar Admin
-                </option>
-                <option value="Data Integration Engineer">
-                  Data Integration Engineer
-                </option>
-                <option value="Institutional Data Steward">
-                  Institutional Data Steward
-                </option>
+                <option value="Library Staff">Staff Librarian</option>
               </select>
             </div>
 
@@ -269,7 +261,9 @@ export default function AdminUserManagementPage() {
                           <p className="text-xs text-slate-500">{admin.email}</p>
                         </td>
                         <td className="whitespace-nowrap px-5 py-4">
-                          <Badge variant="brand">{admin.role}</Badge>
+                          <Badge variant="brand">
+                            {admin.role === "Library Staff" ? "Staff Librarian" : admin.role}
+                          </Badge>
                         </td>
                         <td className="px-5 py-4 text-xs text-slate-600">
                           {admin.department}
@@ -319,7 +313,7 @@ export default function AdminUserManagementPage() {
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}
         title="Invite University Administrator"
-        subtitle="Grant role-based administrative access to the University Data Integration System"
+        subtitle="Manage administrator and staff librarian access"
       >
         <form onSubmit={handleInviteSubmit} className="space-y-4">
           <div>
@@ -355,7 +349,7 @@ export default function AdminUserManagementPage() {
 
           <div>
             <label className="block text-xs font-semibold text-slate-700">
-              Administrative Role
+              Library Staff Role
             </label>
             <select
               value={newRole}
@@ -363,21 +357,13 @@ export default function AdminUserManagementPage() {
               className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:border-indigo-400 focus:outline-none"
             >
               <option value="System Administrator">System Administrator</option>
-              <option value="University Registrar Admin">
-                University Registrar Admin
-              </option>
-              <option value="Data Integration Engineer">
-                Data Integration Engineer
-              </option>
-              <option value="Institutional Data Steward">
-                Institutional Data Steward
-              </option>
+              <option value="Library Staff">Staff Librarian</option>
             </select>
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-700">
-              Office / Department
+              Library / Department
             </label>
             <input
               type="text"
@@ -408,4 +394,3 @@ export default function AdminUserManagementPage() {
     </div>
   );
 }
-

@@ -4,9 +4,14 @@ import { requireAuth } from "../middleware/auth.middleware";
 import {
   loginRateLimit,
   passwordResetRateLimit,
+  studentRegistrationRateLimit,
 } from "../middleware/rate-limit.middleware";
 
 const router = Router();
+
+router.post("/auth/register", studentRegistrationRateLimit, (req, res, next) =>
+  authController.registerStudent(req, res, next)
+);
 
 router.post("/auth/forgot-password", passwordResetRateLimit, (req, res, next) =>
   authController.forgotPassword(req, res, next)

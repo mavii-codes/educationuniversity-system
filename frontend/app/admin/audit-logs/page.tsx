@@ -58,7 +58,7 @@ export default function AdminAuditLogsPage() {
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700 ring-1 ring-inset ring-slate-400/20">
               <Shield className="h-3.5 w-3.5 text-indigo-600" />
-              Institutional Data Governance
+              Library System Security
             </span>
             <span className="text-xs text-slate-400">·</span>
             <span className="text-xs font-medium text-slate-500">
@@ -66,10 +66,10 @@ export default function AdminAuditLogsPage() {
             </span>
           </div>
           <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
-            System &amp; Data Integration Audit Logs
+            Library System Audit Logs
           </h2>
           <p className="mt-1 text-sm text-slate-600">
-            Immutable log of ETL pipeline batches, cross-system student record access, authentication events, and exports.
+            Review account access, catalog changes, and circulation activity recorded by the library system.
           </p>
         </div>
 
@@ -91,12 +91,10 @@ export default function AdminAuditLogsPage() {
           <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-indigo-700" />
           <div className="space-y-1">
             <p className="font-semibold text-indigo-950">
-              Data Privacy &amp; Access Control Principles
+              Account Privacy &amp; Access Control
             </p>
             <p className="leading-relaxed text-indigo-800">
-              Every data access request, ETL ingestion job, identity cross-matching step, and report generation is captured with actor IP, timestamp, and scope.
-              Privacy controls are modeled after FERPA and GDPR standards (purpose limitation, auditability, data minimization, and role-based segregation).
-              <em> Notice: This platform does not claim formal legal compliance certification solely on the basis of implemented privacy features.</em>
+              Library account and circulation actions should be limited to authorized staff and handled with care.
             </p>
           </div>
         </div>
@@ -205,4 +203,3 @@ export default function AdminAuditLogsPage() {
     </div>
   );
 }
-

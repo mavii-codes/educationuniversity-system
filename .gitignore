@@ -5,6 +5,7 @@ node_modules/
 # Build outputs
 .next/
 **/.next/
+**/.next-dev/
 .next-build/
 **/.next-build/
 out/
@@ -35,4 +36,3 @@ Thumbs.db
 
 # Ignore stale root src tab if locked open in editor
 /src/
-

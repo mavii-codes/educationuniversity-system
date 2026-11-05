@@ -17,6 +17,7 @@ import { LibraryBook } from "@/types";
 import { SessionUser } from "@/lib/auth";
 import { useLibraryStore } from "@/lib/library-store";
 import { cn } from "@/lib/utils";
+import { BookCover } from "@/components/library/BookCover";
 
 interface BookDetailModalProps {
   book: LibraryBook | null;
@@ -75,7 +76,7 @@ export function BookDetailModal({
         onClick={onClose}
       />
 
-      <div className="relative w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl z-10 animate-in fade-in-0 zoom-in-95">
+      <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl z-10 animate-in fade-in-0 zoom-in-95">
         {/* Header */}
         <div className="flex items-start justify-between border-b border-slate-100 pb-4">
           <div className="flex items-center gap-3">
@@ -97,6 +98,10 @@ export function BookDetailModal({
           >
             <X className="h-5 w-5" />
           </button>
+        </div>
+
+        <div className="flex justify-center border-b border-slate-100 py-4">
+          <BookCover src={book.cover_url} title={book.title} size="lg" />
         </div>
 
         {/* Feedback Alert */}
@@ -248,4 +253,3 @@ export function BookDetailModal({
     </div>
   );
 }
-

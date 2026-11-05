@@ -80,18 +80,18 @@ export function LibraryUsageAnalyticsSection({
         <div>
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-600/20">
-              First Working Integration
+              Library activity
             </span>
             <span className="text-xs text-slate-400">·</span>
             <span className="text-xs font-medium text-slate-500">
-              Live API &amp; Ingested Circulation
+              Catalog and circulation
             </span>
           </div>
           <h3 className="mt-1 text-base font-semibold text-slate-900">
-            Library Usage &amp; Academic Circulation Analytics
+            Library Usage &amp; Circulation
           </h3>
           <p className="text-xs text-slate-500">
-            Resource utilization patterns across academic departments and holdings categories
+            Borrowing and return activity across the library collection
           </p>
         </div>
 
@@ -99,7 +99,7 @@ export function LibraryUsageAnalyticsSection({
           href="/admin/library"
           className="inline-flex items-center gap-1.5 self-start text-xs font-semibold text-indigo-600 transition hover:text-indigo-700 sm:self-auto"
         >
-          <span>Open Library Integration Hub</span>
+          <span>Open Library Management</span>
           <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>
@@ -258,4 +258,3 @@ export function LibraryUsageAnalyticsSection({
     </section>
   );
 }
-

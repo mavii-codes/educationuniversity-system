@@ -96,6 +96,7 @@ type WeeklyRow = {
 type LoanRow = {
   student_id: string;
   book_id: string;
+  cover_url: string | null;
   title: string;
   author: string;
   category: string;
@@ -233,7 +234,7 @@ async function loadNested(ids: string[]): Promise<{
         [ids]
       ),
       queryDb<LoanRow>(
-        `SELECT l.student_id, l.book_id, b.title, b.author, b.category,
+        `SELECT l.student_id, l.book_id, b.cover_url, b.title, b.author, b.category,
                 l.borrowed_date, l.due_date, l.returned_date, l.status
            FROM library_loans l
            JOIN library_books b ON b.id = l.book_id
@@ -317,6 +318,7 @@ async function loadNested(ids: string[]): Promise<{
     const list = loans.get(row.student_id) ?? [];
     list.push({
       id: row.book_id,
+      cover_url: row.cover_url,
       title: row.title,
       author: row.author,
       category: row.category,

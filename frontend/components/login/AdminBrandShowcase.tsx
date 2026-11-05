@@ -27,10 +27,10 @@ export function AdminBrandShowcase() {
           </div>
           <div>
             <h1 className="text-base font-bold tracking-tight text-slate-900 sm:text-lg">
-              University Data Integration System
+              University Library Management System
             </h1>
             <p className="text-xs font-medium text-slate-500">
-              Institutional Data &amp; Analytics Platform
+              Catalog and circulation administration
             </p>
           </div>
         </div>
@@ -47,7 +47,7 @@ export function AdminBrandShowcase() {
           <span className="text-indigo-600 font-extrabold">connected.</span>
         </h2>
         <p className="max-w-md text-xs sm:text-sm text-slate-600 leading-relaxed">
-          Manage library operations, borrowing activity, and integrated library data from one centralized workspace.
+          Manage the catalog, borrower accounts, circulation, and everyday library operations in one workspace.
         </p>
       </div>
 
@@ -152,4 +152,3 @@ export function AdminBrandShowcase() {
     </div>
   );
 }
-
