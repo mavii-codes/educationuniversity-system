@@ -6,6 +6,14 @@ import { useLibraryStore } from "@/lib/library-store";
 import { useToast } from "@/components/ui/ToastProvider";
 import { BookCover } from "@/components/library/BookCover";
 
+function formatDate(value: string): string {
+  return new Date(value).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export default function StaffReturnsPage() {
   const { transactions, confirmBookReturn } = useLibraryStore();
   const { showToast } = useToast();
@@ -23,12 +31,14 @@ export default function StaffReturnsPage() {
     );
   });
 
-  const handleReturn = (id: string, title: string) => {
-    confirmBookReturn(id);
+  const handleReturn = async (id: string, title: string) => {
+    const result = await confirmBookReturn(id);
     showToast({
-      title: "Book Checked In",
-      description: `"${title}" has been successfully returned and restored to shelf inventory.`,
-      type: "success",
+      title: result.ok ? "Book Checked In" : "Check-in Failed",
+      description: result.ok
+        ? `"${title}" has been successfully returned and restored to shelf inventory.`
+        : result.message,
+      type: result.ok ? "success" : "warning",
     });
   };
 
@@ -84,10 +94,10 @@ export default function StaffReturnsPage() {
                       <p className="font-semibold text-slate-800">{t.studentName}</p>
                       <p className="text-[11px] text-slate-500">{t.studentId}</p>
                     </td>
-                    <td className="px-4 py-3.5 text-slate-600">{t.borrowDate}</td>
+                    <td className="px-4 py-3.5 text-slate-600">{formatDate(t.borrowDate)}</td>
                     <td className="px-4 py-3.5">
                       <span className={t.status === "Overdue" ? "font-bold text-rose-600" : "text-slate-600"}>
-                        {t.dueDate}
+                        {formatDate(t.dueDate)}
                       </span>
                     </td>
                     <td className="px-4 py-3.5">

@@ -78,7 +78,7 @@ export function AdminProfileMenu({
           className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-rose-600 transition hover:bg-rose-50"
         >
           <LogOut className="h-4 w-4" />
-          <span>Logout</span>
+          <span>Sign out</span>
         </button>
       </div>
     </div>

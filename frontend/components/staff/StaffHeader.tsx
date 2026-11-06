@@ -29,33 +29,35 @@ export function StaffHeader({ onOpenMobileMenu }: StaffHeaderProps) {
   const staffRole = user?.accessRole || "Librarian";
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur-xs sm:px-6 lg:px-8">
-      {/* Mobile Menu Button + Page Titles */}
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={onOpenMobileMenu}
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 lg:hidden"
-          aria-label="Open navigation menu"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
+    <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/95 backdrop-blur-sm">
+      <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+        {/* Mobile Menu Button + Page Titles */}
+        <div className="flex min-w-0 items-center gap-3">
+          <button
+            type="button"
+            onClick={onOpenMobileMenu}
+            className="inline-flex items-center justify-center rounded-lg border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 lg:hidden"
+            aria-label="Open navigation menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
 
-        <div>
-          <h1 className="text-base font-bold tracking-tight text-slate-900 sm:text-lg">
-            {title}
-          </h1>
-          <p className="hidden text-xs text-slate-500 sm:block">
-            {subtitle}
-          </p>
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">
+              {title}
+            </h1>
+            <p className="hidden truncate text-xs text-slate-500 md:block">
+              {subtitle}
+            </p>
+          </div>
         </div>
-      </div>
 
-      {/* Right Controls: Staff Role */}
-      <div className="flex items-center gap-3">
-        <div className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-indigo-100 bg-indigo-50/80 px-2.5 py-1 text-[11px] font-semibold text-indigo-700">
-          <ShieldCheck className="h-3 w-3 text-indigo-600" />
-          <span>{staffRole}</span>
+        {/* Right Controls: Staff Role */}
+        <div className="flex items-center gap-3">
+          <div className="hidden shrink-0 sm:inline-flex items-center gap-1.5 rounded-full border border-indigo-100 bg-indigo-50/80 px-2.5 py-1 text-[11px] font-semibold text-indigo-700">
+            <ShieldCheck className="h-3 w-3 text-indigo-600" />
+            <span>{staffRole}</span>
+          </div>
         </div>
       </div>
     </header>

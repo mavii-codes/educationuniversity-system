@@ -358,7 +358,7 @@ export default function AdminUserManagementPage() {
                                   : undefined
                             }
                             aria-label={`${admin.status === "Active" ? "Deactivate" : "Activate"} ${admin.name}`}
-                            className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                            className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${
                               admin.status === "Active"
                                 ? "border-rose-200 text-rose-700 hover:bg-rose-50"
                                 : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
@@ -479,7 +479,7 @@ export default function AdminUserManagementPage() {
               className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 focus:border-indigo-400 focus:outline-none"
             />
             <p className="mt-1 text-xs text-slate-500">
-              The account is active immediately. Share this password securely with the staff member.
+              Passwords must be at least 12 characters. The account is active immediately — share this password securely with the staff member.
             </p>
           </div>
 

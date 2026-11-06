@@ -9,24 +9,19 @@ import {
   CheckCircle2,
   Eye,
   EyeOff,
-  GraduationCap,
   Loader2,
   Lock,
-  Mail,
-  ShieldCheck,
   User,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 type AuthMode = "signin" | "register";
-type PortalRole = "student" | "admin" | "librarian";
 
 export function StudentLoginFormCard() {
   const router = useRouter();
   const { signIn, registerStudent } = useAuth();
 
-  const [activePortal, setActivePortal] = useState<PortalRole>("student");
   const [mode, setMode] = useState<AuthMode>("signin");
 
   // Sign In state
@@ -51,13 +46,10 @@ export function StudentLoginFormCard() {
   const [passwordError, setPasswordError] = useState("");
   const [formError, setFormError] = useState("");
 
-  const handlePortalChange = (portal: PortalRole) => {
-    setActivePortal(portal);
-    setMode("signin");
+  const switchMode = (nextMode: AuthMode) => {
+    setMode(nextMode);
     setFormError("");
     setRegSuccessMsg("");
-    setIdentifierError("");
-    setPasswordError("");
   };
 
   const handleSignInSubmit = async (e: React.FormEvent) => {
@@ -69,11 +61,7 @@ export function StudentLoginFormCard() {
 
     let hasError = false;
     if (!identifier.trim()) {
-      setIdentifierError(
-        activePortal === "student"
-          ? "Please enter your Student ID or university email."
-          : "Please enter your institutional email or ID."
-      );
+      setIdentifierError("Please enter your Student ID or university email.");
       hasError = true;
     }
     if (!password) {
@@ -87,17 +75,15 @@ export function StudentLoginFormCard() {
       identifier,
       password,
       rememberMe,
-      expectedRole:
-        activePortal === "student"
-          ? "Student"
-          : activePortal === "librarian"
-            ? "Librarian"
-            : "Administrator",
+      expectedRole: "Student",
     });
 
     if (!result.ok) {
       // Integrated, polished, user-friendly error message
-      setFormError(result.error || "Unable to sign in. Please check your credentials and try again.");
+      setFormError(
+        result.error ||
+          "Unable to sign in. Please check your credentials and try again."
+      );
       setIsSubmitting(false);
       return;
     }
@@ -176,62 +162,19 @@ export function StudentLoginFormCard() {
   return (
     <div className="w-full max-w-[420px] transition-all duration-300">
       <div className="rounded-3xl border border-slate-200/90 bg-white/95 p-7 sm:p-9 shadow-[0_12px_40px_-8px_rgba(15,23,42,0.08),0_1px_3px_0_rgba(15,23,42,0.03)] backdrop-blur-md">
-        <div
-          aria-label="Choose a portal"
-          className="mb-6 grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1"
-        >
-          {([
-            { id: "student", label: "Student", Icon: GraduationCap },
-            { id: "admin", label: "Admin", Icon: ShieldCheck },
-            { id: "librarian", label: "Staff Librarian", Icon: BookOpen },
-          ] as const).map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => handlePortalChange(id)}
-              aria-pressed={activePortal === id}
-              className={cn(
-                "flex min-w-0 items-center justify-center gap-1 rounded-lg px-1.5 py-2 text-[11px] font-semibold transition sm:gap-1.5 sm:px-2 sm:text-xs",
-                activePortal === id
-                  ? "bg-white text-indigo-700 shadow-sm"
-                  : "text-slate-600 hover:text-slate-900"
-              )}
-            >
-              <Icon className="h-3.5 w-3.5 shrink-0" />
-              <span>{label}</span>
-            </button>
-          ))}
-        </div>
-
         {/* Top Portal Badge */}
         <div className="flex flex-col items-start">
           <div className="inline-flex items-center gap-1.5 rounded-full border border-indigo-100 bg-indigo-50/80 px-3 py-1 text-xs font-semibold text-indigo-700">
-            {activePortal === "student" ? (
-              <BookOpen className="h-3.5 w-3.5 text-indigo-600" />
-            ) : (
-              <ShieldCheck className="h-3.5 w-3.5 text-indigo-600" />
-            )}
-            <span>
-              {activePortal === "student"
-                ? "Student Portal"
-                : activePortal === "librarian"
-                  ? "Staff Librarian Portal"
-                  : "Administrator Portal"}
-            </span>
+            <BookOpen className="h-3.5 w-3.5 text-indigo-600" />
+            <span>Student Portal</span>
           </div>
 
           <h3 className="mt-3.5 text-2xl font-bold tracking-tight text-slate-900 sm:text-[26px]">
-            {mode === "signin"
-              ? activePortal === "student"
-                ? "Welcome back"
-                : `Sign in as ${activePortal === "librarian" ? "Staff Librarian" : "Administrator"}`
-              : "Create an account"}
+            {mode === "signin" ? "Welcome back" : "Create an account"}
           </h3>
           <p className="mt-1 text-xs sm:text-sm text-slate-500 leading-relaxed">
             {mode === "signin"
-              ? activePortal === "student"
-                ? "Sign in to access your university library."
-                : "Sign in with your university account to continue."
+              ? "Sign in to access your university library."
               : "Register your student card to borrow books and access digital catalogs."}
           </p>
         </div>
@@ -275,9 +218,7 @@ export function StudentLoginFormCard() {
                 htmlFor="student-identifier"
                 className="block text-xs font-semibold text-slate-700"
               >
-                {activePortal === "student"
-                  ? "Student ID or University Email"
-                  : "Institutional Email or ID"}
+                Student ID or University Email
               </label>
               <div className="relative mt-1.5">
                 <User className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -291,11 +232,7 @@ export function StudentLoginFormCard() {
                     if (identifierError) setIdentifierError("");
                     if (formError) setFormError("");
                   }}
-                  placeholder={
-                    activePortal === "student"
-                      ? "Enter your student ID or university email"
-                      : "Enter your institutional email or ID"
-                  }
+                  placeholder="Enter your student ID or university email"
                   className={cn(
                     "h-11 w-full rounded-xl border bg-slate-50/50 pl-10 pr-3.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 transition-all focus:bg-white focus:outline-none focus:ring-4",
                     identifierError
@@ -396,32 +333,22 @@ export function StudentLoginFormCard() {
                   <span>Signing in...</span>
                 </>
               ) : (
-                <span>
-                  {activePortal === "student"
-                    ? "Sign In"
-                    : `Sign In as ${activePortal === "librarian" ? "Staff Librarian" : "Administrator"}`}
-                </span>
+                <span>Sign In</span>
               )}
             </button>
 
             {/* Secondary Create Account Link */}
             <div className="pt-3 text-center">
-              {activePortal === "student" && (
-                <p className="text-xs text-slate-600">
-                  New to the library portal?{" "}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMode("register");
-                      setFormError("");
-                      setRegSuccessMsg("");
-                    }}
-                    className="font-semibold text-indigo-600 hover:text-indigo-800 transition"
-                  >
-                    Create an account
-                  </button>
-                </p>
-              )}
+              <p className="text-xs text-slate-600">
+                New to the library portal?{" "}
+                <button
+                  type="button"
+                  onClick={() => switchMode("register")}
+                  className="font-semibold text-indigo-600 hover:text-indigo-800 transition"
+                >
+                  Create an account
+                </button>
+              </p>
             </div>
           </form>
         )}
@@ -583,11 +510,7 @@ export function StudentLoginFormCard() {
                 Already have a student account?{" "}
                 <button
                   type="button"
-                  onClick={() => {
-                    setMode("signin");
-                    setFormError("");
-                    setRegSuccessMsg("");
-                  }}
+                  onClick={() => switchMode("signin")}
                   className="font-semibold text-indigo-600 hover:text-indigo-800 transition"
                 >
                   Sign In
@@ -596,6 +519,19 @@ export function StudentLoginFormCard() {
             </div>
           </form>
         )}
+
+        {/* Staff & Admin portal cross-link */}
+        <div className="mt-6 border-t border-slate-100 pt-4 text-center">
+          <p className="text-xs text-slate-500">
+            Staff or Administrator?{" "}
+            <Link
+              href="/admin/login"
+              className="font-semibold text-indigo-600 hover:text-indigo-700 transition"
+            >
+              Sign in here →
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

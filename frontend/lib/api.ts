@@ -114,6 +114,19 @@ export function setSessionExpiredHandler(
   sessionExpiredHandler = handler;
 }
 
+/**
+ * Notified whenever `/auth/refresh` returns a corrected user payload.
+ * The auth provider registers this handler to replace stale cached roles.
+ */
+type SessionUserUpdateHandler = (user: unknown) => void;
+let sessionUserUpdateHandler: SessionUserUpdateHandler | null = null;
+
+export function setSessionUserUpdateHandler(
+  handler: SessionUserUpdateHandler | null
+): void {
+  sessionUserUpdateHandler = handler;
+}
+
 export async function refreshSession(): Promise<boolean> {
   if (refreshPromise) return refreshPromise;
 
@@ -128,7 +141,19 @@ export async function refreshSession(): Promise<boolean> {
         credentials: "include",
         headers,
       });
-      return res.ok;
+      if (!res.ok) return false;
+
+      // The backend refresh handler returns `{ user, csrfToken }`. Capture the
+      // authoritative user so callers can replace a stale cached role.
+      try {
+        const body = (await res.json()) as { user?: unknown };
+        if (body?.user && typeof body.user === "object") {
+          sessionUserUpdateHandler?.(body.user);
+        }
+      } catch {
+        // A successful refresh with an unreadable body still rotated cookies.
+      }
+      return true;
     } catch {
       return false;
     } finally {
@@ -143,6 +168,17 @@ export async function refreshSession(): Promise<boolean> {
 
 async function simulateNetworkDelay(ms = 160): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Error thrown for non-2xx responses, carrying the HTTP status code. */
+export interface ApiRequestError extends Error {
+  status: number;
+}
+
+export function getApiErrorStatus(error: unknown): number | undefined {
+  if (!(error instanceof Error)) return undefined;
+  const status = (error as Partial<ApiRequestError>).status;
+  return typeof status === "number" ? status : undefined;
 }
 
 export async function fetchJson<T>(
@@ -186,7 +222,9 @@ export async function fetchJson<T>(
     } catch {
       // Ignore non-JSON error bodies.
     }
-    throw new Error(message);
+    const error = new Error(message) as ApiRequestError;
+    error.status = res.status;
+    throw error;
   }
 
   return res.json();

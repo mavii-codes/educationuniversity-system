@@ -19,9 +19,37 @@ import { BookCategory, LibraryBook } from "@/types";
 import { formatNumber } from "@/lib/utils";
 import { BookCover } from "@/components/library/BookCover";
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/components/ui/ToastProvider";
+
+function escapeCsvValue(value: string): string {
+  return `"${value.replace(/"/g, '""')}"`;
+}
+
+function downloadCsv(filename: string, rows: string[][]): void {
+  const csv = rows.map((row) => row.map(escapeCsvValue).join(",")).join("\r\n");
+  const blob = new Blob([`\uFEFF${csv}`], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function getDateStamp(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
 
 export default function IntegratedLibraryRecordsPage() {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [books, setBooks] = useState<LibraryBook[]>([]);
   const [categories, setCategories] = useState<BookCategory[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -77,6 +105,35 @@ export default function IntegratedLibraryRecordsPage() {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
+  const handleExport = () => {
+    const rows = [
+      [
+        "Book Title & Author",
+        "Curricular Category",
+        "ISBN-13",
+        "Call Number",
+        "Available / Total Copies",
+        "Location",
+        "Status",
+      ],
+      ...filteredBooks.map((book) => [
+        `${book.title} — ${book.author} · ${book.publisher} (${book.publicationYear})`,
+        book.category,
+        book.isbn,
+        book.callNumber,
+        `${book.availableCopies} / ${book.totalCopies}`,
+        book.location,
+        book.status,
+      ]),
+    ];
+    downloadCsv(`library-catalog-records-${getDateStamp()}.csv`, rows);
+    showToast({
+      title: "Catalog Records Exported",
+      description: `${filteredBooks.length} record${filteredBooks.length === 1 ? "" : "s"} downloaded as CSV.`,
+      type: "success",
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -107,9 +164,7 @@ export default function IntegratedLibraryRecordsPage() {
 
         <button
           type="button"
-          onClick={() => {
-            alert("Exporting centralized library catalog records to CSV...");
-          }}
+          onClick={handleExport}
           className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
         >
           <Download className="h-3.5 w-3.5 text-slate-500" />

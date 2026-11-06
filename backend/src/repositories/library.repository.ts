@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { queryDb } from "../config/database";
-import { LibraryBookModel, LibraryBookWriteModel } from "../models";
+import {
+  BookCategoryModel,
+  LibraryBookModel,
+  LibraryBookWriteModel,
+} from "../models";
 
 interface LibraryBookRow {
   id: string;
@@ -18,6 +22,13 @@ interface LibraryBookRow {
   status: LibraryBookModel["status"];
   cover_url: string | null;
   last_synced_at: Date | null;
+}
+
+interface BookCategoryRow {
+  category: string;
+  total_titles: number;
+  total_copies: number;
+  available_copies: number;
 }
 
 const BOOK_COLUMNS = `
@@ -46,11 +57,52 @@ function mapBook(row: LibraryBookRow): LibraryBookModel {
   };
 }
 
+function categorySlug(category: string): string {
+  const slug = category
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || "uncategorized";
+}
+
+function categoryCode(category: string): string {
+  const code = category
+    .replace(/&/g, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 4);
+  return code || "GEN";
+}
+
 export async function listLibraryBooks(): Promise<LibraryBookModel[]> {
   const { rows } = await queryDb<LibraryBookRow>(
     `SELECT ${BOOK_COLUMNS} FROM library_books ORDER BY title`
   );
   return rows.map(mapBook);
+}
+
+export async function listLibraryBookCategories(): Promise<BookCategoryModel[]> {
+  const { rows } = await queryDb<BookCategoryRow>(
+    `SELECT category,
+            COUNT(*)::int AS total_titles,
+            COALESCE(SUM(total_copies), 0)::int AS total_copies,
+            COALESCE(SUM(available_copies), 0)::int AS available_copies
+       FROM library_books
+      GROUP BY category
+      ORDER BY total_titles DESC, category ASC`
+  );
+  return rows.map((row) => ({
+    id: `cat-${categorySlug(row.category)}`,
+    code: categoryCode(row.category),
+    name: row.category,
+    totalTitles: row.total_titles,
+    totalCopies: row.total_copies,
+    borrowedCount: row.total_copies - row.available_copies,
+  }));
 }
 
 export async function getLibraryBook(

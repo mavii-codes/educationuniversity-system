@@ -384,14 +384,14 @@ function AdminSettingsContent() {
                     Current Password
                   </label>
                   <input
-                  id="admin-current-password"
-                  type="password"
-                  autoComplete="current-password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  disabled={changingPassword}
-                  required
-                  placeholder="Enter current password"
+                    id="admin-current-password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    disabled={changingPassword}
+                    required
+                    placeholder="Enter current password"
                     className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 focus:border-indigo-400 focus:outline-none"
                   />
                 </div>
@@ -401,27 +401,27 @@ function AdminSettingsContent() {
                     New Password
                   </label>
                   <input
-                  id="admin-new-password"
-                  type="password"
-                  autoComplete="new-password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  minLength={12}
-                  maxLength={200}
-                  disabled={changingPassword}
-                  required
-                  placeholder="At least 12 characters"
-                  className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 focus:border-indigo-400 focus:outline-none"
+                    id="admin-new-password"
+                    type="password"
+                    autoComplete="new-password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    minLength={12}
+                    maxLength={200}
+                    disabled={changingPassword}
+                    required
+                    placeholder="At least 12 characters"
+                    className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 focus:border-indigo-400 focus:outline-none"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={handlePasswordChange}
                   disabled={
-                  changingPassword ||
-                  !API_CONFIG.useLiveApi ||
-                  !currentPassword ||
-                  newPassword.length < 12
+                    changingPassword ||
+                    !API_CONFIG.useLiveApi ||
+                    !currentPassword ||
+                    newPassword.length < 12
                   }
                   className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >

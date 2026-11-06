@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle,
   Eye,
   EyeOff,
+  GraduationCap,
   Loader2,
   Lock,
   Mail,
@@ -18,7 +19,7 @@ import { cn } from "@/lib/utils";
 
 export function AdminLoginFormCard() {
   const router = useRouter();
-  const { signIn } = useAuth();
+  const { signIn, signOut } = useAuth();
 
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -31,11 +32,33 @@ export function AdminLoginFormCard() {
   const [passwordError, setPasswordError] = useState("");
   const [formError, setFormError] = useState("");
 
+  // Friendly (non-error) notice when a student account reaches this portal.
+  const [studentPortalNotice, setStudentPortalNotice] = useState("");
+  const studentRedirectTimer = useRef<number | null>(null);
+
+  // Cancel any pending "return to the Student Portal" redirect on unmount.
+  useEffect(() => {
+    return () => {
+      if (studentRedirectTimer.current) {
+        window.clearTimeout(studentRedirectTimer.current);
+      }
+    };
+  }, []);
+
+  const dismissStudentNotice = () => {
+    if (studentRedirectTimer.current) {
+      window.clearTimeout(studentRedirectTimer.current);
+      studentRedirectTimer.current = null;
+    }
+    setStudentPortalNotice("");
+  };
+
   const handleSignInSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIdentifierError("");
     setPasswordError("");
     setFormError("");
+    dismissStudentNotice();
 
     let hasValidationError = false;
     if (!identifier.trim()) {
@@ -65,7 +88,26 @@ export function AdminLoginFormCard() {
       return;
     }
 
-    router.push(result.role === "Librarian" ? "/staff/dashboard" : "/admin/dashboard");
+    if (result.role === "Student") {
+      // Student accounts belong in the Student Portal. The successful sign-in
+      // above has already created a student session, so clear it and send the
+      // visitor back to /login — after a beat, so the notice stays readable.
+      setIsSubmitting(false);
+      setStudentPortalNotice(
+        "That's a student account. Please sign in via the Student Portal."
+      );
+      if (studentRedirectTimer.current) {
+        window.clearTimeout(studentRedirectTimer.current);
+      }
+      studentRedirectTimer.current = window.setTimeout(() => {
+        signOut("/login");
+      }, 3000);
+      return;
+    }
+
+    router.push(
+      result.role === "Librarian" ? "/staff/dashboard" : "/admin/dashboard"
+    );
   };
 
   return (
@@ -96,6 +138,31 @@ export function AdminLoginFormCard() {
           </div>
         )}
 
+        {/* Friendly student-account notice (non-error) */}
+        {studentPortalNotice && (
+          <div
+            role="status"
+            className="mt-4 flex items-start gap-2.5 rounded-xl border border-indigo-200 bg-indigo-50/90 p-3 text-xs text-indigo-800"
+          >
+            <GraduationCap className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" />
+            <div className="flex-1 leading-relaxed">
+              <span className="block font-semibold text-indigo-950">
+                {studentPortalNotice}
+              </span>
+              <Link
+                href="/login"
+                className="mt-1.5 inline-flex items-center gap-1 font-semibold text-indigo-700 underline-offset-2 transition hover:text-indigo-900 hover:underline"
+              >
+                Go to the Student Portal
+                <span aria-hidden="true">→</span>
+              </Link>
+              <span className="mt-1.5 block text-[11px] text-indigo-500">
+                Sending you to the Student Portal…
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Sign In Form */}
         <form onSubmit={handleSignInSubmit} className="mt-5 space-y-4" noValidate>
           {/* Institutional Email / Username */}
@@ -120,6 +187,7 @@ export function AdminLoginFormCard() {
                   setIdentifier(e.target.value);
                   if (identifierError) setIdentifierError("");
                   if (formError) setFormError("");
+                  if (studentPortalNotice) dismissStudentNotice();
                 }}
                 placeholder="Enter your institutional email or username"
                 className={cn(
@@ -167,6 +235,7 @@ export function AdminLoginFormCard() {
                   setPassword(e.target.value);
                   if (passwordError) setPasswordError("");
                   if (formError) setFormError("");
+                  if (studentPortalNotice) dismissStudentNotice();
                 }}
                 placeholder="Enter your password"
                 className={cn(
@@ -231,9 +300,18 @@ export function AdminLoginFormCard() {
           </button>
         </form>
 
-        {/* Clean bottom with subtle security statement */}
+        {/* Clean bottom with student cross-link + subtle security statement */}
         <div className="mt-6 border-t border-slate-100 pt-4 text-center">
-          <p className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-400">
+          <p className="text-xs text-slate-500">
+            Student?{" "}
+            <Link
+              href="/login"
+              className="font-semibold text-indigo-600 hover:text-indigo-700 transition"
+            >
+              Sign in here →
+            </Link>
+          </p>
+          <p className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-400">
             <Lock className="h-3 w-3 text-slate-400" />
             <span>Secure administrative access</span>
           </p>

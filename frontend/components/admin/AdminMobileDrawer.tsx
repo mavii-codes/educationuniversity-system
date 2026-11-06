@@ -103,7 +103,7 @@ export function AdminMobileDrawer({ open, onClose }: AdminMobileDrawerProps) {
               <p className="truncate font-semibold text-slate-900">
                 {user?.name || "Administrator"}
               </p>
-              <p className="truncate text-slate-500">Role: Administrator</p>
+              <p className="truncate text-slate-500">Role: {user?.role || "Administrator"}</p>
             </div>
           </div>
           <button
@@ -115,7 +115,7 @@ export function AdminMobileDrawer({ open, onClose }: AdminMobileDrawerProps) {
             className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50/70 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100"
           >
             <LogOut className="h-3.5 w-3.5" />
-            <span>Logout</span>
+            <span>Sign out</span>
           </button>
         </div>
       </div>

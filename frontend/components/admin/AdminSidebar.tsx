@@ -36,8 +36,11 @@ export function AdminSidebar() {
           <BookOpen className="h-5 w-5" />
         </div>
         <div className="min-w-0">
-          <span className="block text-[13px] font-bold leading-snug tracking-tight text-slate-900">
+          <span className="block text-[13px] font-bold leading-snug tracking-tight text-slate-900 truncate">
             University Library System
+          </span>
+          <span className="block text-[11px] font-medium text-indigo-600">
+            Administrator Portal
           </span>
         </div>
       </div>
@@ -124,8 +127,8 @@ export function AdminSidebar() {
           <button
             type="button"
             onClick={() => signOut()}
-            title="Logout"
-            aria-label="Logout"
+            title="Sign out"
+            aria-label="Sign out"
             className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
           >
             <LogOut className="h-4 w-4" />

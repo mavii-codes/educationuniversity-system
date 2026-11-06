@@ -4,6 +4,7 @@ import { env } from "../config/env";
 import {
   createLibraryBook as createDatabaseBook,
   getLibraryBook as getDatabaseBook,
+  listLibraryBookCategories,
   listLibraryBooks,
   updateLibraryBook as updateDatabaseBook,
   updateLibraryBookCover,
@@ -59,9 +60,11 @@ function isValidBookInput(
   return bookInputSchema.safeParse(body);
 }
 
-export const getLibraryOverview = (_req: Request, res: Response) => {
+export const getLibraryOverview = async (_req: Request, res: Response) => {
   try {
-    const overview = libraryETLService.getOverview();
+    const overview = env.db.enabled
+      ? await libraryCirculationRepository.getLibraryProductionOverview()
+      : libraryETLService.getOverview();
     res.json({
       success: true,
       data: overview,
@@ -519,9 +522,11 @@ export const markLibraryFinePaid = async (req: Request, res: Response) => {
   }
 };
 
-export const getBookCategories = (_req: Request, res: Response) => {
+export const getBookCategories = async (_req: Request, res: Response) => {
   try {
-    const categories = libraryETLService.getCategories();
+    const categories = env.db.enabled
+      ? await listLibraryBookCategories()
+      : libraryETLService.getCategories();
     res.json({
       success: true,
       data: categories,

@@ -125,6 +125,7 @@ export function AdminHeader({ onOpenMobileMenu }: AdminHeaderProps) {
                   setSearchQuery(e.target.value);
                   setSearchOpen(true);
                 }}
+                aria-label="Search members, books, or library pages"
                 placeholder="Search members, books, or library pages..."
                 className="h-9 w-52 rounded-lg border border-slate-200/90 bg-slate-50/70 pl-9 pr-3 text-xs text-slate-800 placeholder:text-slate-400 transition focus:w-72 focus:border-indigo-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/15 xl:w-72"
               />

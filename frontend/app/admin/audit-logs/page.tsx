@@ -15,8 +15,36 @@ import {
 } from "lucide-react";
 import { getAuditLogs } from "@/lib/api";
 import { AuditLogRecord } from "@/types";
+import { useToast } from "@/components/ui/ToastProvider";
+
+function escapeCsvValue(value: string): string {
+  return `"${value.replace(/"/g, '""')}"`;
+}
+
+function downloadCsv(filename: string, rows: string[][]): void {
+  const csv = rows.map((row) => row.map(escapeCsvValue).join(",")).join("\r\n");
+  const blob = new Blob([`\uFEFF${csv}`], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function getDateStamp(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
 
 export default function AdminAuditLogsPage() {
+  const { showToast } = useToast();
   const [logs, setLogs] = useState<AuditLogRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
@@ -54,6 +82,37 @@ export default function AdminAuditLogsPage() {
     return matchesSearch && matchesStatus;
   });
 
+  const handleExport = () => {
+    const rows = [
+      [
+        "Timestamp",
+        "Actor",
+        "Actor Role",
+        "Action / Event",
+        "Target Resource",
+        "IP Address",
+        "Outcome",
+        "Event Details",
+      ],
+      ...filteredLogs.map((log) => [
+        log.timestamp,
+        log.actor,
+        log.actorRole,
+        log.action,
+        log.resource,
+        log.ipAddress,
+        log.status,
+        log.details,
+      ]),
+    ];
+    downloadCsv(`audit-logs-${getDateStamp()}.csv`, rows);
+    showToast({
+      title: "Audit Log Exported",
+      description: `${filteredLogs.length} record${filteredLogs.length === 1 ? "" : "s"} downloaded as CSV.`,
+      type: "success",
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -79,9 +138,7 @@ export default function AdminAuditLogsPage() {
 
         <button
           type="button"
-          onClick={() => {
-            alert("Exporting security & compliance audit log to encrypted archive...");
-          }}
+          onClick={handleExport}
           className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
         >
           <Download className="h-3.5 w-3.5 text-slate-500" />

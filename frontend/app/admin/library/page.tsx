@@ -63,10 +63,7 @@ export default function AdminLibraryPage() {
   const {
     borrowingRequests,
     transactions: storeTransactions,
-    books: storeBooks,
     upsertBook,
-    reservations: storeReservations,
-    fines: storeFines,
     approveBorrowRequest,
     rejectBorrowRequest,
     confirmBookReturn,
@@ -122,12 +119,15 @@ export default function AdminLibraryPage() {
     loadData();
   }, [loadData]);
 
-  const effectiveTransactions =
-    storeTransactions.length > 0 ? storeTransactions : transactions;
-  const effectiveBooks = storeBooks.length > 0 ? storeBooks : books;
-  const effectiveReservations =
-    storeReservations.length > 0 ? storeReservations : reservations;
-  const effectiveFines = storeFines.length > 0 ? storeFines : fines;
+  // Freshly loaded page data is the source of truth for every tab. Transactions
+  // additionally keep store-only inserts (e.g. a loan just created by approving
+  // a request) visible until the next refresh; page rows win on id conflicts so
+  // a stale store cache can never hide freshly fetched data.
+  const pageTransactionIds = new Set(transactions.map((tx) => tx.id));
+  const displayTransactions = [
+    ...transactions,
+    ...storeTransactions.filter((tx) => !pageTransactionIds.has(tx.id)),
+  ];
 
   const handleApproveRequest = async (id: string) => {
     const res = await approveBorrowRequest(id, user?.name || "Administrator");
@@ -156,10 +156,23 @@ export default function AdminLibraryPage() {
 
   const handleConfirmReturn = async (id: string) => {
     const res = await confirmBookReturn(id);
+    if (res.ok) {
+      setTransactions((previous) =>
+        previous.map((transaction) =>
+          transaction.id === id
+            ? {
+                ...transaction,
+                status: "Returned" as const,
+                finesAccrued: res.fineAccrued,
+              }
+            : transaction
+        )
+      );
+    }
     showToast({
-      title: "Book Return Confirmed",
+      title: res.ok ? "Book Return Confirmed" : "Return Failed",
       description: res.message,
-      type: res.fineAccrued > 0 ? "warning" : "success",
+      type: res.ok ? (res.fineAccrued > 0 ? "warning" : "success") : "warning",
     });
   };
 
@@ -238,7 +251,7 @@ export default function AdminLibraryPage() {
     });
 
   // Filtered Books
-  const filteredBooks = effectiveBooks.filter((b) => {
+  const filteredBooks = books.filter((b) => {
     const matchesSearch =
       searchQuery === "" ||
       b.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -252,7 +265,7 @@ export default function AdminLibraryPage() {
   });
 
   // Filtered Transactions
-  const filteredTransactions = effectiveTransactions.filter((t) => {
+  const filteredTransactions = displayTransactions.filter((t) => {
     const matchesSearch =
       searchQuery === "" ||
       t.bookTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -300,10 +313,10 @@ export default function AdminLibraryPage() {
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
-          { label: "Catalog titles", value: effectiveBooks.length },
+          { label: "Catalog titles", value: books.length },
           {
             label: "Available copies",
-            value: effectiveBooks.reduce((total, book) => total + book.availableCopies, 0),
+            value: books.reduce((total, book) => total + book.availableCopies, 0),
           },
           {
             label: "Pending requests",
@@ -311,7 +324,7 @@ export default function AdminLibraryPage() {
           },
           {
             label: "Overdue loans",
-            value: effectiveTransactions.filter((transaction) => transaction.status === "Overdue").length,
+            value: displayTransactions.filter((transaction) => transaction.status === "Overdue").length,
           },
         ].map((metric) => (
           <div
@@ -337,12 +350,12 @@ export default function AdminLibraryPage() {
             },
             {
               id: "books",
-              label: `Catalog Books (${effectiveBooks.length})`,
+              label: `Catalog Books (${books.length})`,
               icon: BookOpen,
             },
             {
               id: "transactions",
-              label: `Borrowing Loans (${effectiveTransactions.length})`,
+              label: `Borrowing Loans (${displayTransactions.length})`,
               icon: BookMarked,
             },
             {
@@ -352,12 +365,12 @@ export default function AdminLibraryPage() {
             },
             {
               id: "reservations",
-              label: `Reservations (${effectiveReservations.length})`,
+              label: `Reservations (${reservations.length})`,
               icon: Clock,
             },
             {
               id: "fines",
-              label: `Overdue & Fines (${effectiveFines.length})`,
+              label: `Overdue & Fines (${fines.length})`,
               icon: AlertCircle,
             },
           ].map((tab) => {

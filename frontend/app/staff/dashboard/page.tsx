@@ -26,7 +26,6 @@ export default function StaffDashboardPage() {
     borrowingRequests,
     transactions,
     reservations,
-    fines,
     approveBorrowRequest,
     rejectBorrowRequest,
     confirmBookReturn,
@@ -41,25 +40,35 @@ export default function StaffDashboardPage() {
   const overdueLoans = transactions.filter((t) => t.status === "Overdue");
   const activeReservations = reservations.filter((r) => r.status === "Pending" || r.status === "Ready for Pickup");
 
-  const handleApprove = (id: string, title: string) => {
-    approveBorrowRequest(id, user?.name || "Library Staff");
+  const handleApprove = async (id: string, title: string) => {
+    const result = await approveBorrowRequest(id, user?.name || "Library Staff");
     showToast({
-      title: "Request Approved",
-      description: `Loan request for "${title}" has been approved. Due date set to 14 days.`,
-      type: "success",
+      title: result.ok ? "Request Approved" : "Approval Failed",
+      description: result.ok
+        ? `Loan request for "${title}" has been approved. Due date set to 14 days.`
+        : result.message,
+      type: result.ok ? "success" : "warning",
     });
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!rejectId) return;
-    rejectBorrowRequest(rejectId, rejectReason || "Request declined by Library Staff.", user?.name || "Library Staff");
+    const result = await rejectBorrowRequest(
+      rejectId,
+      rejectReason || "Request declined by Library Staff.",
+      user?.name || "Library Staff"
+    );
     showToast({
-      title: "Request Declined",
-      description: "Borrowing request has been declined.",
-      type: "info",
+      title: result.ok ? "Request Declined" : "Decline Failed",
+      description: result.ok
+        ? "Borrowing request has been declined."
+        : result.message,
+      type: result.ok ? "info" : "warning",
     });
-    setRejectId(null);
-    setRejectReason("");
+    if (result.ok) {
+      setRejectId(null);
+      setRejectReason("");
+    }
   };
 
   return (

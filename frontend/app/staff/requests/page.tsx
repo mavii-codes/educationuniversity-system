@@ -7,6 +7,14 @@ import { useLibraryStore } from "@/lib/library-store";
 import { useToast } from "@/components/ui/ToastProvider";
 import { BookCover } from "@/components/library/BookCover";
 
+function formatDate(value: string): string {
+  return new Date(value).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export default function StaffRequestsPage() {
   const { user } = useAuth();
   const { borrowingRequests, approveBorrowRequest, rejectBorrowRequest } = useLibraryStore();
@@ -21,25 +29,35 @@ export default function StaffRequestsPage() {
     return r.status === statusFilter;
   });
 
-  const handleApprove = (id: string, title: string) => {
-    approveBorrowRequest(id, user?.name || "Library Staff");
+  const handleApprove = async (id: string, title: string) => {
+    const result = await approveBorrowRequest(id, user?.name || "Library Staff");
     showToast({
-      title: "Request Approved",
-      description: `Loan request for "${title}" approved. Book checked out for 14 days.`,
-      type: "success",
+      title: result.ok ? "Request Approved" : "Approval Failed",
+      description: result.ok
+        ? `Loan request for "${title}" approved. Book checked out for 14 days.`
+        : result.message,
+      type: result.ok ? "success" : "warning",
     });
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!rejectId) return;
-    rejectBorrowRequest(rejectId, rejectReason || "Request declined by Library Staff.", user?.name || "Library Staff");
+    const result = await rejectBorrowRequest(
+      rejectId,
+      rejectReason || "Request declined by Library Staff.",
+      user?.name || "Library Staff"
+    );
     showToast({
-      title: "Request Declined",
-      description: "Borrowing request has been declined.",
-      type: "info",
+      title: result.ok ? "Request Declined" : "Decline Failed",
+      description: result.ok
+        ? "Borrowing request has been declined."
+        : result.message,
+      type: result.ok ? "info" : "warning",
     });
-    setRejectId(null);
-    setRejectReason("");
+    if (result.ok) {
+      setRejectId(null);
+      setRejectReason("");
+    }
   };
 
   return (
@@ -58,7 +76,9 @@ export default function StaffRequestsPage() {
             <option value="All">All Requests ({borrowingRequests.length})</option>
             <option value="Pending">Pending ({borrowingRequests.filter((r) => r.status === "Pending").length})</option>
             <option value="Approved">Approved</option>
-            <option value="Declined">Declined</option>
+            <option value="Rejected">Rejected</option>
+            <option value="Cancelled">Cancelled</option>
+            <option value="Completed">Completed</option>
           </select>
         </div>
       </div>
@@ -92,16 +112,18 @@ export default function StaffRequestsPage() {
                     <p className="font-semibold text-slate-800">{req.studentName}</p>
                     <p className="text-[11px] text-slate-500">{req.studentId}</p>
                   </td>
-                  <td className="px-4 py-3.5 text-slate-600">{req.requestDate}</td>
+                  <td className="px-4 py-3.5 text-slate-600">{formatDate(req.requestDate)}</td>
                   <td className="px-4 py-3.5 text-slate-600">14 days</td>
                   <td className="px-4 py-3.5">
                     <span
                       className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                        req.status === "Approved"
+                        req.status === "Approved" || req.status === "Completed"
                           ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
                           : req.status === "Pending"
                           ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
-                          : "bg-rose-50 text-rose-700 ring-1 ring-rose-200"
+                          : req.status === "Rejected"
+                          ? "bg-rose-50 text-rose-700 ring-1 ring-rose-200"
+                          : "bg-slate-100 text-slate-600 ring-1 ring-slate-200"
                       }`}
                     >
                       {req.status}

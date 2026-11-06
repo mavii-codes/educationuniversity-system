@@ -3,7 +3,14 @@ import { analyticsController } from "../controllers/analytics.controller";
 import { requireRoles } from "../middleware/auth.middleware";
 
 const router = Router();
-router.use(requireRoles("Administrator", "Librarian"));
+// Scoped to this router's own paths: an unscoped router.use() mounted at
+// /api would also run for requests handled by routers mounted AFTER this
+// one (e.g. /api/library/*), blocking students and staff from the catalog.
+const staffOnly = requireRoles("Administrator", "Librarian");
+router.use("/analytics", staffOnly);
+router.use("/programs", staffOnly);
+router.use("/courses", staffOnly);
+router.use("/reports", staffOnly);
 
 // GET /api/analytics
 router.get("/analytics", (req, res, next) =>

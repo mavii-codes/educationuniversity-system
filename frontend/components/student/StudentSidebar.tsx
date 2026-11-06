@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { BookOpen, ChevronDown, User } from "lucide-react";
+import { BookOpen, ChevronDown, LogOut, User } from "lucide-react";
 import { STUDENT_NAVIGATION_GROUPS } from "./student-navigation";
 import { useAuth } from "@/lib/auth";
 import { useLibraryStore } from "@/lib/library-store";
@@ -96,15 +96,15 @@ export function StudentSidebar() {
                     <Link
                       href={item.href}
                       className={cn(
-                        "group flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold transition-all duration-150",
+                        "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
                         active
-                          ? "bg-indigo-50/90 text-indigo-700 shadow-xs"
+                          ? "bg-indigo-50/90 text-indigo-700"
                           : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                       )}
                     >
                       <Icon
                         className={cn(
-                          "h-[17px] w-[17px] shrink-0 transition-colors",
+                          "h-[18px] w-[18px] shrink-0 transition-colors",
                           active
                             ? "text-indigo-600"
                             : "text-slate-400 group-hover:text-slate-600"
@@ -115,9 +115,9 @@ export function StudentSidebar() {
                       {badgeCount !== null && (
                         <span
                           className={cn(
-                            "ml-auto rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                            "ml-auto inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none",
                             item.badgeKey === "overdueBooksCount"
-                              ? "bg-rose-100 text-rose-700 border border-rose-200"
+                              ? "bg-rose-100 text-rose-700"
                               : item.badgeKey === "pendingRequestsCount"
                               ? "bg-amber-100 text-amber-700"
                               : "bg-indigo-100 text-indigo-700"
@@ -154,27 +154,32 @@ export function StudentSidebar() {
             <Link
               href="/student/profile"
               onClick={() => setMenuOpen(false)}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
             >
               <User className="h-3.5 w-3.5 text-slate-500" />
               <span>View Library Profile</span>
             </Link>
             <button
+              type="button"
               aria-label="Sign out"
               onClick={() => {
                 setMenuOpen(false);
                 signOut();
               }}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50"
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50"
             >
+              <LogOut className="h-3.5 w-3.5" />
               <span>Sign out</span>
             </button>
           </div>
         )}
 
-        <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/70 p-2.5">
+        <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-slate-50/70 p-2.5">
           <button
+            type="button"
             onClick={() => setMenuOpen((v) => !v)}
+            aria-expanded={menuOpen}
+            aria-haspopup="menu"
             className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
           >
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700">
@@ -189,7 +194,15 @@ export function StudentSidebar() {
               </p>
             </div>
           </button>
-          <ChevronDown className="mr-1 h-4 w-4 text-slate-400" />
+          <button
+            type="button"
+            onClick={() => signOut("/login")}
+            title="Sign out"
+            aria-label="Sign out"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </aside>

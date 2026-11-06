@@ -3,7 +3,11 @@ import { adminController } from "../controllers/admin.controller";
 import { requireRoles } from "../middleware/auth.middleware";
 
 const router = Router();
-router.use(requireRoles("Administrator"));
+// Scoped to this router's own paths: an unscoped router.use() mounted at
+// /api would also run for requests handled by routers mounted AFTER this
+// one (e.g. /api/library/*), locking non-admins out of them entirely.
+router.use("/admin", requireRoles("Administrator"));
+router.use("/audit-logs", requireRoles("Administrator"));
 
 // GET /api/admin/dashboard
 router.get("/admin/dashboard", (req, res, next) =>

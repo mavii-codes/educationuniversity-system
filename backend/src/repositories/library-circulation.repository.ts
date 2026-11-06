@@ -3,6 +3,7 @@ import type { PoolClient } from "pg";
 import {
   BorrowingRequestModel,
   BorrowingTransactionModel,
+  LibraryOverviewModel,
   OverdueFineModel,
   ReservationModel,
   StudentBorrowerModel,
@@ -85,6 +86,41 @@ type NotificationRow = {
   created_at: Date;
   is_read: boolean;
   action_url: string | null;
+};
+
+type OverviewTotalsRow = {
+  total_integrated_books: number;
+  total_copies: number;
+  available_copies: number;
+  total_borrowing_transactions: number;
+  total_student_borrowers: number;
+  active_loans: number;
+  overdue_transactions: number;
+  pending_borrowing_requests: number;
+  active_reservations: number;
+  total_fines_recorded: number | string;
+  last_sync_at: Date | null;
+};
+
+type OverviewCategoryRow = {
+  category: string;
+  count: number;
+  borrowed: number;
+};
+
+type OverviewProgramRow = {
+  program: string;
+  program_name: string;
+  active_borrowers: number;
+  active_loans: number;
+  total_borrows: number;
+};
+
+type OverviewMonthlyTrendRow = {
+  month: string;
+  borrowed: number;
+  returned: number;
+  overdue: number;
 };
 
 async function insertStudentNotification(
@@ -202,6 +238,129 @@ function mapFine(row: FineRow): OverdueFineModel {
     daysOverdue: row.days_overdue,
     fineAmount: Number(row.fine_amount),
     paymentStatus: row.payment_status,
+  };
+}
+
+export async function getLibraryProductionOverview(): Promise<LibraryOverviewModel> {
+  const [totals, categories, programs, monthlyTrend] = await Promise.all([
+    queryDb<OverviewTotalsRow>(
+      `SELECT
+         (SELECT COUNT(*) FROM library_books)::int AS total_integrated_books,
+         (SELECT COALESCE(SUM(total_copies), 0) FROM library_books)::int AS total_copies,
+         (SELECT COALESCE(SUM(available_copies), 0) FROM library_books)::int AS available_copies,
+         (SELECT COUNT(*) FROM library_transactions)::int AS total_borrowing_transactions,
+         (SELECT COUNT(DISTINCT student_id) FROM library_transactions)::int AS total_student_borrowers,
+         (SELECT COUNT(*) FROM library_transactions
+           WHERE status IN ('Borrowed', 'Overdue'))::int AS active_loans,
+         (SELECT COUNT(*) FROM library_transactions
+           WHERE status = 'Overdue'
+              OR (status = 'Borrowed' AND due_date < NOW()))::int AS overdue_transactions,
+         (SELECT COUNT(*) FROM library_borrowing_requests
+           WHERE status = 'Pending')::int AS pending_borrowing_requests,
+         (SELECT COUNT(*) FROM library_reservations
+           WHERE status IN ('Pending', 'Ready for Pickup'))::int AS active_reservations,
+         (SELECT COALESCE(SUM(fine_amount), 0) FROM library_fines
+           WHERE payment_status = 'Unpaid') AS total_fines_recorded,
+         (SELECT MAX(updated_at) FROM library_books) AS last_sync_at`
+    ),
+    queryDb<OverviewCategoryRow>(
+      `WITH active_loans AS (
+         SELECT book_id, COUNT(*)::int AS borrowed
+           FROM library_transactions
+          WHERE status IN ('Borrowed', 'Overdue')
+          GROUP BY book_id
+       )
+       SELECT b.category,
+              COUNT(*)::int AS count,
+              COALESCE(SUM(COALESCE(al.borrowed, 0)), 0)::int AS borrowed
+         FROM library_books AS b
+         LEFT JOIN active_loans AS al ON al.book_id = b.id
+        GROUP BY b.category
+        ORDER BY count DESC, b.category ASC`
+    ),
+    queryDb<OverviewProgramRow>(
+      `SELECT t.program_code AS program,
+              COALESCE(p.name, t.program_code) AS program_name,
+              COUNT(DISTINCT t.student_id) FILTER (
+                WHERE t.status IN ('Borrowed', 'Overdue')
+              )::int AS active_borrowers,
+              COUNT(*) FILTER (
+                WHERE t.status IN ('Borrowed', 'Overdue')
+              )::int AS active_loans,
+              COUNT(*)::int AS total_borrows
+         FROM library_transactions AS t
+         LEFT JOIN programs AS p ON p.code = t.program_code
+        GROUP BY t.program_code, p.name
+        ORDER BY total_borrows DESC, t.program_code ASC`
+    ),
+    queryDb<OverviewMonthlyTrendRow>(
+      `WITH months AS (
+         SELECT date_trunc('month', CURRENT_DATE) - make_interval(months => offsets.n) AS month_start,
+                LEAST(
+                  NOW(),
+                  date_trunc('month', CURRENT_DATE) - make_interval(months => offsets.n)
+                    + INTERVAL '1 month'
+                ) AS cutoff
+           FROM (VALUES (4), (3), (2), (1), (0)) AS offsets(n)
+       )
+       SELECT to_char(m.month_start, 'Mon') AS month,
+              COUNT(t.id) FILTER (
+                WHERE t.borrow_date >= m.month_start
+                  AND t.borrow_date < m.month_start + INTERVAL '1 month'
+              )::int AS borrowed,
+              COUNT(t.id) FILTER (
+                WHERE t.return_date >= m.month_start
+                  AND t.return_date < m.month_start + INTERVAL '1 month'
+              )::int AS returned,
+              COUNT(t.id) FILTER (
+                WHERE t.borrow_date < m.cutoff
+                  AND t.due_date < m.cutoff
+                  AND (t.return_date IS NULL OR t.return_date >= m.cutoff)
+              )::int AS overdue
+         FROM months AS m
+         LEFT JOIN library_transactions AS t
+           ON t.borrow_date < m.cutoff
+          AND (t.return_date IS NULL OR t.return_date >= m.month_start)
+        GROUP BY m.month_start, m.cutoff
+        ORDER BY m.month_start`
+    ),
+  ]);
+
+  const summary = totals.rows[0];
+
+  return {
+    kpis: {
+      totalIntegratedBooks: summary?.total_integrated_books ?? 0,
+      totalStudentBorrowers: summary?.total_student_borrowers ?? 0,
+      totalBorrowingTransactions: summary?.total_borrowing_transactions ?? 0,
+      availableBooks: summary?.available_copies ?? 0,
+      borrowedBooks: summary?.active_loans ?? 0,
+      overdueTransactions: summary?.overdue_transactions ?? 0,
+      totalFinesRecorded: Number(summary?.total_fines_recorded ?? 0),
+      lastSyncTimestamp:
+        summary?.last_sync_at?.toISOString() ?? new Date(0).toISOString(),
+      connectionStatus: "Connected",
+      apiEndpoint: "PostgreSQL · centralized library catalog",
+      adapterType: "SQL · Live aggregation",
+    },
+    categoryDistribution: categories.rows.map((row) => ({
+      category: row.category,
+      count: row.count,
+      borrowed: row.borrowed,
+    })),
+    programBorrowingStats: programs.rows.map((row) => ({
+      program: row.program,
+      programName: row.program_name,
+      activeBorrowers: row.active_borrowers,
+      activeLoans: row.active_loans,
+      totalBorrows: row.total_borrows,
+    })),
+    monthlyTrend: monthlyTrend.rows.map((row) => ({
+      month: row.month,
+      borrowed: row.borrowed,
+      returned: row.returned,
+      overdue: row.overdue,
+    })),
   };
 }
 

@@ -9,7 +9,14 @@ import React, {
 } from "react";
 import { useRouter } from "next/navigation";
 import { PortalAuthorizedRole } from "@/types";
-import { API_CONFIG, fetchJson, setSessionExpiredHandler } from "./api";
+import {
+  API_CONFIG,
+  fetchJson,
+  getApiErrorStatus,
+  refreshSession,
+  setSessionExpiredHandler,
+  setSessionUserUpdateHandler,
+} from "./api";
 
 export interface SessionUser {
   id: string;
@@ -65,6 +72,48 @@ const LEGACY_STORAGE_KEY = "udis_admin_session";
 /** Legacy mock-registration records; cleaned up opportunisticly on sign-out. */
 const REGISTERED_STUDENTS_KEY = "udis_registered_students";
 
+function normalizePortalUser(user: SessionUser): SessionUser {
+  return (user as { role?: string }).role === "Registrar"
+    ? { ...user, role: "Librarian" as const, accessRole: "Library Staff" }
+    : user;
+}
+
+function clearPersistedSession(): void {
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+    window.sessionStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+    window.sessionStorage.removeItem(LEGACY_STORAGE_KEY);
+    window.localStorage.removeItem(REGISTERED_STUDENTS_KEY);
+  } catch {
+    // Ignore storage access errors in restricted browsing modes
+  }
+}
+
+/**
+ * Fetch the authoritative session user. `/auth/*` endpoints are excluded from
+ * the shared client's auto-refresh retry, so an expired access cookie is
+ * refreshed explicitly and the request retried once.
+ */
+async function fetchCurrentUser(): Promise<SessionUser> {
+  try {
+    const data = await fetchJson<{ user?: SessionUser }>("/auth/me");
+    if (!data?.user) {
+      throw new Error("The server did not return a user session.");
+    }
+    return data.user;
+  } catch (error) {
+    if (getApiErrorStatus(error) !== 401) throw error;
+    if (!(await refreshSession())) throw error;
+
+    const data = await fetchJson<{ user?: SessionUser }>("/auth/me");
+    if (!data?.user) {
+      throw new Error("The server did not return a user session.");
+    }
+    return data.user;
+  }
+}
+
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -72,31 +121,93 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isInitializing, setIsInitializing] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
+  const applyServerUser = useCallback((nextUser: SessionUser) => {
+    setUser(nextUser);
     try {
-      const savedLocal =
-        window.localStorage.getItem(STORAGE_KEY) ||
-        window.localStorage.getItem(LEGACY_STORAGE_KEY);
-      const savedSession =
-        window.sessionStorage.getItem(STORAGE_KEY) ||
-        window.sessionStorage.getItem(LEGACY_STORAGE_KEY);
-      const raw = savedLocal || savedSession;
-      if (raw) {
-        const parsed = JSON.parse(raw) as SessionUser;
-        if (parsed && parsed.email) {
-          const restoredUser =
-            (parsed as { role: string }).role === "Registrar"
-              ? { ...parsed, role: "Librarian" as const, accessRole: "Library Staff" }
-              : parsed;
-          setUser(restoredUser);
-        }
-      }
-    } catch {
-      // Ignore storage parse issues
-    } finally {
-      setIsInitializing(false);
+      const storedLocally = window.localStorage.getItem(STORAGE_KEY) !== null;
+      const storage = storedLocally ? window.localStorage : window.sessionStorage;
+      storage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
+    } catch (error) {
+      console.error("[Auth] Failed to persist refreshed session profile:", error);
     }
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const restoreSession = async () => {
+      let restoredUser: SessionUser | null = null;
+      let restoredStorage: Storage | null = null;
+      try {
+        const savedLocal =
+          window.localStorage.getItem(STORAGE_KEY) ||
+          window.localStorage.getItem(LEGACY_STORAGE_KEY);
+        const savedSession =
+          window.sessionStorage.getItem(STORAGE_KEY) ||
+          window.sessionStorage.getItem(LEGACY_STORAGE_KEY);
+        const raw = savedLocal || savedSession;
+        if (raw) {
+          const parsed = JSON.parse(raw) as SessionUser;
+          if (parsed && parsed.email) {
+            restoredUser = normalizePortalUser(parsed);
+            // Optimistic first paint while the server revalidates the session.
+            setUser(restoredUser);
+            restoredStorage = savedLocal
+              ? window.localStorage
+              : window.sessionStorage;
+          }
+        }
+      } catch {
+        // Ignore storage parse issues
+      }
+
+      // Demo mode keeps its instant restore with no backend round-trip.
+      if (!API_CONFIG.useLiveApi || !restoredUser || !restoredStorage) {
+        setIsInitializing(false);
+        return;
+      }
+
+      try {
+        const serverUser = normalizePortalUser(await fetchCurrentUser());
+        if (cancelled) return;
+        setUser(serverUser);
+        try {
+          restoredStorage.setItem(STORAGE_KEY, JSON.stringify(serverUser));
+        } catch (error) {
+          console.error("[Auth] Failed to persist revalidated session:", error);
+        }
+      } catch (error) {
+        if (cancelled) return;
+        if (getApiErrorStatus(error) === 401) {
+          // Definitive auth failure after a refresh retry: drop the session.
+          clearPersistedSession();
+          setUser(null);
+        } else {
+          // Network blip / 5xx: keep the optimistic cached session.
+          console.warn(
+            "[Auth] Unable to revalidate the stored session; keeping cached session:",
+            error
+          );
+        }
+      } finally {
+        if (!cancelled) setIsInitializing(false);
+      }
+    };
+
+    void restoreSession();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    setSessionUserUpdateHandler((updatedUser) => {
+      if (!updatedUser || typeof updatedUser !== "object") return;
+      applyServerUser(normalizePortalUser(updatedUser as SessionUser));
+    });
+
+    return () => setSessionUserUpdateHandler(null);
+  }, [applyServerUser]);
 
   useEffect(() => {
     setSessionExpiredHandler(() => {

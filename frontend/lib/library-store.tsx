@@ -44,7 +44,14 @@ import {
   returnLibraryTransaction,
 } from "./api";
 
+type LibraryLoadState = "loading" | "ready" | "error";
+
 interface LibraryStoreContextValue {
+  // Live API load status. Always "ready" when the demo store is in use.
+  loadState: LibraryLoadState;
+  loadError?: string;
+  refreshData: () => Promise<void>;
+
   books: LibraryBook[];
   upsertBook: (book: LibraryBook) => void;
   borrowingRequests: BorrowingRequest[];
@@ -305,73 +312,130 @@ export function LibraryStoreProvider({
     }
   });
 
-  const refreshLiveLibraryData = useCallback(async () => {
-    const results = await Promise.allSettled([
-      getLibraryBooks(),
-      getLibraryFines(),
-      getLibraryRequests(),
-      getLibraryTransactions(),
-      getLibraryReservations(),
-      getLibraryNotifications(),
-    ]);
-    const [
-      catalogResult,
-      finesResult,
-      requestsResult,
-      transactionsResult,
-      reservationsResult,
-      notificationsResult,
-    ] = results;
-    if (catalogResult.status === "fulfilled") {
-      setBooks(catalogResult.value.map(addMockCoverUrl));
-    } else {
-      console.error("[Library] Failed to load catalog from the live API:", catalogResult.reason);
-    }
-    if (finesResult.status === "fulfilled") {
-      setFines(finesResult.value);
-    } else {
-      console.error("[Library] Failed to load fines from the live API:", finesResult.reason);
-    }
-    if (requestsResult.status === "fulfilled") {
-      setBorrowingRequests(requestsResult.value);
-    } else {
-      console.error(
-        "[Library] Failed to load borrowing requests from the live API:",
-        requestsResult.reason
-      );
-    }
-    if (transactionsResult.status === "fulfilled") {
-      setTransactions(transactionsResult.value);
-    } else {
-      console.error(
-        "[Library] Failed to load transactions from the live API:",
-        transactionsResult.reason
-      );
-    }
-    if (reservationsResult.status === "fulfilled") {
-      setReservations(reservationsResult.value);
-    } else {
-      console.error(
-        "[Library] Failed to load reservations from the live API:",
-        reservationsResult.reason
-      );
-    }
-    if (notificationsResult.status === "fulfilled") {
-      setNotifications(notificationsResult.value);
-    } else {
-      console.error(
-        "[Library] Failed to load notifications from the live API:",
-        notificationsResult.reason
-      );
-    }
-  }, []);
+  // Load status is only meaningful for the live API. The demo store always
+  // reports "ready" so degradation UI can never appear in demo mode.
+  const [loadState, setLoadState] = useState<LibraryLoadState>(() =>
+    API_CONFIG.useLiveApi ? "loading" : "ready"
+  );
+  const [loadError, setLoadError] = useState<string | undefined>(undefined);
+
+  const refreshLiveLibraryData = useCallback(
+    async ({ showLoading = false }: { showLoading?: boolean } = {}) => {
+      if (!API_CONFIG.useLiveApi) {
+        setLoadState("ready");
+        setLoadError(undefined);
+        return;
+      }
+
+      if (showLoading) {
+        setLoadState("loading");
+        setLoadError(undefined);
+      }
+
+      const results = await Promise.allSettled([
+        getLibraryBooks(),
+        getLibraryFines(),
+        getLibraryRequests(),
+        getLibraryTransactions(),
+        getLibraryReservations(),
+        getLibraryNotifications(),
+      ]);
+      const [
+        catalogResult,
+        finesResult,
+        requestsResult,
+        transactionsResult,
+        reservationsResult,
+        notificationsResult,
+      ] = results;
+
+      let successCount = 0;
+      let firstFailure: unknown;
+
+      if (catalogResult.status === "fulfilled") {
+        successCount += 1;
+        setBooks(catalogResult.value.map(addMockCoverUrl));
+      } else {
+        if (firstFailure === undefined) firstFailure = catalogResult.reason;
+        console.error("[Library] Failed to load catalog from the live API:", catalogResult.reason);
+      }
+      if (finesResult.status === "fulfilled") {
+        successCount += 1;
+        setFines(finesResult.value);
+      } else {
+        if (firstFailure === undefined) firstFailure = finesResult.reason;
+        console.error("[Library] Failed to load fines from the live API:", finesResult.reason);
+      }
+      if (requestsResult.status === "fulfilled") {
+        successCount += 1;
+        setBorrowingRequests(requestsResult.value);
+      } else {
+        if (firstFailure === undefined) firstFailure = requestsResult.reason;
+        console.error(
+          "[Library] Failed to load borrowing requests from the live API:",
+          requestsResult.reason
+        );
+      }
+      if (transactionsResult.status === "fulfilled") {
+        successCount += 1;
+        setTransactions(transactionsResult.value);
+      } else {
+        if (firstFailure === undefined) firstFailure = transactionsResult.reason;
+        console.error(
+          "[Library] Failed to load transactions from the live API:",
+          transactionsResult.reason
+        );
+      }
+      if (reservationsResult.status === "fulfilled") {
+        successCount += 1;
+        setReservations(reservationsResult.value);
+      } else {
+        if (firstFailure === undefined) firstFailure = reservationsResult.reason;
+        console.error(
+          "[Library] Failed to load reservations from the live API:",
+          reservationsResult.reason
+        );
+      }
+      if (notificationsResult.status === "fulfilled") {
+        successCount += 1;
+        setNotifications(notificationsResult.value);
+      } else {
+        if (firstFailure === undefined) firstFailure = notificationsResult.reason;
+        console.error(
+          "[Library] Failed to load notifications from the live API:",
+          notificationsResult.reason
+        );
+      }
+
+      // Any successful slice proves the service is reachable; only a wholly
+      // failed batch degrades the store to "error".
+      if (successCount === 0) {
+        setLoadState("error");
+        setLoadError(
+          firstFailure instanceof Error && firstFailure.message
+            ? firstFailure.message
+            : "The library service did not return any data."
+        );
+        return;
+      }
+      setLoadState("ready");
+      setLoadError(undefined);
+    },
+    []
+  );
+
+  // Explicit retry (surfaced by the shell banner) shows the loading state;
+  // mutation-triggered refreshes keep the current status to avoid flashing.
+  const refreshData = useCallback(async () => {
+    await refreshLiveLibraryData({ showLoading: true });
+  }, [refreshLiveLibraryData]);
 
   useEffect(() => {
     // Authenticated endpoints must never fire from the public login page.
     if (!API_CONFIG.useLiveApi || !isAuthenticated) return;
     let active = true;
     const loadLibraryData = async () => {
-      await refreshLiveLibraryData();
+      await refreshLiveLibraryData({ showLoading: true });
     };
     void loadLibraryData();
     const reloadFines = () => {
@@ -403,6 +467,9 @@ export function LibraryStoreProvider({
     setReservations([]);
     setFines([]);
     setNotifications([]);
+    // A signed-out store has not attempted a load yet; drop any stale status.
+    setLoadState("loading");
+    setLoadError(undefined);
   }, [isAuthenticated]);
 
   useEffect(() => {
@@ -1132,6 +1199,16 @@ export function LibraryStoreProvider({
         return { ok: true, message: "Fine is already paid." };
       }
 
+      // Never fake a payment against the demo store: no live endpoint means
+      // there is nowhere to persist the settlement.
+      if (!API_CONFIG.useLiveApi) {
+        return {
+          ok: false,
+          message:
+            "Demo mode cannot record fine payments. Connect the live API to settle fines at the circulation desk.",
+        };
+      }
+
       try {
         const result = await payLibraryFine(fineId);
         if (!result.success) {
@@ -1227,6 +1304,9 @@ export function LibraryStoreProvider({
   return (
     <LibraryStoreContext.Provider
       value={{
+        loadState,
+        loadError,
+        refreshData,
         books,
         upsertBook,
         borrowingRequests,

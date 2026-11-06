@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { AlertTriangle, Loader2, RefreshCw } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { MobileNavigation } from "./MobileNavigation";
 import { Header } from "./Header";
@@ -17,6 +17,55 @@ import { StaffSidebar } from "@/components/staff/StaffSidebar";
 import { StaffMobileDrawer } from "@/components/staff/StaffMobileDrawer";
 import { StaffHeader } from "@/components/staff/StaffHeader";
 import { useAuth } from "@/lib/auth";
+import { useLibraryStore } from "@/lib/library-store";
+
+function LibraryDataAlert() {
+  const { loadState, refreshData } = useLibraryStore();
+  const [isRetrying, setIsRetrying] = useState(false);
+
+  // Keep the alert mounted during an explicit retry so the button can show
+  // progress; a successful retry flips loadState to "ready" and unmounts it.
+  if (loadState !== "error" && !isRetrying) return null;
+
+  const handleRetry = async () => {
+    setIsRetrying(true);
+    try {
+      await refreshData();
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+
+  return (
+    <div className="mx-auto w-full max-w-[1440px] px-4 pt-4 sm:px-6 lg:px-8">
+      <div
+        role="alert"
+        className="flex flex-col gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-amber-900 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div className="flex items-start gap-2">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
+          <p className="text-xs font-medium leading-5">
+            Library data couldn&apos;t be loaded from the server — some lists
+            may be empty or out of date.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void handleRetry()}
+          disabled={isRetrying}
+          className="inline-flex shrink-0 items-center justify-center gap-1.5 self-end rounded-lg border border-amber-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-amber-800 transition hover:bg-amber-100 disabled:cursor-wait disabled:opacity-60 sm:self-auto"
+        >
+          {isRetrying ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <RefreshCw className="h-3 w-3" />
+          )}
+          {isRetrying ? "Retrying..." : "Retry"}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -135,6 +184,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <div className="flex min-h-screen flex-col lg:pl-64">
           <AdminHeader onOpenMobileMenu={() => setMobileMenuOpen(true)} />
+          <LibraryDataAlert />
           <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 sm:px-6 sm:py-7 lg:px-8">
             {children}
           </main>
@@ -184,6 +234,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <div className="flex min-h-screen flex-col lg:pl-64">
           <StaffHeader onOpenMobileMenu={() => setMobileMenuOpen(true)} />
+          <LibraryDataAlert />
           <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 sm:px-6 sm:py-7 lg:px-8">
             {children}
           </main>
@@ -237,6 +288,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <div className="flex min-h-screen flex-col lg:pl-64">
           <StudentHeader onOpenMobileMenu={() => setMobileMenuOpen(true)} />
+          <LibraryDataAlert />
           <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 sm:px-6 sm:py-7 lg:px-8">
             {children}
           </main>
@@ -264,6 +316,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex min-h-screen flex-col lg:pl-64">
         <Header onOpenMobileMenu={() => setMobileMenuOpen(true)} />
+        <LibraryDataAlert />
         <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 sm:px-6 sm:py-7 lg:px-8">
           {children}
         </main>

@@ -10,12 +10,13 @@ import {
   Server,
   ShieldAlert,
 } from "lucide-react";
-import { API_CONFIG } from "@/services/api";
+import { API_CONFIG } from "@/lib/api";
 import { Badge } from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/ToastProvider";
 
 export default function SettingsPage() {
   const { showToast } = useToast();
+  const isLiveApi = API_CONFIG.useLiveApi;
 
   const [universityName, setUniversityName] = useState(
     "Metropolitan State University"
@@ -261,27 +262,38 @@ export default function SettingsPage() {
                   API Service Adapter
                 </h3>
               </div>
-              <Badge variant="brand">Mock Mode</Badge>
+              <Badge variant={isLiveApi ? "success" : "warning"} dot>
+                {isLiveApi ? "Live API Connected" : "Mock Data Mode"}
+              </Badge>
             </div>
             <p className="mt-2.5 text-xs leading-relaxed text-slate-600">
-              Frontend data services are structured for seamless connection to the upcoming{" "}
-              <strong className="font-semibold text-slate-800">
-                Express.js + PostgreSQL
-              </strong>{" "}
-              REST API.
+              {isLiveApi ? (
+                <>
+                  Data services are connected to the{" "}
+                  <strong className="font-semibold text-slate-800">
+                    Express.js + PostgreSQL
+                  </strong>{" "}
+                  REST API and serve live library, student, and administration records.
+                </>
+              ) : (
+                <>
+                  Data services currently serve built-in demonstration data while the{" "}
+                  <strong className="font-semibold text-slate-800">
+                    Express.js + PostgreSQL
+                  </strong>{" "}
+                  REST API integration is finalized.
+                </>
+              )}
             </p>
             <div className="mt-4 space-y-1.5 rounded-lg border border-indigo-100 bg-white p-3 font-mono text-[11px] text-slate-600">
               <div className="flex items-center gap-1.5 text-indigo-700">
                 <CheckCircle2 className="h-3 w-3 shrink-0" />
                 <span>Base: {API_CONFIG.baseUrl}</span>
               </div>
-              <p>GET /api/students</p>
-              <p>GET /api/students/:id</p>
-              <p>GET /api/programs</p>
-              <p>GET /api/analytics</p>
-              <p>GET /api/data-sources</p>
-              <p>GET /api/integrations</p>
-              <p>GET /api/library/overview</p>
+              <p>/auth/* — Sign-in, sessions &amp; account passwords</p>
+              <p>/students/* &amp; /programs/* — Student identities</p>
+              <p>/library/* — Catalog, circulation, fines &amp; requests</p>
+              <p>/admin/* — Dashboard, staff users &amp; saved settings</p>
             </div>
           </div>
         </div>
