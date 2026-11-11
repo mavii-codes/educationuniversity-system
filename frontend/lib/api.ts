@@ -1274,10 +1274,46 @@ export async function getStudentLifecycle(
   studentId: string
 ): Promise<StudentLifecycle> {
   return tryLiveOrFallback(
-    () =>
-      fetchJson<StudentLifecycle>(
-        `/students/${encodeURIComponent(studentId)}/lifecycle`
-      ),
+    async () => {
+      const response = await fetchJson<{
+        profile?: {
+          studentId?: string;
+          studentName?: string;
+          programName?: string;
+          programCode?: string;
+          yearLevel?: string;
+          status?: string;
+        };
+        currentStage?: string | null;
+        stages?: StudentLifecycle["stages"];
+        timeline?: StudentLifecycle["timeline"];
+      }>(`/students/${encodeURIComponent(studentId)}/lifecycle`);
+      const profile = response.profile;
+      if (
+        !profile?.studentId ||
+        !profile.studentName ||
+        !profile.programName ||
+        !profile.programCode ||
+        !profile.yearLevel ||
+        !profile.status ||
+        !Array.isArray(response.stages) ||
+        !Array.isArray(response.timeline)
+      ) {
+        throw new Error("The lifecycle API response is missing required profile or timeline data.");
+      }
+
+      return {
+        studentId: profile.studentId,
+        studentName: profile.studentName,
+        programName: profile.programName,
+        programCode: profile.programCode,
+        yearLevel: profile.yearLevel,
+        status: profile.status,
+        currentStage: response.currentStage ?? "—",
+        stages: response.stages,
+        timeline: response.timeline,
+      };
+    },
     async () => {
       await simulateNetworkDelay(140);
       return buildMockStudentLifecycle(studentId);
