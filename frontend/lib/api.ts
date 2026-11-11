@@ -10,7 +10,6 @@ import {
   INTEGRATION_LOGS,
   INTEGRATION_SUMMARY,
   LIBRARY_BOOKS,
-  LIBRARY_ETL_LOGS,
   LIBRARY_OVERVIEW,
   LIFECYCLE_OVERVIEW_STATS,
   LIFECYCLE_STAGES,
@@ -35,6 +34,11 @@ import {
   CourseCatalogItem,
   DashboardAnalytics,
   DataSource,
+  FerpaAccessEvent,
+  FerpaConsent,
+  FerpaConsentInput,
+  FerpaDirectorySetting,
+  FerpaOverview,
   IntegrationSummary,
   IntegrationSyncLog,
   LibraryBook,
@@ -49,9 +53,17 @@ import {
   ReservationRecord,
   Student,
   StudentBorrower,
+  StudentLifecycle,
   StudentNotificationItem,
   SyncHistoryRecord,
 } from "@/types";
+import {
+  buildMockStudentLifecycle,
+  FERPA_ACCESS_EVENTS,
+  FERPA_CONSENTS,
+  FERPA_DIRECTORY_SETTINGS,
+  FERPA_OVERVIEW,
+} from "@/data/university-features-mock";
 
 /**
  * REST API Client Configuration
@@ -958,59 +970,22 @@ export async function payLibraryFine(
 
 // POST /api/library/etl/sync
 export async function runLibraryETL(triggeredBy = "Admin Console"): Promise<LibraryETLLog> {
-  return tryLiveOrFallback(
-    async () => {
-      const res = await fetchJson<{ success: boolean; data: LibraryETLLog }>("/library/etl/sync", {
-        method: "POST",
-        body: JSON.stringify({ triggeredBy }),
-      });
-      return res.data;
-    },
-    async () => {
-      await simulateNetworkDelay(900);
-      const newLog: LibraryETLLog = {
-        id: `etl-run-${Date.now()}`,
-        jobName: "Library LMS API Ingestion & Student Identity Matching",
-        status: "Completed",
-        startedAt: new Date(Date.now() - 6200).toISOString(),
-        completedAt: new Date().toISOString(),
-        duration: "6.2s",
-        recordsExtracted: 27,
-        recordsValidated: 27,
-        duplicatesCleaned: 1,
-        studentsMatched: 6,
-        recordsLoaded: 26,
-        errors: [],
-        executionLog: [
-          "[00:00.000] Initialized connection to external Library LMS API (Adapter: Koha/Folio)",
-          "[00:01.200] Extracted 11 raw catalog books, 6 borrower cards, 6 circulation transactions, 3 reservations",
-          "[00:02.400] Validation: verified 11 ISBN-13 checksums and date ranges",
-          "[00:03.100] Cleaning: detected and purged 1 duplicate book record (ISBN 978-0262033848)",
-          "[00:04.300] Transformation: mapped Koha marc21 fields to University DataHub central schema",
-          "[00:05.100] Identity Matching: resolved 6/6 student borrower IDs against student master records",
-          "[00:05.800] Loaded 10 books, 6 borrowers, 6 transactions, 3 reservations into central database",
-          "[00:06.200] ETL pipeline completed successfully with 0 errors",
-        ],
-      };
-      LIBRARY_ETL_LOGS.unshift(newLog);
-      return newLog;
+  const res = await fetchJson<{ success: boolean; data: LibraryETLLog }>(
+    "/library/etl/sync",
+    {
+      method: "POST",
+      body: JSON.stringify({ triggeredBy }),
     }
   );
+  return res.data;
 }
 
 // GET /api/library/etl/logs
 export async function getLibraryETLLogs(): Promise<LibraryETLLog[]> {
-  return tryLiveOrFallback(
-    async () => {
-      const res = await fetchJson<{ success: boolean; data: LibraryETLLog[] }>("/library/etl/logs");
-      return res.data;
-    },
-    async () => {
-      await simulateNetworkDelay(120);
-      return LIBRARY_ETL_LOGS.map((l) => ({ ...l }));
-    },
-    (data) => Array.isArray(data)
+  const res = await fetchJson<{ success: boolean; data: LibraryETLLog[] }>(
+    "/library/etl/logs"
   );
+  return res.data;
 }
 
 // GET /api/audit-logs
@@ -1139,4 +1114,174 @@ export async function markAllLibraryNotificationsRead(): Promise<void> {
     method: "POST",
     body: JSON.stringify({}),
   });
+}
+
+// =============================================================
+// FERPA GOVERNANCE
+// =============================================================
+
+// GET /api/ferpa/overview
+export async function getFerpaOverview(): Promise<FerpaOverview> {
+  return tryLiveOrFallback(
+    () => fetchJson<FerpaOverview>("/ferpa/overview"),
+    async () => {
+      await simulateNetworkDelay(110);
+      return { ...FERPA_OVERVIEW };
+    },
+    (data) =>
+      Boolean(data) &&
+      typeof data.activeConsents === "number" &&
+      typeof data.directoryOptOuts === "number"
+  );
+}
+
+// GET /api/ferpa/consents
+export async function getFerpaConsents(
+  studentId?: string
+): Promise<FerpaConsent[]> {
+  return tryLiveOrFallback(
+    async () => {
+      const query = studentId
+        ? `?studentId=${encodeURIComponent(studentId)}`
+        : "";
+      const response = await fetchJson<{ consents: FerpaConsent[] }>(
+        `/ferpa/consents${query}`
+      );
+      return response.consents;
+    },
+    async () => {
+      await simulateNetworkDelay(110);
+      return FERPA_CONSENTS.filter(
+        (consent) => !studentId || consent.studentId === studentId
+      ).map((consent) => ({ ...consent }));
+    },
+    (data) => Array.isArray(data)
+  );
+}
+
+// POST /api/ferpa/consents
+export async function recordFerpaConsent(
+  input: FerpaConsentInput
+): Promise<FerpaConsent> {
+  if (API_CONFIG.useLiveApi) {
+    const response = await fetchJson<{ consent: FerpaConsent }>(
+      "/ferpa/consents",
+      {
+        method: "POST",
+        body: JSON.stringify(input),
+      }
+    );
+    return response.consent;
+  }
+
+  await simulateNetworkDelay(220);
+  const student = STUDENTS.find((candidate) => candidate.id === input.studentId);
+  const consent: FerpaConsent = {
+    id: `ferpa-consent-${Date.now()}`,
+    studentId: input.studentId,
+    studentName: student?.name ?? input.studentId,
+    consentType: input.consentType,
+    status: input.granted ? "Granted" : "Revoked",
+    effectiveAt: new Date().toISOString(),
+    expiresAt: null,
+    recordedByName: "Administrator",
+    note: input.note?.trim() ? input.note.trim() : null,
+  };
+  FERPA_CONSENTS.unshift(consent);
+  FERPA_OVERVIEW.activeConsents = Math.max(
+    0,
+    FERPA_OVERVIEW.activeConsents + (input.granted ? 1 : -1)
+  );
+  return { ...consent };
+}
+
+// GET /api/ferpa/access-log
+export async function getFerpaAccessLog(
+  limit = 100
+): Promise<FerpaAccessEvent[]> {
+  return tryLiveOrFallback(
+    async () => {
+      const response = await fetchJson<{ events: FerpaAccessEvent[] }>(
+        `/ferpa/access-log?limit=${encodeURIComponent(String(limit))}`
+      );
+      return response.events;
+    },
+    async () => {
+      await simulateNetworkDelay(110);
+      return FERPA_ACCESS_EVENTS.slice(0, limit).map((event) => ({ ...event }));
+    },
+    (data) => Array.isArray(data)
+  );
+}
+
+// GET /api/ferpa/directory-settings
+export async function getFerpaDirectorySettings(): Promise<
+  FerpaDirectorySetting[]
+> {
+  return tryLiveOrFallback(
+    async () => {
+      const response = await fetchJson<{ settings: FerpaDirectorySetting[] }>(
+        "/ferpa/directory-settings"
+      );
+      return response.settings;
+    },
+    async () => {
+      await simulateNetworkDelay(110);
+      return FERPA_DIRECTORY_SETTINGS.map((setting) => ({ ...setting }));
+    },
+    (data) => Array.isArray(data)
+  );
+}
+
+// PATCH /api/ferpa/directory-settings/:studentId
+export async function updateFerpaDirectorySetting(
+  studentId: string,
+  directoryOptOut: boolean
+): Promise<FerpaDirectorySetting> {
+  if (API_CONFIG.useLiveApi) {
+    const response = await fetchJson<{ setting: FerpaDirectorySetting }>(
+      `/ferpa/directory-settings/${encodeURIComponent(studentId)}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ directoryOptOut }),
+      }
+    );
+    return response.setting;
+  }
+
+  await simulateNetworkDelay(180);
+  const existing = FERPA_DIRECTORY_SETTINGS.find(
+    (setting) => setting.studentId === studentId
+  );
+  if (!existing) {
+    throw new Error(`No directory setting was found for student ${studentId}.`);
+  }
+  const previousOptOut = existing.directoryOptOut;
+  existing.directoryOptOut = directoryOptOut;
+  existing.updatedAt = new Date().toISOString();
+  if (previousOptOut !== directoryOptOut) {
+    FERPA_OVERVIEW.directoryOptOuts += directoryOptOut ? 1 : -1;
+  }
+  return { ...existing };
+}
+
+// =============================================================
+// UNIFIED STUDENT LIFECYCLE (PER STUDENT)
+// =============================================================
+
+// GET /api/students/:id/lifecycle
+export async function getStudentLifecycle(
+  studentId: string
+): Promise<StudentLifecycle> {
+  return tryLiveOrFallback(
+    () =>
+      fetchJson<StudentLifecycle>(
+        `/students/${encodeURIComponent(studentId)}/lifecycle`
+      ),
+    async () => {
+      await simulateNetworkDelay(140);
+      return buildMockStudentLifecycle(studentId);
+    },
+    (data) => Boolean(data?.stages && Array.isArray(data.stages) && data?.studentId)
+  );
 }

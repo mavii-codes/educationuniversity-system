@@ -2,7 +2,9 @@ import {
   Bell,
   BookMarked,
   BookOpen,
+  Database,
   FileClock,
+  GraduationCap,
   LayoutDashboard,
   LucideIcon,
   Settings,
@@ -61,6 +63,21 @@ const ADMIN_NAVIGATION_GROUPS: AdminNavGroup[] = [
   {
     groupLabel: "Administration",
     items: [
+      {
+        label: "Data Integration",
+        href: "/admin/etl",
+        icon: Database,
+      },
+      {
+        label: "Student Lifecycle",
+        href: "/admin/lifecycle",
+        icon: GraduationCap,
+      },
+      {
+        label: "FERPA Compliance",
+        href: "/admin/ferpa",
+        icon: ShieldCheck,
+      },
       {
         label: "User Management",
         href: "/admin/users",
@@ -153,6 +170,27 @@ export function getAdminPageMeta(pathname: string): {
     return {
       title: "Borrower Profile",
       subtitle: "Library membership and circulation activity",
+    };
+  }
+  if (pathname === "/admin/etl") {
+    return {
+      title: "Data Integration",
+      subtitle:
+        "Sync university source systems and monitor ETL pipeline runs",
+    };
+  }
+  if (pathname === "/admin/lifecycle") {
+    return {
+      title: "Student Lifecycle",
+      subtitle:
+        "Track cohort progression and per-student milestones across integrated systems",
+    };
+  }
+  if (pathname === "/admin/ferpa") {
+    return {
+      title: "FERPA Compliance",
+      subtitle:
+        "Manage consent records, directory opt-outs, and protected-record access",
     };
   }
   if (pathname === "/admin/audit-logs") {

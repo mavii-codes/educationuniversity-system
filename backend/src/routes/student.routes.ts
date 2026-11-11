@@ -27,6 +27,23 @@ router.get("/students/:id", (req, res, next) => {
   studentController.getStudentById(req, res, next);
 });
 
+// GET /api/students/:id/lifecycle
+router.get("/students/:id/lifecycle", (req, res, next) => {
+  const user = currentUser(res);
+  if (
+    user?.portalRole !== "Administrator" &&
+    user?.portalRole !== "Librarian" &&
+    !(user?.portalRole === "Student" && user.id === req.params.id)
+  ) {
+    res.status(403).json({
+      error: "Forbidden",
+      message: "You may only view your own student lifecycle.",
+    });
+    return;
+  }
+  studentController.getStudentLifecycle(req, res, next);
+});
+
 // GET /api/lifecycle
 router.get("/lifecycle", requireRoles("Administrator", "Librarian"), (req, res, next) =>
   studentController.getLifecycle(req, res, next)

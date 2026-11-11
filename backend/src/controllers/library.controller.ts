@@ -10,6 +10,10 @@ import {
   updateLibraryBookCover,
 } from "../repositories/library.repository";
 import { libraryETLService } from "../services/library.service";
+import {
+  LibraryEtlUnavailableError,
+  libraryEtlService,
+} from "../services/library-etl.service";
 import { getCoverUrl } from "../utils/getCover";
 import {
   getUploadedCoverUrl,
@@ -542,15 +546,28 @@ export const getBookCategories = async (_req: Request, res: Response) => {
 
 export const runLibraryETLSync = async (req: Request, res: Response) => {
   try {
-    const triggeredBy = req.body?.triggeredBy || "Admin Console";
-    const log = await libraryETLService.runPipelineSync(triggeredBy);
+    const triggeredBySchema = z
+      .object({ triggeredBy: z.string().trim().min(1).max(120).optional() })
+      .strict();
+    const parsedBody = triggeredBySchema.safeParse(req.body ?? {});
+    if (!parsedBody.success) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid Library ETL request.",
+      });
+      return;
+    }
+
+    const log = await libraryEtlService.runPipelineSync(
+      parsedBody.data.triggeredBy ?? "Admin Console"
+    );
     res.json({
       success: true,
-      message: "Library ETL pipeline executed successfully",
+      message: "Live Library ETL pipeline executed successfully",
       data: log,
     });
   } catch (error) {
-    res.status(500).json({
+    res.status(error instanceof LibraryEtlUnavailableError ? 503 : 500).json({
       success: false,
       message: "Library ETL pipeline execution encountered an error",
       error: error instanceof Error ? error.message : "Unknown error",
@@ -558,15 +575,15 @@ export const runLibraryETLSync = async (req: Request, res: Response) => {
   }
 };
 
-export const getLibraryETLLogs = (_req: Request, res: Response) => {
+export const getLibraryETLLogs = async (_req: Request, res: Response) => {
   try {
-    const logs = libraryETLService.getETLLogs();
+    const logs = await libraryEtlService.getETLLogs();
     res.json({
       success: true,
       data: logs,
     });
   } catch (error) {
-    res.status(500).json({
+    res.status(error instanceof LibraryEtlUnavailableError ? 503 : 500).json({
       success: false,
       message: "Failed to retrieve ETL pipeline execution logs",
       error: error instanceof Error ? error.message : "Unknown error",
@@ -628,6 +645,15 @@ export const createBorrowingRequest = async (req: Request, res: Response) => {
       data: request,
     });
   } catch (error) {
+    // Partial unique index idx_library_requests_active_unique enforces one
+    // active (Pending/Approved) request per student per book — surface the
+    // race as a clean conflict instead of a 500.
+    if (isUniqueViolation(error)) {
+      return res.status(409).json({
+        success: false,
+        message: "You already have an active borrowing request for this book.",
+      });
+    }
     res.status(500).json({
       success: false,
       message: "Failed to submit borrowing request",
@@ -704,6 +730,15 @@ export const createLibraryReservation = async (req: Request, res: Response) => {
     const isClientError =
       message ===
       "Book or student not found, or an active reservation already exists.";
+    // Partial unique index idx_library_reservations_active_unique enforces one
+    // active reservation per student per book — surface the race as a clean
+    // conflict instead of a 500.
+    if (isUniqueViolation(error)) {
+      return res.status(409).json({
+        success: false,
+        message: "You already have an active reservation for this book.",
+      });
+    }
     return res.status(isClientError ? 400 : 500).json({
       success: false,
       message,

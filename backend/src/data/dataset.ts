@@ -25,7 +25,6 @@ export interface SeedDataset {
   integrationLogs: IntegrationLogModel[];
   alumniRecords: AlumniModel[];
   alumniAnalytics: Record<string, any>;
-  alumniCrmSourceInfo: Record<string, unknown>;
   integratedAlumni: IntegratedAlumniModel[];
   reports: ReportModel[];
   notifications: NotificationModel[];

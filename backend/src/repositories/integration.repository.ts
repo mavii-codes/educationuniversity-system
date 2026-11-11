@@ -50,6 +50,7 @@ export async function findAllDataSources(): Promise<DataSourceModel[]> {
     `SELECT id, code, name, short_name, description, status, record_count, last_synced_at,
             sync_frequency, endpoint_preview, health_score, entities_synced, maintainer_dept
        FROM data_sources
+      WHERE code = 'LIBRARY'
       ORDER BY sort_order, code`
   );
 
@@ -94,7 +95,10 @@ export async function performDataSourceSync(id: string): Promise<SourceSyncResul
       name: string;
       record_count: number;
     }>(
-      `SELECT id, code, name, record_count FROM data_sources WHERE id = $1 FOR UPDATE`,
+      `SELECT id, code, name, record_count
+         FROM data_sources
+        WHERE id = $1 AND code = 'LIBRARY'
+        FOR UPDATE`,
       [id]
     );
 

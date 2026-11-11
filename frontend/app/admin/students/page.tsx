@@ -1,7 +1,14 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertCircle, BookMarked, Search, Users } from "lucide-react";
+import Link from "next/link";
+import {
+  AlertCircle,
+  ArrowRight,
+  BookMarked,
+  Search,
+  Users,
+} from "lucide-react";
 import { getLibraryBorrowers } from "@/lib/api";
 import { StudentBorrower } from "@/types";
 import { Badge } from "@/components/ui/Badge";
@@ -125,18 +132,19 @@ export default function LibraryBorrowersPage() {
                 <th scope="col" className="px-4 py-3.5">Active loans</th>
                 <th scope="col" className="px-4 py-3.5">Fines</th>
                 <th scope="col" className="px-5 py-3.5">Account status</th>
+                <th scope="col" className="px-5 py-3.5">Lifecycle</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center text-sm text-slate-500">
+                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-slate-500">
                     Loading borrower accounts...
                   </td>
                 </tr>
               ) : filteredBorrowers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center text-sm text-slate-500">
+                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-slate-500">
                     {error
                       ? "Borrower accounts are unavailable."
                       : search
@@ -174,6 +182,15 @@ export default function LibraryBorrowersPage() {
                       >
                         {borrower.status}
                       </Badge>
+                    </td>
+                    <td className="px-5 py-4">
+                      <Link
+                        href={`/admin/lifecycle?studentId=${encodeURIComponent(borrower.studentId)}`}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50/60 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100"
+                      >
+                        Lifecycle
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </Link>
                     </td>
                   </tr>
                 ))

@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { BookOpen, ChevronDown, LogOut, User } from "lucide-react";
+import { BookOpen, LogOut, User } from "lucide-react";
 import { STUDENT_NAVIGATION_GROUPS } from "./student-navigation";
 import { useAuth } from "@/lib/auth";
 import { useLibraryStore } from "@/lib/library-store";

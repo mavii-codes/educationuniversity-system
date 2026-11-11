@@ -603,3 +603,108 @@ export interface StudentLibraryDashboardSummary {
   outstandingFinesTotal: number;
   unreadNotificationsCount: number;
 }
+
+// -------------------------------------------------------------
+// FERPA Governance & Unified Student Lifecycle
+// -------------------------------------------------------------
+
+export interface FerpaOverview {
+  activeConsents: number;
+  directoryOptOuts: number;
+  accessEventsLast30Days: number;
+  restrictedStudents: number;
+}
+
+export type FerpaConsentType =
+  | "RECORDS_RELEASE"
+  | "DIRECTORY_INFO"
+  | "THIRD_PARTY"
+  | "RESEARCH_USE";
+
+export type FerpaConsentStatus = "Granted" | "Revoked";
+
+export interface FerpaConsent {
+  id: string;
+  studentId: string;
+  studentName: string;
+  consentType: FerpaConsentType;
+  status: FerpaConsentStatus;
+  effectiveAt: string;
+  expiresAt: string | null;
+  recordedByName: string | null;
+  note: string | null;
+}
+
+export interface FerpaConsentInput {
+  studentId: string;
+  consentType: FerpaConsentType;
+  granted: boolean;
+  note?: string;
+}
+
+export interface FerpaAccessEvent {
+  id: string;
+  studentId: string;
+  studentName: string;
+  viewerId: string;
+  viewerName: string;
+  viewerRole: string;
+  action: string;
+  occurredAt: string;
+}
+
+export interface FerpaDirectorySetting {
+  studentId: string;
+  studentName: string;
+  directoryOptOut: boolean;
+  updatedAt: string;
+}
+
+export type LifecycleStageDetailKey =
+  | "ADMISSIONS"
+  | "ENROLLMENT"
+  | "LMS_ENGAGEMENT"
+  | "LIBRARY_ACTIVITY"
+  | "FINANCIAL_STANDING"
+  | "ALUMNI";
+
+export type LifecycleStageDetailStatus =
+  | "Completed"
+  | "Active"
+  | "Upcoming"
+  | "Alumni";
+
+export interface LifecycleStageMetric {
+  label: string;
+  value: string;
+}
+
+export interface LifecycleStageDetail {
+  key: LifecycleStageDetailKey;
+  label: string;
+  status: LifecycleStageDetailStatus;
+  date: string | null;
+  summary: string;
+  metrics: LifecycleStageMetric[];
+}
+
+export interface LifecycleTimelineEvent {
+  id: string;
+  stage: string;
+  sourceSystem: string;
+  title: string;
+  description: string | null;
+  occurredAt: string;
+}
+
+export interface StudentLifecycle {
+  studentId: string;
+  studentName: string;
+  programName: string;
+  programCode: string;
+  yearLevel: string;
+  status: string;
+  currentStage: string;
+  stages: LifecycleStageDetail[];
+  timeline: LifecycleTimelineEvent[];
+}

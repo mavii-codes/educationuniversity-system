@@ -2,6 +2,9 @@ import { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 import { analyticsService } from "../services/analytics.service";
 import { studentService } from "../services/student.service";
+import { studentLifecycleService } from "../services/student-lifecycle.service";
+import { ferpaService } from "../services/ferpa.service";
+import { currentUser } from "../middleware/auth.middleware";
 import { ApiError } from "../middleware/error.middleware";
 
 const studentQuerySchema = z.object({
@@ -22,7 +25,7 @@ export class StudentController {
         throw new ApiError(400, "Invalid student filter parameters.");
       }
 
-      const students = await studentService.findAll(parsed.data);
+      const students = await studentService.findAll(parsed.data, currentUser(res));
       res.json(students);
     } catch (error) {
       next(error);
@@ -40,7 +43,67 @@ export class StudentController {
       if (!student) {
         throw new ApiError(404, `Student record "${parsedId.data}" not found`);
       }
-      res.json(student);
+
+      const user = currentUser(res);
+      const isStaff =
+        user?.portalRole === "Administrator" || user?.portalRole === "Librarian";
+
+      let payload = student;
+      if (user?.portalRole === "Librarian") {
+        const directoryOptOut = await ferpaService.isDirectoryOptOut(student.id);
+        payload = ferpaService.getMaskedStudent(student, {
+          ...user,
+          directoryOptOut,
+        });
+      }
+
+      if (isStaff && user) {
+        await ferpaService.logStudentAccess({
+          studentId: student.id,
+          viewer: user,
+          action: "VIEW_PROFILE",
+        });
+      }
+
+      res.json(payload);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getStudentLifecycle(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const parsedId = idSchema.safeParse(req.params.id);
+      if (!parsedId.success) {
+        throw new ApiError(400, "Invalid student ID.");
+      }
+
+      const user = currentUser(res);
+      if (!user) {
+        throw new ApiError(401, "Authentication required.");
+      }
+
+      const lifecycle = await studentLifecycleService.getStudentLifecycle(
+        parsedId.data,
+        user
+      );
+      if (!lifecycle) {
+        throw new ApiError(404, `Student record "${parsedId.data}" not found`);
+      }
+
+      if (user.portalRole !== "Student") {
+        await ferpaService.logStudentAccess({
+          studentId: parsedId.data,
+          viewer: user,
+          action: "VIEW_LIFECYCLE",
+        });
+      }
+
+      res.json(lifecycle);
     } catch (error) {
       next(error);
     }

@@ -105,7 +105,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         router.replace("/admin/login");
       } else if (user?.role === "Student") {
         router.replace("/student/dashboard");
-      } else if (user?.role === "Librarian") {
+      } else if (
+        user?.role === "Librarian" &&
+        pathname !== "/admin/ferpa" &&
+        !pathname?.startsWith("/admin/ferpa/")
+      ) {
+        // Librarians have read-only FERPA visibility; all other admin modules
+        // remain Administrator-only.
         router.replace("/staff/dashboard");
       }
     } else if (isStaffPortal) {

@@ -1758,143 +1758,38 @@
   ],
   "dataSources": [
     {
-      "id": "src-sis",
-      "code": "SIS",
-      "name": "Student Information System",
-      "shortName": "SIS Core",
-      "description": "Primary registrar repository for admissions, enrollment loads, curriculum schedules, official grades, and student standing.",
-      "status": "Connected",
-      "lastSynced": "5 minutes ago",
-      "recordCount": 5240,
-      "syncFrequency": "Every 15 minutes",
-      "endpointPreview": "/api/data-sources/sis",
-      "healthScore": 99.9,
-      "entitiesSynced": [
-        "Students",
-        "Enrollments",
-        "Programs",
-        "Grades",
-        "Academic Standing"
-      ],
-      "maintainerDept": "Office of the University Registrar"
-    },
-    {
-      "id": "src-lms",
-      "code": "LMS",
-      "name": "Learning Management System",
-      "shortName": "University LMS",
-      "description": "Digital classroom platform tracking course logins, module completion rates, online quizzes, and assignment submissions.",
-      "status": "Connected",
-      "lastSynced": "12 minutes ago",
-      "recordCount": 5100,
-      "syncFrequency": "Every 30 minutes",
-      "endpointPreview": "/api/data-sources/lms",
-      "healthScore": 98.7,
-      "entitiesSynced": [
-        "Course Shells",
-        "Login Sessions",
-        "Assignments",
-        "Module Progress"
-      ],
-      "maintainerDept": "Center for Educational Technology"
-    },
-    {
-      "id": "src-hr",
-      "code": "HR",
-      "name": "HR / Payroll",
-      "shortName": "HR & Faculty",
-      "description": "Faculty roster, department appointments, teaching load allocations, academic advisers, and administrative staff directory.",
-      "status": "Connected",
-      "lastSynced": "25 minutes ago",
-      "recordCount": 386,
-      "syncFrequency": "Every 6 hours",
-      "endpointPreview": "/api/data-sources/hr",
-      "healthScore": 99.5,
-      "entitiesSynced": [
-        "Faculty Profiles",
-        "Department Assignments",
-        "Adviser Mapping",
-        "Teaching Loads"
-      ],
-      "maintainerDept": "Human Resources Department"
-    },
-    {
       "id": "src-library",
       "code": "LIBRARY",
       "name": "Library System",
       "shortName": "Campus Library",
-      "description": "Integrated cataloging and circulation system managing book loans, digital journal access, due dates, and graduation clearances.",
+      "description": "Integrated cataloging and circulation system managing book loans, due dates, and library clearances.",
       "status": "Connected",
       "lastSynced": "18 minutes ago",
       "recordCount": 4850,
       "syncFrequency": "Every hour",
-      "endpointPreview": "/api/data-sources/library",
+      "endpointPreview": "/api/library/overview",
       "healthScore": 99.4,
       "entitiesSynced": [
+        "Catalog Books",
+        "Student Borrowers",
         "Circulation Loans",
-        "Returned Holdings",
-        "Clearance Status",
-        "Research Access"
+        "Returns",
+        "Reservations",
+        "Overdue Fines"
       ],
       "maintainerDept": "University Library Services"
-    },
-    {
-      "id": "src-alumni",
-      "code": "ALUMNI",
-      "name": "Alumni CRM",
-      "shortName": "Alumni Relations",
-      "description": "Graduate tracer platform recording alumni employment status, hiring organizations, geographic distribution, and industry feedback.",
-      "status": "Connected",
-      "lastSynced": "42 minutes ago",
-      "recordCount": 8400,
-      "syncFrequency": "Daily at 06:00 AM",
-      "endpointPreview": "/api/data-sources/alumni",
-      "healthScore": 96.2,
-      "entitiesSynced": [
-        "Alumni Directory",
-        "Employment Outcomes",
-        "Tracer Surveys",
-        "Partner Companies"
-      ],
-      "maintainerDept": "Alumni & Career Placement Office"
     }
   ],
   "integrationSummary": {
-    "totalRecordsProcessed": 23976,
-    "successfulRecords": 23948,
-    "failedRecords": 4,
-    "duplicateRecords": 24,
-    "lastIntegration": "Today, 5 minutes ago",
+    "totalRecordsProcessed": 4850,
+    "successfulRecords": 4850,
+    "failedRecords": 0,
+    "duplicateRecords": 0,
+    "lastIntegration": "Today, 10:30 AM",
     "currentStatus": "Operational",
-    "uptimePercentage": 99.92
+    "uptimePercentage": 100
   },
   "integrationLogs": [
-    {
-      "id": "sync-1001",
-      "sourceCode": "SIS",
-      "sourceName": "SIS",
-      "recordsProcessed": 5240,
-      "duplicatesDetected": 0,
-      "failedRecords": 0,
-      "duration": "14.2s",
-      "status": "Successful",
-      "dateLabel": "Today",
-      "timestamp": "Today, 10:45 AM",
-      "notes": "All active student profiles and midterm grade records verified."
-    },
-    {
-      "id": "sync-1002",
-      "sourceCode": "LMS",
-      "sourceName": "LMS",
-      "recordsProcessed": 5100,
-      "duplicatesDetected": 4,
-      "failedRecords": 0,
-      "duration": "21.8s",
-      "status": "Successful",
-      "dateLabel": "Today",
-      "timestamp": "Today, 10:38 AM",
-      "notes": "Course completion metrics and weekly engagement logs merged."
-    },
     {
       "id": "sync-1003",
       "sourceCode": "LIBRARY",
@@ -1907,45 +1802,6 @@
       "dateLabel": "Today",
       "timestamp": "Today, 10:30 AM",
       "notes": "Active circulation loans and return clearances synchronized."
-    },
-    {
-      "id": "sync-1004",
-      "sourceCode": "ALUMNI",
-      "sourceName": "Alumni",
-      "recordsProcessed": 3200,
-      "duplicatesDetected": 12,
-      "failedRecords": 2,
-      "duration": "18.4s",
-      "status": "Warning",
-      "dateLabel": "Today",
-      "timestamp": "Today, 10:15 AM",
-      "notes": "12 duplicate alumni personal email entries queued for identity merge."
-    },
-    {
-      "id": "sync-1005",
-      "sourceCode": "HR",
-      "sourceName": "HR / Payroll",
-      "recordsProcessed": 386,
-      "duplicatesDetected": 0,
-      "failedRecords": 0,
-      "duration": "4.1s",
-      "status": "Successful",
-      "dateLabel": "Today",
-      "timestamp": "Today, 09:00 AM",
-      "notes": "Faculty teaching load and academic adviser assignments updated."
-    },
-    {
-      "id": "sync-1006",
-      "sourceCode": "SIS",
-      "sourceName": "SIS",
-      "recordsProcessed": 5200,
-      "duplicatesDetected": 8,
-      "failedRecords": 2,
-      "duration": "15.0s",
-      "status": "Warning",
-      "dateLabel": "Yesterday",
-      "timestamp": "Yesterday, 06:00 PM",
-      "notes": "8 transferee records required manual middle-name reconciliation."
     }
   ],
   "alumniRecords": [
@@ -2137,15 +1993,6 @@
       }
     ]
   },
-  "alumniCrmSourceInfo": {
-    "dataSource": "Alumni CRM",
-    "integrationMethod": "API / ETL / ELT",
-    "connectionStatus": "Connected",
-    "lastSynchronization": "Today, 10:42 AM",
-    "recordsSynchronized": 18560,
-    "graduationBatchesCount": 5,
-    "programsRepresentedCount": 6
-  },
   "integratedAlumni": [
     {
       "id": "ALM-001",
@@ -2157,7 +2004,7 @@
       "batch": "2026",
       "graduationDate": "May 2026",
       "status": "Alumni",
-      "source": "Alumni CRM",
+      "source": "Alumni Records",
       "email": "patricia.lim@alumni.university.edu",
       "contactNumber": "+63 917 482 1104",
       "enrollmentYear": "2022"
@@ -2172,7 +2019,7 @@
       "batch": "2025",
       "graduationDate": "June 2025",
       "status": "Alumni",
-      "source": "Alumni CRM",
+      "source": "Alumni Records",
       "email": "camille.villanueva@alumni.university.edu",
       "contactNumber": "+63 918 309 7741",
       "enrollmentYear": "2021"
@@ -2187,7 +2034,7 @@
       "batch": "2025",
       "graduationDate": "June 2025",
       "status": "Alumni",
-      "source": "Alumni CRM",
+      "source": "Alumni Records",
       "email": "miguel.tan@alumni.university.edu",
       "contactNumber": "+63 917 654 2290",
       "enrollmentYear": "2021"
@@ -2202,7 +2049,7 @@
       "batch": "2024",
       "graduationDate": "May 2024",
       "status": "Alumni",
-      "source": "Alumni CRM",
+      "source": "Alumni Records",
       "email": "kevin.reyes@alumni.university.edu",
       "contactNumber": "+63 919 842 5531",
       "enrollmentYear": "2020"
@@ -2217,7 +2064,7 @@
       "batch": "2024",
       "graduationDate": "May 2024",
       "status": "Alumni",
-      "source": "Alumni CRM",
+      "source": "Alumni Records",
       "email": "alyssa.mercado@alumni.university.edu",
       "contactNumber": "+63 917 910 3382",
       "enrollmentYear": "2020"
@@ -2232,7 +2079,7 @@
       "batch": "2026",
       "graduationDate": "May 2026",
       "status": "Alumni",
-      "source": "Alumni CRM",
+      "source": "Alumni Records",
       "email": "nathaniel.ramos@alumni.university.edu",
       "contactNumber": "+63 916 720 4419",
       "enrollmentYear": "2022"
@@ -2247,7 +2094,7 @@
       "batch": "2023",
       "graduationDate": "June 2023",
       "status": "Alumni",
-      "source": "Alumni CRM",
+      "source": "Alumni Records",
       "email": "bianca.salazar@alumni.university.edu",
       "contactNumber": "+63 917 503 8821",
       "enrollmentYear": "2019"
@@ -2262,7 +2109,7 @@
       "batch": "2023",
       "graduationDate": "June 2023",
       "status": "Alumni",
-      "source": "Alumni CRM",
+      "source": "Alumni Records",
       "email": "joshua.morales@alumni.university.edu",
       "contactNumber": "+63 918 441 9023",
       "enrollmentYear": "2019"
@@ -2277,7 +2124,7 @@
       "batch": "2025",
       "graduationDate": "June 2025",
       "status": "Alumni",
-      "source": "Alumni CRM",
+      "source": "Alumni Records",
       "email": "adrianne.chua@alumni.university.edu",
       "contactNumber": "+63 917 229 6150",
       "enrollmentYear": "2021"
@@ -2292,7 +2139,7 @@
       "batch": "2022",
       "graduationDate": "May 2022",
       "status": "Alumni",
-      "source": "Alumni CRM",
+      "source": "Alumni Records",
       "email": "gabriel.soriano@alumni.university.edu",
       "contactNumber": "+63 919 318 4092",
       "enrollmentYear": "2018"
@@ -2307,7 +2154,7 @@
       "lastGenerated": "Today, 09:30 AM",
       "frequency": "Semester & Weekly Snapshot",
       "sourceSystems": [
-        "SIS"
+        "Student Records"
       ],
       "fileSize": "1.4 MB",
       "highlights": [
@@ -2361,12 +2208,12 @@
       "id": "rep-performance",
       "title": "Academic Performance Report",
       "category": "Academic",
-      "description": "Cross-departmental GPA distribution, passing and failing percentages, Dean's List qualifiers, and LMS coursework correlation.",
+      "description": "Cross-departmental GPA distribution, passing and failing percentages, Dean's List qualifiers, and coursework completion correlation.",
       "lastGenerated": "Today, 08:15 AM",
       "frequency": "Midterm & Final Grading",
       "sourceSystems": [
-        "SIS",
-        "LMS"
+        "Student Records",
+        "Academic Records"
       ],
       "fileSize": "2.1 MB",
       "highlights": [
@@ -2424,8 +2271,8 @@
       "lastGenerated": "Yesterday, 05:00 PM",
       "frequency": "Weekly",
       "sourceSystems": [
-        "SIS",
-        "LMS"
+        "Student Records",
+        "Academic Records"
       ],
       "fileSize": "980 KB",
       "highlights": [
@@ -2479,12 +2326,12 @@
       "id": "rep-risk",
       "title": "At-Risk Student Report",
       "category": "Retention",
-      "description": "Early-warning retention roster combining SIS midterm grades, low classroom attendance, and declining LMS login activity for academic advising.",
+      "description": "Early-warning retention roster combining academic records, classroom attendance, and course activity for academic advising.",
       "lastGenerated": "Today, 10:00 AM",
       "frequency": "Daily Automated Alert",
       "sourceSystems": [
-        "SIS",
-        "LMS",
+        "Student Records",
+        "Academic Records",
         "Library"
       ],
       "fileSize": "1.1 MB",
@@ -2543,7 +2390,7 @@
       "lastGenerated": "Oct 24, 2026",
       "frequency": "Per Academic Term",
       "sourceSystems": [
-        "SIS",
+        "Student Records",
         "Library"
       ],
       "fileSize": "1.7 MB",
@@ -2602,8 +2449,8 @@
       "lastGenerated": "Oct 26, 2026",
       "frequency": "Quarterly Tracer",
       "sourceSystems": [
-        "Alumni CRM",
-        "SIS"
+        "Alumni Records",
+        "Student Records"
       ],
       "fileSize": "2.3 MB",
       "highlights": [
@@ -2657,29 +2504,25 @@
       "id": "rep-integration",
       "title": "Data Integration Report",
       "category": "Integration",
-      "description": "Audit log of synchronization pipelines across SIS, LMS, HR/Payroll, Library, and Alumni CRM including schema health and duplicate resolution.",
-      "lastGenerated": "Today, 10:45 AM",
+      "description": "Audit log of Library catalog and circulation synchronization, including schema health and duplicate resolution.",
+      "lastGenerated": "Today, 10:30 AM",
       "frequency": "Daily System Audit",
       "sourceSystems": [
-        "SIS",
-        "LMS",
-        "HR",
-        "Library",
-        "Alumni CRM"
+        "Library"
       ],
-      "fileSize": "840 KB",
+      "fileSize": "120 KB",
       "highlights": [
         {
           "label": "Records Processed",
-          "value": "23,976"
+          "value": "4,850"
         },
         {
           "label": "Success Rate",
-          "value": "99.88%"
+          "value": "100%"
         },
         {
           "label": "Duplicates Flagged",
-          "value": "24"
+          "value": "0"
         }
       ],
       "previewHeaders": [
@@ -2690,28 +2533,10 @@
       ],
       "previewRows": [
         {
-          "col1": "Student Information System",
-          "col2": "5,240",
-          "col3": "0",
-          "col4": "Successful"
-        },
-        {
-          "col1": "Learning Management System",
-          "col2": "5,100",
-          "col3": "4",
-          "col4": "Successful"
-        },
-        {
           "col1": "Library System",
           "col2": "4,850",
           "col3": "0",
           "col4": "Successful"
-        },
-        {
-          "col1": "Alumni CRM",
-          "col2": "3,200",
-          "col3": "12",
-          "col4": "Warning (Merged)"
         }
       ]
     }
@@ -2719,33 +2544,13 @@
   "notifications": [
     {
       "id": "notif-1",
-      "title": "SIS synchronization completed",
-      "description": "5,240 student enrollment and midterm records verified with zero errors.",
+      "title": "Library synchronization completed",
+      "description": "4,850 library records synchronized with zero errors.",
       "timestamp": "5 minutes ago",
       "type": "success",
-      "source": "SIS",
-      "read": false,
-      "href": "/data-integration"
-    },
-    {
-      "id": "notif-2",
-      "title": "LMS synchronization warning",
-      "description": "4 course shell enrollments had delayed timestamps during batch refresh.",
-      "timestamp": "15 minutes ago",
-      "type": "warning",
-      "source": "LMS",
+      "source": "Library",
       "read": false,
       "href": "/data-sources"
-    },
-    {
-      "id": "notif-3",
-      "title": "12 duplicate student records detected",
-      "description": "Alumni CRM batch flagged overlapping personal email addresses for review.",
-      "timestamp": "30 minutes ago",
-      "type": "info",
-      "source": "Data Integration",
-      "read": false,
-      "href": "/data-integration"
     },
     {
       "id": "notif-4",
@@ -2770,44 +2575,12 @@
   ],
   "activityFeed": [
     {
-      "id": "act-1",
-      "title": "Student record synchronized",
-      "detail": "5,240 active and historical enrollment profiles verified from SIS.",
-      "source": "SIS",
-      "timestamp": "5 minutes ago",
-      "status": "success"
-    },
-    {
-      "id": "act-2",
-      "title": "LMS data updated",
-      "detail": "Midterm coursework submissions and weekly login metrics refreshed.",
-      "source": "LMS",
-      "timestamp": "12 minutes ago",
-      "status": "info"
-    },
-    {
-      "id": "act-3",
-      "title": "New enrollment detected",
-      "detail": "18 transferee credentials validated for College of Computing.",
-      "source": "SIS",
-      "timestamp": "28 minutes ago",
-      "status": "success"
-    },
-    {
       "id": "act-4",
       "title": "Library records synchronized",
       "detail": "4,850 borrowing transactions and clearance statuses updated.",
       "source": "Library",
       "timestamp": "42 minutes ago",
       "status": "success"
-    },
-    {
-      "id": "act-5",
-      "title": "Alumni record updated",
-      "detail": "Q3 graduate employment survey batch imported with 12 duplicate flags.",
-      "source": "Alumni",
-      "timestamp": "1 hour ago",
-      "status": "warning"
     }
   ],
   "lifecycleOverviewStats": [
@@ -2827,7 +2600,7 @@
       "label": "Active",
       "value": 4820,
       "change": "92.0% retained",
-      "description": "Attending classes & active in LMS"
+      "description": "Attending classes & active in coursework"
     },
     {
       "label": "Graduated",
@@ -2839,7 +2612,7 @@
       "label": "Alumni",
       "value": 8400,
       "change": "89.4% employed",
-      "description": "Verified records in Alumni CRM"
+      "description": "Verified alumni records"
     }
   ],
   "lifecycleStages": [
@@ -2853,8 +2626,7 @@
       "conversionRate": "88.4% qualified",
       "description": "Captures applicant demographics, entrance exam scores, senior high school credentials, and scholarship eligibility before generating a permanent University ID.",
       "sourceSystems": [
-        "SIS Admissions Module",
-        "Testing & Placement Center"
+        "Admissions Records"
       ],
       "keyMilestones": [
         "Online application & academic credential upload verified",
@@ -2880,21 +2652,20 @@
     {
       "key": "enrollment",
       "title": "Enrollment",
-      "subtitle": "Subject advising, sectioning & cross-system provisioning",
+      "subtitle": "Subject advising, sectioning & student services",
       "status": "completed",
       "metricLabel": "Enrolled Students",
       "metricCount": 5240,
       "conversionRate": "84.5% enrollment yield",
-      "description": "Once enrolled in the SIS, student accounts are automatically provisioned in the Learning Management System and Library System within 10 minutes via DataHub integration.",
+      "description": "Enrollment records establish student status and library borrowing eligibility.",
       "sourceSystems": [
-        "Student Information System (SIS)",
-        "LMS Provisioning",
+        "Student Records",
         "Library System"
       ],
       "keyMilestones": [
         "Curriculum study load & academic adviser assignment",
         "Registrar validation & official Student ID activation",
-        "Automatic LMS course shell enrollment",
+        "Course enrollment recorded",
         "Campus Library borrowing privileges enabled"
       ],
       "insights": [
@@ -2915,21 +2686,19 @@
     {
       "key": "academic-progress",
       "title": "Academic Progress",
-      "subtitle": "Active coursework, attendance, LMS engagement & retention care",
+      "subtitle": "Active coursework, attendance, academic engagement & retention care",
       "status": "current",
       "metricLabel": "Active Learners",
       "metricCount": 4820,
       "conversionRate": "94.2% passing rate",
-      "description": "Combines real-time SIS midterm grades, classroom attendance, LMS assignment completion, and library utilization to support proactive advising and early risk intervention.",
+      "description": "Combines academic records, classroom attendance, course progress, and library utilization to support proactive advising and early risk intervention.",
       "sourceSystems": [
-        "SIS Academics",
-        "LMS Analytics",
-        "Library System",
-        "HR Faculty Load"
+        "Academic Records",
+        "Library System"
       ],
       "keyMilestones": [
-        "Continuous attendance & LMS engagement monitoring",
-        "Midterm grade synchronization & GPA tracking",
+        "Continuous attendance & course engagement monitoring",
+        "Academic progress and GPA tracking",
         "Early-warning alerts routed to academic advisers for at-risk students",
         "Practicum, laboratory & research milestone tracking"
       ],
@@ -2958,7 +2727,7 @@
       "conversionRate": "91.8% on-time completion",
       "description": " Automates degree audit verification across earned curriculum units, capstone completion, library book clearance, and registrar sign-off prior to commencement.",
       "sourceSystems": [
-        "SIS Registrar",
+        "Registrar Records",
         "Library Clearance",
         "Academic Departments"
       ],
@@ -2991,14 +2760,13 @@
       "metricLabel": "Tracked Alumni",
       "metricCount": 8400,
       "conversionRate": "89.4% employed",
-      "description": "Transitions graduated student profiles into the Alumni CRM to track employment outcomes, industry alignment, postgraduate studies, and institutional partnerships.",
+      "description": "Tracks graduate employment outcomes, industry alignment, postgraduate studies, and institutional partnerships.",
       "sourceSystems": [
-        "Alumni CRM",
-        "Career Placement Office",
-        "SIS Archive"
+        "Alumni Records",
+        "Career Placement Office"
       ],
       "keyMilestones": [
-        "Seamless profile handoff from SIS Registrar to Alumni CRM",
+        "Graduate records added to the alumni lifecycle",
         "6-month & 12-month graduate employability tracer surveys",
         "Industry mentorship & practicum partner matching",
         "Continuing education & postgraduate program pathways"
@@ -3230,42 +2998,12 @@
       "graduatingStudentsSubtext": "Class of 2026 degree candidates",
       "alumni": 18560,
       "alumniSubtext": "89.4% employed within 6 mos",
-      "connectedDataSources": "5 / 5",
-      "connectedDataSourcesSubtext": "All campus connectors active",
-      "lastSuccessfulSync": "Today, 9:42 AM",
-      "lastSuccessfulSyncSubtext": "SIS incremental sync completed"
+      "connectedDataSources": "1 / 1",
+      "connectedDataSourcesSubtext": "Library source active",
+      "lastSuccessfulSync": "Today, 9:30 AM",
+      "lastSuccessfulSyncSubtext": "Library sync completed"
     },
     "dataSources": [
-      {
-        "id": "src-sis",
-        "code": "SIS",
-        "name": "Student Information System",
-        "shortLabel": "SIS",
-        "status": "Connected",
-        "lastSync": "Today, 9:42 AM",
-        "records": 12450,
-        "description": "Enrollment, curriculum standing, and official academic transcripts"
-      },
-      {
-        "id": "src-lms",
-        "code": "LMS",
-        "name": "Learning Management System",
-        "shortLabel": "LMS",
-        "status": "Connected",
-        "lastSync": "Today, 9:38 AM",
-        "records": 10820,
-        "description": "Digital coursework engagement, module completion, and submissions"
-      },
-      {
-        "id": "src-hr",
-        "code": "HR",
-        "name": "HR / Payroll",
-        "shortLabel": "HR / Payroll",
-        "status": "Connected",
-        "lastSync": "Today, 9:22 AM",
-        "records": 940,
-        "description": "Faculty teaching assignments, advisers, and departmental rosters"
-      },
       {
         "id": "src-library",
         "code": "LIBRARY",
@@ -3273,18 +3011,8 @@
         "shortLabel": "Library",
         "status": "Connected",
         "lastSync": "Today, 9:30 AM",
-        "records": 8421,
-        "description": "Resource circulation, digital repository loans, and academic clearances"
-      },
-      {
-        "id": "src-alumni",
-        "code": "ALUMNI",
-        "name": "Alumni CRM",
-        "shortLabel": "Alumni CRM",
-        "status": "Connected",
-        "lastSync": "Today, 9:15 AM",
-        "records": 18560,
-        "description": "Graduate career outcomes, employment tracking, and alumni engagement"
+        "records": 4850,
+        "description": "Library catalog, borrowers, circulation, reservations, and fines"
       }
     ],
     "lifecycleOverview": [
@@ -3292,58 +3020,34 @@
         "stage": "Enrollment",
         "count": 12450,
         "subtitle": "Verified admissions & term registration",
-        "sourceLabel": "Student Information System"
+        "sourceLabel": "Student records"
       },
       {
         "stage": "Learning",
         "count": 10820,
         "subtitle": "Active coursework & campus participation",
-        "sourceLabel": "SIS · LMS · Library"
+        "sourceLabel": "Library activity"
       },
       {
         "stage": "Graduation",
         "count": 2140,
         "subtitle": "Cleared senior candidates & conferrals",
-        "sourceLabel": "SIS · Registrar Audit"
+        "sourceLabel": "Library clearance & degree candidates"
       },
       {
         "stage": "Alumni",
         "count": 18560,
         "subtitle": "Career placement & institutional network",
-        "sourceLabel": "Alumni CRM"
+        "sourceLabel": "Alumni records"
       }
     ],
     "recentSynchronization": [
-      {
-        "id": "recent-sis",
-        "dataSource": "SIS",
-        "fullName": "Student Information System",
-        "lastSync": "Today, 9:42 AM",
-        "records": 12450,
-        "status": "Connected"
-      },
-      {
-        "id": "recent-lms",
-        "dataSource": "LMS",
-        "fullName": "Learning Management System",
-        "lastSync": "Today, 9:38 AM",
-        "records": 10820,
-        "status": "Connected"
-      },
       {
         "id": "recent-lib",
         "dataSource": "Library",
         "fullName": "Library System",
         "lastSync": "Today, 9:30 AM",
-        "records": 8421,
-        "status": "Connected"
-      },
-      {
-        "id": "recent-alumni",
-        "dataSource": "Alumni CRM",
-        "fullName": "Alumni CRM",
-        "lastSync": "Today, 9:15 AM",
-        "records": 18560,
+        "records": 4850,
         "status": "Connected"
       }
     ],
@@ -3530,81 +3234,15 @@
   ],
   "syncHistory": [
     {
-      "id": "SH-9048",
-      "dataSource": "SIS",
-      "fullName": "Student Information System",
-      "syncMode": "Scheduled Incremental",
-      "lastSync": "Today, 9:42 AM",
-      "records": 12450,
-      "duration": "6.4s",
-      "status": "Connected",
-      "notes": "Synchronized term enrollments, GPA standing, and graduating candidate flags."
-    },
-    {
-      "id": "SH-9047",
-      "dataSource": "LMS",
-      "fullName": "Learning Management System",
-      "syncMode": "Scheduled Incremental",
-      "lastSync": "Today, 9:38 AM",
-      "records": 10820,
-      "duration": "5.8s",
-      "status": "Connected",
-      "notes": "Updated weekly course participation, module completions, and submission metrics."
-    },
-    {
       "id": "SH-9046",
       "dataSource": "Library",
       "fullName": "Library System",
       "syncMode": "Scheduled Incremental",
       "lastSync": "Today, 9:30 AM",
-      "records": 8421,
+      "records": 4850,
       "duration": "3.9s",
       "status": "Connected",
       "notes": "Cleared returned circulation records and academic clearance holds."
-    },
-    {
-      "id": "SH-9045",
-      "dataSource": "HR / Payroll",
-      "fullName": "HR / Payroll",
-      "syncMode": "Scheduled Incremental",
-      "lastSync": "Today, 9:22 AM",
-      "records": 940,
-      "duration": "2.1s",
-      "status": "Connected",
-      "notes": "Verified active faculty teaching loads and academic adviser assignments."
-    },
-    {
-      "id": "SH-9044",
-      "dataSource": "Alumni CRM",
-      "fullName": "Alumni CRM",
-      "syncMode": "Scheduled Incremental",
-      "lastSync": "Today, 9:15 AM",
-      "records": 18560,
-      "duration": "8.2s",
-      "status": "Connected",
-      "notes": "Consolidated graduate employment updates and industry placement surveys."
-    },
-    {
-      "id": "SH-9043",
-      "dataSource": "LMS",
-      "fullName": "Learning Management System",
-      "syncMode": "Schema Verification",
-      "lastSync": "Yesterday, 11:30 PM",
-      "records": 10814,
-      "duration": "9.5s",
-      "status": "Warning",
-      "notes": "2 duplicate section enrollments queued for registrar identity review."
-    },
-    {
-      "id": "SH-9042",
-      "dataSource": "SIS",
-      "fullName": "Student Information System",
-      "syncMode": "Manual Full Sync",
-      "lastSync": "Yesterday, 6:00 PM",
-      "records": 12448,
-      "duration": "18.4s",
-      "status": "Connected",
-      "notes": "Full institutional student master reconciliation completed cleanly."
     }
   ]
 }

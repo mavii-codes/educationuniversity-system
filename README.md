@@ -69,6 +69,17 @@ npm run db:seed
 npm run db:backfill-book-covers
 ```
 
+The administrator ETL console is limited to the Library source and uses
+`/api/library/etl/sync` and `/api/library/etl/logs`.
+These endpoints require an authenticated Administrator or Librarian session
+and PostgreSQL (`DB_ENABLED=true`). The ETL reads the current Library catalog,
+circulation, reservation, and fine tables, validates and matches records by
+student ID, then persists Library activity and fine events to the student
+lifecycle timeline. Run history is stored in `library_etl_runs`; source catalog
+and circulation records are not overwritten. The pipeline does not connect to
+an external Koha/Folio service; configure a real vendor endpoint and credentials
+before treating an external library system as the source.
+
 The library migration adds persistent catalog metadata and `cover_url`. The
 backfill looks up covers for existing PostgreSQL books, waiting 300 ms between
 books. Administrator and Registrar book edits are available from Library Management;

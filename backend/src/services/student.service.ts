@@ -2,6 +2,7 @@ import { env } from "../config/env";
 import { seedDataset } from "../data/dataset";
 import { StudentModel, StudentQuery } from "../models";
 import * as studentRepository from "../repositories/student.repository";
+import { FerpaViewer, ferpaService } from "./ferpa.service";
 
 function filterSeedStudents(query: StudentQuery): StudentModel[] {
   let items = seedDataset.students.map((student) => ({ ...student }));
@@ -33,11 +34,43 @@ function filterSeedStudents(query: StudentQuery): StudentModel[] {
 }
 
 export class StudentService {
-  async findAll(query: StudentQuery = {}): Promise<StudentModel[]> {
-    if (env.db.enabled) {
-      return studentRepository.findAll(query);
+  async findAll(
+    query: StudentQuery = {},
+    viewer?: FerpaViewer
+  ): Promise<StudentModel[]> {
+    const students = env.db.enabled
+      ? await studentRepository.findAll(query)
+      : filterSeedStudents(query);
+
+    if (!viewer || viewer.portalRole === "Student") {
+      return students;
     }
-    return filterSeedStudents(query);
+
+    let visibleStudents = students;
+    if (viewer.portalRole === "Librarian" && students.length > 0) {
+      // One batch lookup for the whole page — never query opt-outs per row.
+      const optOutIds = await ferpaService.getDirectoryOptOutIds(
+        students.map((student) => student.id)
+      );
+      visibleStudents = students.map((student) =>
+        ferpaService.getMaskedStudent(student, {
+          ...viewer,
+          directoryOptOut: optOutIds.has(student.id),
+        })
+      );
+    }
+
+    // Directory reads are logged once per request in DB mode. The access log
+    // requires a concrete student row, so the first returned record anchors it.
+    if (env.db.enabled && students.length > 0) {
+      await ferpaService.logStudentAccess({
+        studentId: students[0].id,
+        viewer,
+        action: "VIEW_DIRECTORY",
+      });
+    }
+
+    return visibleStudents;
   }
 
   async findById(id: string): Promise<StudentModel | null> {

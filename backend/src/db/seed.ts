@@ -708,7 +708,6 @@ async function main(): Promise<void> {
       ["admin_dashboard_overview", seedDataset.adminDashboardOverview],
       ["integration_summary", seedDataset.integrationSummary],
       ["alumni_analytics", seedDataset.alumniAnalytics],
-      ["alumni_crm_source_info", seedDataset.alumniCrmSourceInfo],
     ];
 
     for (const [key, payload] of snapshots) {

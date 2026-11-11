@@ -99,6 +99,49 @@ paths:
           description: Updated book and cover_url result
         "404":
           description: Book not found
+  /library/etl/sync:
+    post:
+      tags: [Library]
+      summary: Run live Library-to-student-lifecycle ETL (Administrator or Librarian)
+      description: Reads the configured PostgreSQL Library catalog, circulation, reservation, and fine records. Persists lifecycle timeline events and run history. This does not use demo fixtures or overwrite the Library source records.
+      parameters:
+        - $ref: "#/components/parameters/CsrfHeader"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                triggeredBy:
+                  type: string
+                  minLength: 1
+                  maxLength: 120
+      responses:
+        "200":
+          description: Persisted live ETL run
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator or Librarian role required
+        "503":
+          description: PostgreSQL is required for live ETL
+  /library/etl/logs:
+    get:
+      tags: [Library]
+      summary: List persisted live Library ETL runs (Administrator or Librarian)
+      responses:
+        "200":
+          description: Recent persistent ETL run history
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator or Librarian role required
+        "503":
+          description: PostgreSQL is required for live ETL history
   /library/fines/{id}/pay:
     put:
       tags: [Library]
@@ -425,24 +468,6 @@ paths:
       responses:
         "200":
           description: Alumni overview
-  /alumni/integrated:
-    get:
-      tags: [Alumni]
-      summary: Integrated Alumni CRM records
-      responses:
-        "200":
-          description: Integrated records
-  /alumni/sync:
-    post:
-      tags: [Alumni]
-      summary: Trigger a simulated Alumni CRM sync (Administrator)
-      parameters:
-        - $ref: "#/components/parameters/CsrfHeader"
-      responses:
-        "200":
-          description: Sync result
-        "403":
-          description: Forbidden
   /admin/dashboard:
     get:
       tags: [Admin]
