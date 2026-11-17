@@ -41,7 +41,7 @@ export const STAFF_NAVIGATION_GROUPS: StaffNavGroup[] = [
     groupLabel: "Library Operations",
     items: [
       {
-        label: "Books Catalog",
+        label: "Book Management",
         href: "/staff/books",
         icon: BookOpen,
       },

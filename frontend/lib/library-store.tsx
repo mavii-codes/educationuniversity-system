@@ -43,6 +43,10 @@ import {
   rejectLibraryRequest,
   returnLibraryTransaction,
 } from "./api";
+import {
+  dailyFineForLoanPrice,
+  estimateOverdueFine,
+} from "./library-fines";
 
 type LibraryLoadState = "loading" | "ready" | "error";
 
@@ -195,7 +199,7 @@ const INITIAL_NOTIFICATIONS: StudentNotificationItem[] = [
     studentId: "2024-042",
     title: "Overdue Loan Reminder",
     message:
-      "Effective Java (3rd Edition) was due on Nov 1, 2026. A daily overdue fine of ₱15.00 has accrued. Please return to the library desk.",
+      "Effective Java (3rd Edition) was due on Nov 1, 2026. A daily overdue fine based on the book's price has accrued. Please return to the library desk.",
     type: "Fine",
     timestamp: "1 day ago",
     read: false,
@@ -907,6 +911,12 @@ export function LibraryStoreProvider({
           message: "Cannot approve: no copies available in inventory.",
         };
       }
+      if ((book.bookPrice ?? 0) <= 0) {
+        return {
+          ok: false,
+          message: "Set a positive book price before approving this loan.",
+        };
+      }
 
       if (API_CONFIG.useLiveApi) {
         try {
@@ -965,6 +975,7 @@ export function LibraryStoreProvider({
         bookTitle: book.title,
         isbn: book.isbn,
         cover_url: book.cover_url ?? null,
+        bookPriceAtBorrow: book.bookPrice ?? null,
         studentId: request.studentId,
         studentName: request.studentName,
         programCode: request.programCode,
@@ -1086,8 +1097,8 @@ export function LibraryStoreProvider({
       if (isOverdue) {
         const diffMs = now.getTime() - dueDate.getTime();
         const daysOverdue = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-        const finePerDay = 15.0; // standard ₱15 / day library policy
-        calculatedFine = daysOverdue * finePerDay;
+        const finePerDay = dailyFineForLoanPrice(tx.bookPriceAtBorrow);
+        calculatedFine = estimateOverdueFine(finePerDay, daysOverdue);
 
         // Create overdue fine record
         const newFine: OverdueFineRecord = {
@@ -1100,6 +1111,7 @@ export function LibraryStoreProvider({
           dueDate: tx.dueDate,
           daysOverdue,
           fineAmount: calculatedFine,
+          fineRatePerDay: finePerDay,
           paymentStatus: "Unpaid",
         };
         setFines((prev) => [newFine, ...prev]);

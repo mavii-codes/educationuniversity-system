@@ -398,7 +398,12 @@ async function hydrate(rows: StudentRow[]): Promise<StudentModel[]> {
   }));
 }
 
-export async function findAll(query: StudentQuery = {}): Promise<StudentModel[]> {
+type StudentFilter = {
+  whereClause: string;
+  params: unknown[];
+};
+
+function buildFilter(query: StudentQuery): StudentFilter {
   const params: unknown[] = [];
   const where: string[] = [];
 
@@ -426,13 +431,62 @@ export async function findAll(query: StudentQuery = {}): Promise<StudentModel[]>
     where.push(`s.risk_level = $${params.length}`);
   }
 
+  return {
+    whereClause: where.length ? `WHERE ${where.join(" AND ")}` : "",
+    params,
+  };
+}
+
+export interface PagedStudents {
+  items: StudentModel[];
+  total: number;
+}
+
+export async function findAll(query: StudentQuery = {}): Promise<StudentModel[]> {
+  const { whereClause, params } = buildFilter(query);
+
   const result = await queryDb<StudentRow>(
     `${SELECT_STUDENTS}
-     ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+     ${whereClause}
      ORDER BY s.name`,
     params
   );
   return hydrate(result.rows);
+}
+
+/**
+ * Database-backed page read. `findAll` keeps returning the full result set for
+ * callers that do not paginate; this variant adds a matching COUNT(*) query and
+ * a deterministic LIMIT/OFFSET window.
+ */
+export async function findPaged(
+  query: StudentQuery = {},
+  page = 1,
+  pageSize = 10
+): Promise<PagedStudents> {
+  const { whereClause, params } = buildFilter(query);
+  const offset = (page - 1) * pageSize;
+
+  const countSql = `
+    SELECT COUNT(*)::int AS count
+    FROM students s
+    JOIN programs p ON p.code = s.program_code
+    ${whereClause}
+  `;
+  const rowsSql = `${SELECT_STUDENTS}
+    ${whereClause}
+    ORDER BY s.id
+    LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+
+  const [countResult, rowsResult] = await Promise.all([
+    queryDb<{ count: number }>(countSql, params),
+    queryDb<StudentRow>(rowsSql, [...params, pageSize, offset]),
+  ]);
+
+  return {
+    items: await hydrate(rowsResult.rows),
+    total: Number(countResult.rows[0]?.count ?? 0),
+  };
 }
 
 export async function findById(id: string): Promise<StudentModel | null> {

@@ -21,12 +21,17 @@ interface LifecycleTimelineProps {
   stages: LifecycleStage[];
 }
 
-const stageIcons: Record<LifecycleStageKey, React.ElementType> = {
+const stageIcons: Partial<Record<LifecycleStageKey, React.ElementType>> = {
   admission: UserPlus,
   enrollment: ClipboardCheck,
   "academic-progress": BookOpenCheck,
   graduation: GraduationCap,
   alumni: Award,
+  NO_ACTIVITY: UserPlus,
+  REQUESTS_PENDING: ClipboardCheck,
+  ACTIVE_BORROWERS: BookOpenCheck,
+  OUTSTANDING_FINES: Database,
+  RESTRICTED: Award,
 };
 
 export function LifecycleTimeline({ stages }: LifecycleTimelineProps) {

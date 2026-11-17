@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { CheckCircle2, Clock, Filter, Search, XCircle } from "lucide-react";
+import Link from "next/link";
+import { BookOpen, CheckCircle2, Plus, XCircle } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useLibraryStore } from "@/lib/library-store";
 import { useToast } from "@/components/ui/ToastProvider";
@@ -23,6 +24,9 @@ export default function StaffRequestsPage() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+
+  const canManageBooks =
+    user?.role === "Librarian" || user?.role === "Administrator";
 
   const filtered = borrowingRequests.filter((r) => {
     if (statusFilter === "All") return true;
@@ -67,7 +71,7 @@ export default function StaffRequestsPage() {
           <h2 className="text-xl font-bold tracking-tight text-slate-900">Borrowing Requests</h2>
           <p className="text-xs text-slate-500">Review, approve, and manage student loan requests</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -80,6 +84,25 @@ export default function StaffRequestsPage() {
             <option value="Cancelled">Cancelled</option>
             <option value="Completed">Completed</option>
           </select>
+          {canManageBooks && (
+            <>
+              <Link
+                href="/staff/books?add=1"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                <Plus className="h-3.5 w-3.5 text-slate-500" />
+                <span>Add Book</span>
+              </Link>
+              <Link
+                href="/staff/books?restock=1"
+                title="Manage books and restock copies when the head librarian is away"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-indigo-700"
+              >
+                <BookOpen className="h-3.5 w-3.5" />
+                <span>Manage Books / Restock</span>
+              </Link>
+            </>
+          )}
         </div>
       </div>
 

@@ -18,6 +18,7 @@ import { SessionUser } from "@/lib/auth";
 import { useLibraryStore } from "@/lib/library-store";
 import { cn } from "@/lib/utils";
 import { BookCover } from "@/components/library/BookCover";
+import { dailyFineForBookPrice } from "@/lib/library-fines";
 
 interface BookDetailModalProps {
   book: LibraryBook | null;
@@ -142,6 +143,14 @@ export function BookDetailModal({
               </p>
             </div>
             <div>
+              <span className="text-[11px] font-medium text-slate-400">Book price</span>
+              <p className="font-semibold text-slate-900 mt-0.5">
+                {book.bookPrice && book.bookPrice > 0
+                  ? `₱${book.bookPrice.toFixed(2)}`
+                  : "Not configured"}
+              </p>
+            </div>
+            <div>
               <span className="text-[11px] font-medium text-slate-400">Call Number</span>
               <p className="font-mono font-medium text-slate-700 mt-0.5">{book.callNumber}</p>
             </div>
@@ -194,7 +203,12 @@ export function BookDetailModal({
             <ul className="space-y-1 text-[11px] list-disc list-inside">
               <li>Standard loan period: 14 calendar days upon librarian checkout.</li>
               <li>Limit: maximum of 3 concurrent active loans per student account.</li>
-              <li>Overdue rate: ₱15.00 / calendar day of delay past the scheduled due date.</li>
+              <li>
+                Overdue fine:{" "}
+                {book.bookPrice && book.bookPrice > 0
+                  ? `₱${dailyFineForBookPrice(book.bookPrice).toFixed(2)} per calendar day (1/20 of the book price).`
+                  : "Price must be entered before this loan can be approved."}
+              </li>
             </ul>
           </div>
         </div>

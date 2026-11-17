@@ -10,6 +10,7 @@ import {
   StudentNotificationModel,
 } from "../models";
 import { queryDb, withTransaction } from "../config/database";
+import { calculateOverdueFine } from "../utils/library-fines";
 
 type RequestRow = {
   id: string;
@@ -46,6 +47,7 @@ type TransactionRow = {
   return_date: Date | null;
   status: BorrowingTransactionModel["status"];
   fines_accrued: number | string;
+  book_price_at_borrow: number | string | null;
   source_system: string;
 };
 
@@ -74,6 +76,7 @@ type FineRow = {
   due_date: Date;
   days_overdue: number;
   fine_amount: number | string;
+  fine_rate_per_day: number | string;
   payment_status: OverdueFineModel["paymentStatus"];
 };
 
@@ -154,6 +157,7 @@ const REQUEST_COLUMNS = `
 
 const TRANSACTION_COLUMNS = `
   t.id, t.transaction_code, t.book_id, t.book_title, t.isbn, b.cover_url,
+  t.book_price_at_borrow,
   t.student_id, t.student_name, t.program_code, t.borrow_date, t.due_date,
   t.return_date,
   CASE WHEN t.status = 'Borrowed' AND t.due_date < NOW() THEN 'Overdue'
@@ -197,6 +201,10 @@ function mapTransaction(row: TransactionRow): BorrowingTransactionModel {
     bookTitle: row.book_title,
     isbn: row.isbn,
     cover_url: row.cover_url,
+    bookPriceAtBorrow:
+      row.book_price_at_borrow === null
+        ? null
+        : Number(row.book_price_at_borrow),
     studentId: row.student_id,
     studentName: row.student_name,
     programCode: row.program_code,
@@ -237,6 +245,7 @@ function mapFine(row: FineRow): OverdueFineModel {
     dueDate: row.due_date.toISOString(),
     daysOverdue: row.days_overdue,
     fineAmount: Number(row.fine_amount),
+    fineRatePerDay: Number(row.fine_rate_per_day),
     paymentStatus: row.payment_status,
   };
 }
@@ -497,14 +506,21 @@ export async function approveBorrowingRequest(
     const { rows: books } = await client.query<{
       available_copies: number;
       total_copies: number;
+      book_price: number | string;
     }>(
-      `SELECT available_copies, total_copies
+      `SELECT available_copies, total_copies, book_price
          FROM library_books WHERE id = $1 FOR UPDATE`,
       [request.book_id]
     );
     const book = books[0];
     if (!book || book.available_copies <= 0) {
       return { ok: false, message: "No available copies in inventory." };
+    }
+    if (Number(book.book_price) <= 0) {
+      return {
+        ok: false,
+        message: "Set a positive book price before approving this loan.",
+      };
     }
     await client.query("SELECT id FROM students WHERE id = $1 FOR UPDATE", [
       request.student_id,
@@ -547,9 +563,9 @@ export async function approveBorrowingRequest(
       `INSERT INTO library_transactions
          (id, transaction_code, book_id, book_title, isbn, student_id,
           student_name, program_code, borrow_date, due_date, status, fines_accrued,
-          source_system)
+          book_price_at_borrow, source_system)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'Borrowed', 0,
-               'University Library System')`,
+               $11, 'University Library System')`,
       [
         transactionId,
         transactionCode,
@@ -561,6 +577,7 @@ export async function approveBorrowingRequest(
         request.program_code,
         reviewedDate,
         dueDate,
+        book.book_price,
       ]
     );
     await client.query(
@@ -784,7 +801,12 @@ export async function confirmLibraryReturn(
       0,
       Math.ceil((now.getTime() - transaction.due_date.getTime()) / 86400000)
     );
-    const fineAccrued = overdueDays * 15;
+    const { dailyRate, total: fineAccrued } = calculateOverdueFine(
+      transaction.book_price_at_borrow === null
+        ? null
+        : Number(transaction.book_price_at_borrow),
+      overdueDays
+    );
     await client.query(
       `UPDATE library_transactions
           SET status = 'Returned', return_date = $2, fines_accrued = $3
@@ -837,8 +859,9 @@ export async function confirmLibraryReturn(
       await client.query(
         `INSERT INTO library_fines
            (id, transaction_id, book_title, student_id, student_name,
-            program_code, due_date, days_overdue, fine_amount, payment_status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'Unpaid')`,
+            program_code, due_date, days_overdue, fine_amount,
+            fine_rate_per_day, payment_status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'Unpaid')`,
         [
           randomUUID().replace(/-/g, ""),
           transaction.id,
@@ -849,6 +872,7 @@ export async function confirmLibraryReturn(
           transaction.due_date,
           overdueDays,
           fineAccrued,
+          dailyRate,
         ]
       );
     }
@@ -878,7 +902,8 @@ export async function listLibraryFines(
   const { rows } = await queryDb<FineRow>(
     `SELECT f.id, f.transaction_id, f.book_title, f.student_id,
             f.student_name, f.program_code, f.due_date, f.days_overdue,
-            f.fine_amount, COALESCE(p.payment_status, f.payment_status) AS payment_status
+            f.fine_amount, f.fine_rate_per_day,
+            COALESCE(p.payment_status, f.payment_status) AS payment_status
        FROM library_fines AS f
        LEFT JOIN library_fine_payments AS p ON p.fine_id = f.id
       WHERE ($1::varchar IS NULL OR f.student_id = $1)

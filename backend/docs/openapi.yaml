@@ -13,6 +13,8 @@ tags:
   - name: Students
   - name: Analytics
   - name: Integration
+  - name: Integrations
+  - name: FERPA
   - name: Alumni
   - name: Admin
   - name: Library
@@ -378,9 +380,208 @@ paths:
           schema: { type: string }
       responses:
         "200":
-          description: Student profile
+          description: Student profile (FERPA-masked for Librarians when directory opt-out is set)
         "404":
           description: Not found
+  /students/{id}/lifecycle:
+    get:
+      tags: [Students]
+      summary: Unified per-student lifecycle (admissions → alumni)
+      description: >
+        Aggregates admissions, enrollment, LMS engagement, library activity,
+        fines and alumni status for one student, plus the ETL-fed timeline.
+        Allowed for Administrator, Librarian (FERPA access is logged), or the
+        student themself.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Unified student lifecycle
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  profile:
+                    type: object
+                  currentStage: { type: string }
+                  stages:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key: { type: string }
+                        label: { type: string }
+                        status: { type: string, enum: [Completed, Active, Upcoming, Alumni] }
+                        date: { type: string, nullable: true }
+                        summary: { type: string }
+                        metrics:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              label: { type: string }
+                              value: { type: string }
+                  timeline:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        stage: { type: string }
+                        sourceSystem: { type: string }
+                        title: { type: string }
+                        description: { type: string, nullable: true }
+                        occurredAt: { type: string }
+        "404":
+          description: Student not found
+  /etl/sources:
+    get:
+      tags: [Integrations]
+      summary: University ETL source registry (SIS, LMS, HR, Alumni CRM, Library)
+      responses:
+        "200":
+          description: Registered ETL/ELT sources with status and last sync time
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sources:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code: { type: string, enum: [SIS, LMS, HR, ALUMNI_CRM, LIBRARY] }
+                        name: { type: string }
+                        description: { type: string }
+                        adapter: { type: string }
+                        status: { type: string, enum: [Connected, Degraded, Disabled] }
+                        lastSyncedAt: { type: string, nullable: true }
+  /etl/sync:
+    post:
+      tags: [Integrations]
+      summary: Run the university ETL/ELT batch pipeline (Administrator)
+      description: >
+        Extract → validate → clean → transform → load for each requested source
+        (default: all five). Persists run history, lifecycle events, and source
+        sync status. Invalid/duplicate source rows are rejected and reported.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sourceIds:
+                  type: array
+                  items: { type: string, enum: [SIS, LMS, HR, ALUMNI_CRM, LIBRARY] }
+      responses:
+        "200":
+          description: Run result with per-source counts and execution log
+        "400":
+          description: Invalid payload
+  /etl/runs:
+    get:
+      tags: [Integrations]
+      summary: University ETL run history
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 50, default: 10 }
+      responses:
+        "200":
+          description: Recent ETL runs with totals
+  /ferpa/overview:
+    get:
+      tags: [FERPA]
+      summary: FERPA governance KPIs (Administrator)
+      responses:
+        "200":
+          description: Consent, opt-out and access-event counts
+  /ferpa/consents:
+    get:
+      tags: [FERPA]
+      summary: List student consent records (Administrator, Librarian)
+      parameters:
+        - in: query
+          name: studentId
+          schema: { type: string }
+      responses:
+        "200":
+          description: Consent registry
+    post:
+      tags: [FERPA]
+      summary: Record a consent grant/revocation (Administrator)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [studentId, consentType, granted]
+              properties:
+                studentId: { type: string }
+                consentType: { type: string, enum: [RECORDS_RELEASE, DIRECTORY_INFO, THIRD_PARTY, RESEARCH_USE] }
+                granted: { type: boolean }
+                note: { type: string }
+      responses:
+        "200":
+          description: Created consent
+        "400":
+          description: Invalid payload
+        "404":
+          description: Unknown student
+  /ferpa/access-log:
+    get:
+      tags: [FERPA]
+      summary: Student record access log (Administrator)
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 500, default: 100 }
+      responses:
+        "200":
+          description: Recent record-access events
+  /ferpa/directory-settings:
+    get:
+      tags: [FERPA]
+      summary: Directory-information opt-out settings (Administrator, Librarian)
+      responses:
+        "200":
+          description: Per-student opt-out flags
+  /ferpa/directory-settings/{studentId}:
+    patch:
+      tags: [FERPA]
+      summary: Toggle a student's directory-information opt-out (Administrator)
+      parameters:
+        - in: path
+          name: studentId
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [directoryOptOut]
+              properties:
+                directoryOptOut: { type: boolean }
+      responses:
+        "200":
+          description: Updated setting
+        "404":
+          description: Unknown student
+  /ferpa/my-consents:
+    get:
+      tags: [FERPA]
+      summary: List the current student's own consent records (Student)
+      responses:
+        "200":
+          description: Own consents
+        "403":
+          description: Not a student session
   /lifecycle:
     get:
       tags: [Students]
@@ -599,6 +800,50 @@ paths:
       responses:
         "200":
           description: Up to 500 most recent audit events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string }
+                    timestamp: { type: string, format: date-time }
+                    actor: { type: string }
+                    actorRole: { type: string }
+                    action:
+                      type: string
+                      description: Raw machine-readable audit code (e.g. `api.patch`, `auth.login_succeeded`), preserved for auditability.
+                    resource:
+                      type: string
+                      description: Raw audited entity type, optionally suffixed with the entity id.
+                    status:
+                      type: string
+                      enum: [Success, Warning, Failure]
+                    ipAddress: { type: string }
+                    details:
+                      type: string
+                      description: Legacy raw detail string retained for CSV export and existing consumers.
+                    actionLabel:
+                      type: string
+                      description: Human-readable presentation label for the raw action, derived from the action code and request metadata.
+                    resourceLabel:
+                      type: string
+                      description: Human-readable presentation label for the audited resource (e.g. `FERPA directory setting — student 2025-074`).
+                    category:
+                      type: string
+                      description: Grouping used for audit log filtering and badges.
+                      enum:
+                        - Authentication
+                        - Library
+                        - FERPA & Privacy
+                        - Data Integration
+                        - Administration
+                        - Members
+                        - System
+                    detailsExtra:
+                      type: string
+                      description: Non-duplicative extra context, such as an HTTP error status, records processed, or duration. Empty when nothing extra applies.
   /health:
     get:
       tags: [Auth]
@@ -626,6 +871,7 @@ components:
       type: object
       required:
         - isbn
+        - bookPrice
         - title
         - author
         - publisher
@@ -637,6 +883,7 @@ components:
         - location
       properties:
         isbn: { type: string, maxLength: 32 }
+        bookPrice: { type: number, minimum: 0, maximum: 99999999.99, description: Original price per copy in PHP; must be positive before loan approval }
         title: { type: string, maxLength: 200 }
         author: { type: string, maxLength: 160 }
         publisher: { type: string, maxLength: 160 }

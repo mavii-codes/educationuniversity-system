@@ -2585,204 +2585,200 @@
   ],
   "lifecycleOverviewStats": [
     {
-      "label": "Applicants",
-      "value": 6200,
-      "change": "+6.2% YoY",
-      "description": "Admissions portal & entrance examinees"
+      "label": "Registered Members",
+      "value": 10,
+      "change": "5 active borrowers",
+      "description": "Students with a library borrower account or circulation history"
     },
     {
-      "label": "Enrolled",
-      "value": 5240,
-      "change": "84.5% yield",
-      "description": "Officially registered across 6 colleges"
+      "label": "Active Borrowers",
+      "value": 5,
+      "change": "6 items currently on loan",
+      "description": "Students currently holding one or more library items"
     },
     {
-      "label": "Active",
-      "value": 4820,
-      "change": "92.0% retained",
-      "description": "Attending classes & active in coursework"
+      "label": "Lifetime Loans",
+      "value": 109,
+      "change": "Across 10 borrowers",
+      "description": "Library circulation transactions on record"
     },
     {
-      "label": "Graduated",
-      "value": 850,
-      "change": "Class of 2026",
-      "description": "Conferred degrees this academic year"
+      "label": "Outstanding Fines (PHP)",
+      "value": 0,
+      "change": "0 unpaid fines",
+      "description": "Total unpaid library fine balance"
     },
     {
-      "label": "Alumni",
-      "value": 8400,
-      "change": "89.4% employed",
-      "description": "Verified alumni records"
+      "label": "Overdue Items",
+      "value": 0,
+      "change": "No overdue loans",
+      "description": "Active library loans past their due date"
     }
   ],
   "lifecycleStages": [
     {
-      "key": "admission",
-      "title": "Admission",
-      "subtitle": "Application, entrance evaluation & document verification",
-      "status": "completed",
-      "metricLabel": "Total Applicants",
-      "metricCount": 6200,
-      "conversionRate": "88.4% qualified",
-      "description": "Captures applicant demographics, entrance exam scores, senior high school credentials, and scholarship eligibility before generating a permanent University ID.",
+      "key": "no-activity",
+      "title": "No Activity Yet",
+      "subtitle": "Library accounts without circulation, requests, reservations or fines",
+      "status": "upcoming",
+      "metricLabel": "Students Without Activity",
+      "metricCount": 0,
+      "conversionRate": "0.0% of members",
+      "description": "Registered library accounts that have not borrowed, requested, reserved, or accrued fines.",
       "sourceSystems": [
-        "Admissions Records"
-      ],
-      "keyMilestones": [
-        "Online application & academic credential upload verified",
-        "University Entrance Assessment scored & ranked",
-        "Merit and financial aid scholarship screening completed",
-        "Notice of Admission issued with pre-enrollment checklist"
-      ],
-      "insights": [
-        {
-          "label": "Acceptance Rate",
-          "value": "88.4%"
-        },
-        {
-          "label": "Avg Processing Time",
-          "value": "3.2 Days"
-        },
-        {
-          "label": "Scholarship Grantees",
-          "value": "640 Students"
-        }
-      ]
-    },
-    {
-      "key": "enrollment",
-      "title": "Enrollment",
-      "subtitle": "Subject advising, sectioning & student services",
-      "status": "completed",
-      "metricLabel": "Enrolled Students",
-      "metricCount": 5240,
-      "conversionRate": "84.5% enrollment yield",
-      "description": "Enrollment records establish student status and library borrowing eligibility.",
-      "sourceSystems": [
-        "Student Records",
         "Library System"
       ],
       "keyMilestones": [
-        "Curriculum study load & academic adviser assignment",
-        "Registrar validation & official Student ID activation",
-        "Course enrollment recorded",
-        "Campus Library borrowing privileges enabled"
+        "Borrower account provisioned from student records",
+        "Library orientation and borrowing privileges enabled",
+        "First catalog search, request, or reservation",
+        "First circulation transaction recorded"
       ],
       "insights": [
         {
-          "label": "Freshmen & Transferees",
-          "value": "1,450"
+          "label": "Registered Members",
+          "value": "10"
         },
         {
-          "label": "Continuing Students",
-          "value": "3,790"
+          "label": "Awaiting First Activity",
+          "value": "0 Students"
         },
         {
-          "label": "Provisioning Latency",
-          "value": "< 5 mins"
+          "label": "Activation Policy",
+          "value": "Automatic"
         }
       ]
     },
     {
-      "key": "academic-progress",
-      "title": "Academic Progress",
-      "subtitle": "Active coursework, attendance, academic engagement & retention care",
+      "key": "requests-pending",
+      "title": "Requests Pending",
+      "subtitle": "Borrowing requests and reservations awaiting library staff action",
       "status": "current",
-      "metricLabel": "Active Learners",
-      "metricCount": 4820,
-      "conversionRate": "94.2% passing rate",
-      "description": "Combines academic records, classroom attendance, course progress, and library utilization to support proactive advising and early risk intervention.",
+      "metricLabel": "Students Awaiting Action",
+      "metricCount": 0,
+      "conversionRate": "0.0% of members",
+      "description": "Students with pending borrowing requests or active reservations in the library queue.",
       "sourceSystems": [
-        "Academic Records",
-        "Library System"
+        "Library Circulation"
       ],
       "keyMilestones": [
-        "Continuous attendance & course engagement monitoring",
-        "Academic progress and GPA tracking",
-        "Early-warning alerts routed to academic advisers for at-risk students",
-        "Practicum, laboratory & research milestone tracking"
+        "Borrowing request submitted from the catalog",
+        "Request validated against borrowing limits and availability",
+        "Staff approval or rejection with review notes",
+        "Reservation pickup window scheduled"
       ],
       "insights": [
         {
-          "label": "Campus Avg GPA",
-          "value": "3.31 / 4.00"
+          "label": "Pending Queue",
+          "value": "0"
         },
         {
-          "label": "Avg Attendance",
-          "value": "92.4%"
+          "label": "Share of Members",
+          "value": "0.0%"
         },
         {
-          "label": "Early Advising Alerts",
-          "value": "142 Active"
+          "label": "Target Turnaround",
+          "value": "2 Business Days"
         }
       ]
     },
     {
-      "key": "graduation",
-      "title": "Graduation",
-      "subtitle": "Curriculum audit, institutional clearance & degree conferral",
-      "status": "upcoming",
-      "metricLabel": "Graduating Cohort",
-      "metricCount": 850,
-      "conversionRate": "91.8% on-time completion",
-      "description": " Automates degree audit verification across earned curriculum units, capstone completion, library book clearance, and registrar sign-off prior to commencement.",
+      "key": "active-borrowers",
+      "title": "Active Borrowers",
+      "subtitle": "Students currently holding one or more library items",
+      "status": "current",
+      "metricLabel": "Active Borrowers",
+      "metricCount": 5,
+      "conversionRate": "50.0% of members",
+      "description": "Students with open loans, including items borrowed within the current circulation window.",
       "sourceSystems": [
-        "Registrar Records",
-        "Library Clearance",
-        "Academic Departments"
+        "Library Circulation"
       ],
       "keyMilestones": [
-        "100% curriculum unit & residency audit verification",
-        "Automated Library & laboratory zero-liability clearance",
-        "Latin honors & academic distinction validation",
-        "Official transcript sealing & commencement conferral"
+        "Approved request converted into a circulation loan",
+        "Due date assigned and borrower notified",
+        "Renewal or return processed at the circulation desk",
+        "Loan closed with returned or overdue status"
       ],
       "insights": [
         {
-          "label": "Graduating Seniors",
-          "value": "850"
+          "label": "Items on Loan",
+          "value": "6"
         },
         {
-          "label": "Cleared Library Accounts",
-          "value": "98.6%"
+          "label": "Lifetime Loans",
+          "value": "109"
         },
         {
-          "label": "Latin Honors Candidates",
-          "value": "118"
+          "label": "Active Borrowers",
+          "value": "5"
         }
       ]
     },
     {
-      "key": "alumni",
-      "title": "Alumni",
-      "subtitle": "Career outcomes, industry placement & lifelong university ties",
-      "status": "upcoming",
-      "metricLabel": "Tracked Alumni",
-      "metricCount": 8400,
-      "conversionRate": "89.4% employed",
-      "description": "Tracks graduate employment outcomes, industry alignment, postgraduate studies, and institutional partnerships.",
+      "key": "outstanding-fines",
+      "title": "Outstanding Fines",
+      "subtitle": "Unpaid library fines and unsettled borrower balances",
+      "status": "current",
+      "metricLabel": "Students With Unpaid Fines",
+      "metricCount": 0,
+      "conversionRate": "PHP 0.00 outstanding",
+      "description": "Students carrying an unpaid library fine balance from overdue or damaged items.",
       "sourceSystems": [
-        "Alumni Records",
-        "Career Placement Office"
+        "Library Fines"
       ],
       "keyMilestones": [
-        "Graduate records added to the alumni lifecycle",
-        "6-month & 12-month graduate employability tracer surveys",
-        "Industry mentorship & practicum partner matching",
-        "Continuing education & postgraduate program pathways"
+        "Fine assessed automatically when an item becomes overdue",
+        "Borrower notified of the outstanding balance",
+        "Payment recorded against the fine at the circulation desk",
+        "Account cleared and borrowing privileges restored"
       ],
       "insights": [
         {
-          "label": "Employment Rate",
-          "value": "89.4%"
+          "label": "Unpaid Students",
+          "value": "0"
         },
         {
-          "label": "Degree-Aligned Roles",
-          "value": "78.2%"
+          "label": "Outstanding Balance",
+          "value": "PHP 0.00"
         },
         {
-          "label": "Partner Employers",
-          "value": "240+ Orgs"
+          "label": "Overdue Items",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "key": "restricted",
+      "title": "Restricted",
+      "subtitle": "Borrowers blocked by unpaid fines or overdue library items",
+      "status": "current",
+      "metricLabel": "Restricted Students",
+      "metricCount": 0,
+      "conversionRate": "0.0% of members",
+      "description": "Students whose borrowing privileges are limited until fines are settled or overdue items are returned.",
+      "sourceSystems": [
+        "Library Circulation",
+        "Library Fines"
+      ],
+      "keyMilestones": [
+        "Restriction triggered by unpaid fines or overdue loans",
+        "Borrowing and reservation privileges suspended",
+        "Clearance completed after payment or item return",
+        "Borrowing privileges reinstated automatically"
+      ],
+      "insights": [
+        {
+          "label": "Restricted Students",
+          "value": "0"
+        },
+        {
+          "label": "Overdue Items",
+          "value": "0"
+        },
+        {
+          "label": "Unpaid Balance",
+          "value": "PHP 0.00"
         }
       ]
     }

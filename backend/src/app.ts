@@ -16,6 +16,7 @@ import analyticsRoutes from "./routes/analytics.routes";
 import integrationRoutes from "./routes/integration.routes";
 import adminRoutes from "./routes/admin.routes";
 import ferpaRoutes from "./routes/ferpa.routes";
+import etlRoutes from "./routes/etl.routes";
 import libraryRoutes from "./routes/library.routes";
 import { uploadsDirectory } from "./utils/book-cover-storage";
 import * as authRepository from "./repositories/auth.repository";
@@ -134,6 +135,7 @@ app.use("/api", analyticsRoutes);
 app.use("/api", integrationRoutes);
 app.use("/api", adminRoutes);
 app.use("/api", ferpaRoutes);
+app.use("/api", etlRoutes);
 app.use("/api", libraryRoutes);
 
 // Error Handling

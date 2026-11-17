@@ -10,6 +10,7 @@ import {
   BookMarked,
   BookOpen,
   BookmarkCheck,
+  Bell,
   CheckCircle2,
   Clock,
   Cpu,
@@ -20,6 +21,7 @@ import {
   Search,
   Shield,
   UserCheck,
+  X,
 } from "lucide-react";
 import {
   getLibraryBooks,
@@ -84,6 +86,7 @@ export default function AdminLibraryPage() {
   const [rejectReason, setRejectReason] = useState("");
   const [bookEditor, setBookEditor] = useState<LibraryBook | null | undefined>();
   const [bookSaving, setBookSaving] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const { showToast } = useToast();
 
   const loadData = useCallback(async () => {
@@ -128,6 +131,15 @@ export default function AdminLibraryPage() {
     ...transactions,
     ...storeTransactions.filter((tx) => !pageTransactionIds.has(tx.id)),
   ];
+  const pendingRequests = borrowingRequests.filter(
+    (request) => request.status === "Pending"
+  );
+  const overdueLoans = displayTransactions.filter(
+    (transaction) => transaction.status === "Overdue"
+  );
+  const unpaidFines = fines.filter((fine) => fine.paymentStatus === "Unpaid");
+  const notificationCount =
+    pendingRequests.length + overdueLoans.length + unpaidFines.length;
 
   const handleApproveRequest = async (id: string) => {
     const res = await approveBorrowRequest(id, user?.name || "Administrator");
@@ -309,7 +321,154 @@ export default function AdminLibraryPage() {
             Manage the catalog, borrower requests, active loans, reservations, and fines.
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => setNotificationsOpen(true)}
+          aria-haspopup="dialog"
+          aria-expanded={notificationsOpen}
+          className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-lg border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100"
+        >
+          <Bell className="h-4 w-4" />
+          <span>Notifications</span>
+          {notificationCount > 0 && (
+            <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-indigo-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+              {notificationCount > 99 ? "99+" : notificationCount}
+            </span>
+          )}
+        </button>
       </div>
+
+      {notificationsOpen && (
+        <div className="fixed inset-0 z-50">
+          <button
+            type="button"
+            aria-label="Close notifications"
+            onClick={() => setNotificationsOpen(false)}
+            className="absolute inset-0 bg-slate-900/30"
+          />
+          <aside
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="library-notifications-title"
+            className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-2xl"
+          >
+            <div className="flex items-start justify-between border-b border-slate-100 px-5 py-4">
+              <div>
+                <h3
+                  id="library-notifications-title"
+                  className="text-base font-bold text-slate-900"
+                >
+                  Library Notifications
+                </h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  Items that may need staff attention.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setNotificationsOpen(false)}
+                aria-label="Close notifications"
+                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {loading ? (
+                <p className="px-5 py-12 text-center text-xs text-slate-500">
+                  Loading current library alerts...
+                </p>
+              ) : notificationCount === 0 ? (
+                <div className="px-5 py-12 text-center">
+                  <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-500" />
+                  <p className="mt-3 text-sm font-semibold text-slate-800">
+                    You&apos;re all caught up
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    No pending requests, overdue loans, or unpaid fines need attention.
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {pendingRequests.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab("requests");
+                        setNotificationsOpen(false);
+                      }}
+                      className="flex w-full items-start gap-3 px-5 py-4 text-left transition hover:bg-slate-50"
+                    >
+                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+                        <Clock className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-semibold text-slate-900">
+                          {pendingRequests.length} borrowing request{pendingRequests.length === 1 ? "" : "s"} awaiting review
+                        </span>
+                        <span className="mt-1 block text-xs text-slate-500">
+                          {pendingRequests.slice(0, 3).map((request) => request.bookTitle).join(", ")}
+                          {pendingRequests.length > 3 ? " and more" : ""}
+                        </span>
+                      </span>
+                      <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-slate-400" />
+                    </button>
+                  )}
+                  {overdueLoans.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab("transactions");
+                        setStatusFilter("Overdue");
+                        setNotificationsOpen(false);
+                      }}
+                      className="flex w-full items-start gap-3 px-5 py-4 text-left transition hover:bg-slate-50"
+                    >
+                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-rose-50 text-rose-600">
+                        <AlertTriangle className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-semibold text-slate-900">
+                          {overdueLoans.length} overdue loan{overdueLoans.length === 1 ? "" : "s"} awaiting return
+                        </span>
+                        <span className="mt-1 block text-xs text-slate-500">
+                          {overdueLoans.slice(0, 3).map((loan) => loan.bookTitle).join(", ")}
+                          {overdueLoans.length > 3 ? " and more" : ""}
+                        </span>
+                      </span>
+                      <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-slate-400" />
+                    </button>
+                  )}
+                  {unpaidFines.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab("fines");
+                        setNotificationsOpen(false);
+                      }}
+                      className="flex w-full items-start gap-3 px-5 py-4 text-left transition hover:bg-slate-50"
+                    >
+                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+                        <AlertCircle className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-semibold text-slate-900">
+                          {unpaidFines.length} unpaid fine{unpaidFines.length === 1 ? "" : "s"} to follow up
+                        </span>
+                        <span className="mt-1 block text-xs text-slate-500">
+                          {unpaidFines.slice(0, 3).map((fine) => fine.bookTitle).join(", ")}
+                          {unpaidFines.length > 3 ? " and more" : ""}
+                        </span>
+                      </span>
+                      <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-slate-400" />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </aside>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[

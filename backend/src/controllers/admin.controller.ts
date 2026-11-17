@@ -3,7 +3,17 @@ import { z } from "zod";
 import { currentUser } from "../middleware/auth.middleware";
 import { ApiError } from "../middleware/error.middleware";
 import { adminService } from "../services/admin.service";
+import {
+  getAuditActionLabel,
+  getAuditCategory,
+  getAuditDetails,
+  getAuditDetailsExtra,
+  getAuditOutcome,
+  getAuditResourceLabel,
+} from "../services/audit-labels";
 import { findAuditLogs } from "../repositories/audit.repository";
+
+export { getAuditDetails, getAuditOutcome };
 
 const createLibraryStaffSchema = z.object({
   name: z.string().trim().min(2).max(160),
@@ -37,38 +47,6 @@ function isUniqueViolation(error: unknown): boolean {
     "code" in error &&
     error.code === "23505"
   );
-}
-
-function getAuditDetails(
-  action: string,
-  metadata: Record<string, unknown> | null
-): string {
-  if (!metadata) return action.replace(/[._]/g, " ");
-  if (typeof metadata.details === "string") return metadata.details;
-
-  const details = [action.replace(/[._]/g, " ")];
-  if (typeof metadata.path === "string") details.push(metadata.path);
-  if (typeof metadata.statusCode === "number") {
-    details.push(`HTTP ${metadata.statusCode}`);
-  }
-  if (typeof metadata.recordsProcessed === "number") {
-    details.push(`${metadata.recordsProcessed} records processed`);
-  }
-  if (typeof metadata.duration === "string") {
-    details.push(`Duration ${metadata.duration}`);
-  }
-  return details.join(" · ");
-}
-
-function getAuditOutcome(
-  action: string,
-  metadata: Record<string, unknown> | null
-): "Success" | "Warning" | "Failure" {
-  if (metadata?.status === "Warning" || metadata?.status === "Failure") {
-    return metadata.status;
-  }
-  if (/failed|blocked|reuse_detected/i.test(action)) return "Failure";
-  return "Success";
 }
 
 export class AdminController {
@@ -231,6 +209,18 @@ export class AdminController {
               ? row.metadata.ipAddress
               : "—",
           details: getAuditDetails(row.action, row.metadata),
+          actionLabel: getAuditActionLabel(
+            row.action,
+            row.metadata,
+            row.entity_type
+          ),
+          resourceLabel: getAuditResourceLabel(
+            row.entity_type,
+            row.entity_id,
+            row.metadata
+          ),
+          category: getAuditCategory(row.action, row.entity_type),
+          detailsExtra: getAuditDetailsExtra(row.metadata),
         }))
       );
     } catch (error) {

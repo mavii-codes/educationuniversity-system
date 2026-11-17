@@ -33,15 +33,21 @@ function filterSeedStudents(query: StudentQuery): StudentModel[] {
   return items;
 }
 
+export interface StudentPage {
+  items: StudentModel[];
+  total: number;
+}
+
 export class StudentService {
-  async findAll(
-    query: StudentQuery = {},
+  /**
+   * Applies FERPA visibility and request-level access logging to a list of
+   * students. Shared by the unpaginated and paginated directory reads so both
+   * paths enforce the same masking rules.
+   */
+  private async applyViewerVisibility(
+    students: StudentModel[],
     viewer?: FerpaViewer
   ): Promise<StudentModel[]> {
-    const students = env.db.enabled
-      ? await studentRepository.findAll(query)
-      : filterSeedStudents(query);
-
     if (!viewer || viewer.portalRole === "Student") {
       return students;
     }
@@ -71,6 +77,41 @@ export class StudentService {
     }
 
     return visibleStudents;
+  }
+
+  async findAll(
+    query: StudentQuery = {},
+    viewer?: FerpaViewer
+  ): Promise<StudentModel[]> {
+    const students = env.db.enabled
+      ? await studentRepository.findAll(query)
+      : filterSeedStudents(query);
+
+    return this.applyViewerVisibility(students, viewer);
+  }
+
+  async findPaged(
+    query: StudentQuery = {},
+    page = 1,
+    pageSize = 10,
+    viewer?: FerpaViewer
+  ): Promise<StudentPage> {
+    if (env.db.enabled) {
+      const result = await studentRepository.findPaged(query, page, pageSize);
+      return {
+        items: await this.applyViewerVisibility(result.items, viewer),
+        total: result.total,
+      };
+    }
+
+    const filtered = filterSeedStudents(query);
+    const start = (page - 1) * pageSize;
+    const items = filtered.slice(start, start + pageSize);
+
+    return {
+      items: await this.applyViewerVisibility(items, viewer),
+      total: filtered.length,
+    };
   }
 
   async findById(id: string): Promise<StudentModel | null> {

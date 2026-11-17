@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:seed": "tsx src/db/seed.ts",
+    "etl:sync": "tsx scripts/verify-university-etl.ts",
     "db:backfill-book-covers": "tsx src/scripts/backfill-book-covers.ts",
     "test": "vitest run",
     "test:watch": "vitest"

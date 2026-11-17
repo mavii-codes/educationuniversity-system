@@ -277,6 +277,7 @@ export interface LibraryBookModel {
   id: string;
   isbn: string;
   cover_url?: string | null;
+  bookPrice: number;
   title: string;
   author: string;
   publisher: string;
@@ -293,6 +294,7 @@ export interface LibraryBookModel {
 
 export interface LibraryBookWriteModel {
   isbn: string;
+  bookPrice: number;
   title: string;
   author: string;
   publisher: string;
@@ -337,6 +339,7 @@ export interface BorrowingTransactionModel {
   bookTitle: string;
   isbn: string;
   cover_url?: string | null;
+  bookPriceAtBorrow?: number | null;
   studentId: string;
   studentName: string;
   programCode: string;
@@ -373,6 +376,7 @@ export interface OverdueFineModel {
   dueDate: string;
   daysOverdue: number;
   fineAmount: number;
+  fineRatePerDay?: number;
   paymentStatus: "Unpaid" | "Waived" | "Paid";
 }
 

@@ -13,6 +13,8 @@ const studentQuerySchema = z.object({
   yearLevel: z.string().trim().max(24).optional(),
   status: z.string().trim().max(24).optional(),
   riskLevel: z.enum(["Low", "Medium", "High"]).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(100).optional(),
 });
 
 const idSchema = z.string().trim().min(1).max(32).regex(/^[A-Za-z0-9-]+$/);
@@ -25,8 +27,29 @@ export class StudentController {
         throw new ApiError(400, "Invalid student filter parameters.");
       }
 
-      const students = await studentService.findAll(parsed.data, currentUser(res));
-      res.json(students);
+      const { page, pageSize, ...filters } = parsed.data;
+      const viewer = currentUser(res);
+
+      // Paginated mode is opt-in: listing callers that send neither `page` nor
+      // `pageSize` keep receiving the plain array response.
+      if (page !== undefined && pageSize !== undefined) {
+        const result = await studentService.findPaged(
+          filters,
+          page,
+          pageSize,
+          viewer
+        );
+        res.json({
+          students: result.items,
+          total: result.total,
+          page,
+          pageSize,
+          totalPages: Math.ceil(result.total / pageSize),
+        });
+        return;
+      }
+
+      res.json(await studentService.findAll(filters, viewer));
     } catch (error) {
       next(error);
     }

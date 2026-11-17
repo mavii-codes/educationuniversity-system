@@ -9,6 +9,7 @@ import {
 interface LibraryBookRow {
   id: string;
   isbn: string;
+  book_price: number | string;
   title: string;
   author: string;
   publisher: string;
@@ -32,7 +33,7 @@ interface BookCategoryRow {
 }
 
 const BOOK_COLUMNS = `
-  id, isbn, title, author, publisher, publication_year, category, call_number,
+  id, isbn, book_price, title, author, publisher, publication_year, category, call_number,
   total_copies, available_copies, borrowed_copies, location, status, cover_url,
   updated_at AS last_synced_at
 `;
@@ -41,6 +42,7 @@ function mapBook(row: LibraryBookRow): LibraryBookModel {
   return {
     id: row.id,
     isbn: row.isbn,
+    bookPrice: Number(row.book_price),
     title: row.title,
     author: row.author,
     publisher: row.publisher,
@@ -128,14 +130,15 @@ export async function createLibraryBook(
         : "Available";
   const { rows } = await queryDb<LibraryBookRow>(
     `INSERT INTO library_books
-       (id, isbn, title, author, publisher, publication_year, category,
+       (id, isbn, book_price, title, author, publisher, publication_year, category,
         call_number, total_copies, available_copies, borrowed_copies, location,
         status, cover_url)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
      RETURNING ${BOOK_COLUMNS}`,
     [
       id,
       book.isbn,
+      book.bookPrice,
       book.title,
       book.author,
       book.publisher,
@@ -166,15 +169,16 @@ export async function updateLibraryBook(
         : "Available";
   const { rows } = await queryDb<LibraryBookRow>(
     `UPDATE library_books
-        SET isbn = $2, title = $3, author = $4, publisher = $5,
-            publication_year = $6, category = $7, call_number = $8,
-            total_copies = $9, available_copies = $10, borrowed_copies = $11,
-            location = $12, status = $13, cover_url = $14, updated_at = NOW()
+        SET isbn = $2, book_price = $3, title = $4, author = $5, publisher = $6,
+            publication_year = $7, category = $8, call_number = $9,
+            total_copies = $10, available_copies = $11, borrowed_copies = $12,
+            location = $13, status = $14, cover_url = $15, updated_at = NOW()
       WHERE id = $1
       RETURNING ${BOOK_COLUMNS}`,
     [
       id,
       book.isbn,
+      book.bookPrice,
       book.title,
       book.author,
       book.publisher,

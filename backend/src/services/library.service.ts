@@ -10,6 +10,7 @@ import {
   ReservationModel,
   StudentBorrowerModel,
 } from "../models";
+import { calculateOverdueFine } from "../utils/library-fines";
 
 /**
  * External Library Management System Mock API Client
@@ -809,6 +810,7 @@ class LibraryETLService {
       availableCopies: b.copies_avail,
       borrowedCopies: b.copies_out,
       location: b.shelf_loc,
+      bookPrice: 0,
       status: b.copies_avail === 0 ? "Checked Out" : b.copies_out > 0 ? "Partially Available" : "Available",
       cover_url: null,
       lastSyncedAt: new Date().toISOString(),
@@ -1249,6 +1251,12 @@ class LibraryETLService {
     if (!book || book.availableCopies <= 0) {
       return { ok: false, message: "No available copies in inventory." };
     }
+    if (book.bookPrice <= 0) {
+      return {
+        ok: false,
+        message: "Set a positive book price before approving this loan.",
+      };
+    }
 
     req.status = "Approved";
     req.reviewedBy = reviewedBy;
@@ -1269,6 +1277,7 @@ class LibraryETLService {
       bookTitle: book.title,
       isbn: book.isbn,
       cover_url: book.cover_url ?? null,
+      bookPriceAtBorrow: book.bookPrice,
       studentId: req.studentId,
       studentName: req.studentName,
       programCode: req.programCode,
@@ -1314,7 +1323,11 @@ class LibraryETLService {
     if (isOverdue) {
       const diffMs = now.getTime() - dueDate.getTime();
       const days = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-      calculatedFine = days * 15.0;
+      const { dailyRate, total } = calculateOverdueFine(
+        tx.bookPriceAtBorrow ?? null,
+        days
+      );
+      calculatedFine = total;
 
       const fineItem: OverdueFineModel = {
         id: `fine-${Date.now()}`,
@@ -1326,6 +1339,7 @@ class LibraryETLService {
         dueDate: tx.dueDate,
         daysOverdue: days,
         fineAmount: calculatedFine,
+        fineRatePerDay: dailyRate,
         paymentStatus: "Unpaid",
       };
       this.fines.unshift(fineItem);

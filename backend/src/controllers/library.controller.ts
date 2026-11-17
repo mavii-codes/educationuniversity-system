@@ -34,6 +34,7 @@ function isUniqueViolation(error: unknown): boolean {
 const bookInputSchema = z
   .object({
     isbn: z.string().trim().max(32),
+    bookPrice: z.coerce.number().finite().min(0).max(99999999.99),
     title: z.string().trim().min(1).max(200),
     author: z.string().trim().min(1).max(160),
     publisher: z.string().trim().max(160),
@@ -149,6 +150,17 @@ export const createLibraryBook = async (req: Request, res: Response) => {
       success: false,
       message: "Invalid book details.",
       errors: parsed.error.issues,
+    });
+  }
+  if (parsed.data.bookPrice <= 0) {
+    try {
+      await removeLocalCover(getUploadedCoverUrl(req));
+    } catch (error) {
+      console.error("[Library] Failed to remove invalid uploaded cover:", error);
+    }
+    return res.status(400).json({
+      success: false,
+      message: "Book price must be greater than zero.",
     });
   }
 

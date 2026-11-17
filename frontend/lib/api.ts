@@ -54,6 +54,7 @@ import {
   Student,
   StudentBorrower,
   StudentLifecycle,
+  StudentListPage,
   StudentNotificationItem,
   SyncHistoryRecord,
 } from "@/types";
@@ -270,6 +271,37 @@ export interface StudentQueryFilters {
   riskLevel?: string;
 }
 
+function applyMockStudentFilters(filters?: StudentQueryFilters): Student[] {
+  let results = [...STUDENTS];
+
+  if (filters) {
+    if (filters.search) {
+      const q = filters.search.toLowerCase().trim();
+      results = results.filter(
+        (s) =>
+          s.name.toLowerCase().includes(q) ||
+          s.id.toLowerCase().includes(q) ||
+          s.programName.toLowerCase().includes(q) ||
+          s.email.toLowerCase().includes(q)
+      );
+    }
+    if (filters.program && filters.program !== "All") {
+      results = results.filter((s) => s.programCode === filters.program);
+    }
+    if (filters.yearLevel && filters.yearLevel !== "All") {
+      results = results.filter((s) => s.yearLevel === filters.yearLevel);
+    }
+    if (filters.status && filters.status !== "All") {
+      results = results.filter((s) => s.status === filters.status);
+    }
+    if (filters.riskLevel && filters.riskLevel !== "All") {
+      results = results.filter((s) => s.riskLevel === filters.riskLevel);
+    }
+  }
+
+  return results;
+}
+
 // GET /api/students
 export async function getStudents(filters?: StudentQueryFilters): Promise<Student[]> {
   return tryLiveOrFallback(
@@ -285,36 +317,55 @@ export async function getStudents(filters?: StudentQueryFilters): Promise<Studen
     },
     async () => {
       await simulateNetworkDelay(160);
-      let results = [...STUDENTS];
-
-      if (filters) {
-        if (filters.search) {
-          const q = filters.search.toLowerCase().trim();
-          results = results.filter(
-            (s) =>
-              s.name.toLowerCase().includes(q) ||
-              s.id.toLowerCase().includes(q) ||
-              s.programName.toLowerCase().includes(q) ||
-              s.email.toLowerCase().includes(q)
-          );
-        }
-        if (filters.program && filters.program !== "All") {
-          results = results.filter((s) => s.programCode === filters.program);
-        }
-        if (filters.yearLevel && filters.yearLevel !== "All") {
-          results = results.filter((s) => s.yearLevel === filters.yearLevel);
-        }
-        if (filters.status && filters.status !== "All") {
-          results = results.filter((s) => s.status === filters.status);
-        }
-        if (filters.riskLevel && filters.riskLevel !== "All") {
-          results = results.filter((s) => s.riskLevel === filters.riskLevel);
-        }
-      }
-
-      return results;
+      return applyMockStudentFilters(filters);
     },
     (data) => Array.isArray(data) && (data.length === 0 || Boolean(data[0]?.academicRecords))
+  );
+}
+
+// GET /api/students?page=&pageSize=
+export async function getStudentsPaged(
+  filters: StudentQueryFilters | undefined,
+  page: number,
+  pageSize: number
+): Promise<StudentListPage> {
+  const safePage = Math.max(1, Math.trunc(page) || 1);
+  const safePageSize = Math.min(100, Math.max(1, Math.trunc(pageSize) || 10));
+
+  return tryLiveOrFallback(
+    () => {
+      const params = new URLSearchParams();
+      if (filters?.search) params.set("search", filters.search);
+      if (filters?.program && filters.program !== "All") params.set("program", filters.program);
+      if (filters?.yearLevel && filters.yearLevel !== "All") params.set("yearLevel", filters.yearLevel);
+      if (filters?.status && filters.status !== "All") params.set("status", filters.status);
+      if (filters?.riskLevel && filters.riskLevel !== "All") params.set("riskLevel", filters.riskLevel);
+      params.set("page", String(safePage));
+      params.set("pageSize", String(safePageSize));
+      return fetchJson<StudentListPage>(`/students?${params.toString()}`);
+    },
+    async () => {
+      await simulateNetworkDelay(160);
+      const filtered = applyMockStudentFilters(filters);
+      const total = filtered.length;
+      return {
+        students: filtered.slice(
+          (safePage - 1) * safePageSize,
+          safePage * safePageSize
+        ),
+        total,
+        page: safePage,
+        pageSize: safePageSize,
+        totalPages: Math.ceil(total / safePageSize),
+      };
+    },
+    (data) =>
+      Boolean(data) &&
+      Array.isArray(data.students) &&
+      typeof data.total === "number" &&
+      typeof data.page === "number" &&
+      typeof data.pageSize === "number" &&
+      typeof data.totalPages === "number"
   );
 }
 

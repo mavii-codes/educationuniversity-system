@@ -80,7 +80,11 @@ and circulation records are not overwritten. The pipeline does not connect to
 an external Koha/Folio service; configure a real vendor endpoint and credentials
 before treating an external library system as the source.
 
-The library migration adds persistent catalog metadata and `cover_url`. The
+The library migrations add persistent catalog metadata, `cover_url`, and a
+book price in PHP. New loans snapshot the catalog price at checkout; overdue
+fines accrue at 1/20 of that price per calendar day, rounded to cents. A book
+must have a positive price before a borrowing request can be approved. Loans
+created before price snapshots retain the prior ₱15-per-day rate. The
 backfill looks up covers for existing PostgreSQL books, waiting 300 ms between
 books. Administrator and Registrar book edits are available from Library Management;
 PostgreSQL must be enabled for changes to persist across
@@ -96,6 +100,43 @@ backend API (for example `http://localhost:5000/api`) and `CORS_ORIGIN` must
 allow the frontend origin. On hosted deployments, mount persistent storage at
 `backend/uploads` so uploaded covers survive restarts and are shared by all
 backend instances.
+
+### University Data Integration (ETL/ELT), FERPA governance & Unified Student Lifecycle
+
+Beyond the library pipeline, the system implements the university integration
+stack: **ETL/ELT** batch ingestion across campus systems, **FERPA** governance
+for student education records, and a **Unified Student Lifecycle** view.
+
+- **University ETL/ELT** (`/api/etl/*`): batch Extract → Validate → Clean →
+  Transform → Load pipelines for the **SIS**, **LMS**, **HR**, **Alumni CRM**
+  and **Library** sources. Fixture extracts live in
+  `backend/src/etl/sources.ts`; invalid rows are rejected (with reasons) and
+  duplicates are cleaned before rows are upserted into the central schema
+  (`students`, `enrollments`, `lms_course_progress`, `hr_student_employment`,
+  `alumni_records`), and lifecycle timeline events are appended to
+  `student_lifecycle_events`. Run history is stored in `etl_runs` /
+  `etl_run_sources` (restored by migration `020` after `016` temporarily
+  dropped them). Endpoints: `GET /api/etl/sources` (Admin/Librarian),
+  `POST /api/etl/sync` (Administrator, body `{ sourceIds? }`),
+  `GET /api/etl/runs?limit=` (Admin/Librarian). A manual CLI runner is
+  available: `npm run etl:sync [-- SOURCE ...]` (requires `DB_ENABLED=true`).
+  The admin UI lives at **Administration → Data Integration** (`/admin/etl`).
+- **FERPA governance** (`/api/ferpa/*`): every staff view of a student record
+  is logged to `ferpa_access_log`; a per-student directory-information opt-out
+  (`ferpa_directory_settings`) masks email/phone/address for Librarians;
+  consent grants/revocations are tracked in `ferpa_consent_records`. Students
+  can review their own consents via `GET /api/ferpa/my-consents`. The admin UI
+  lives at **Administration → FERPA Compliance** (`/admin/ferpa`).
+- **Unified Student Lifecycle** (`GET /api/students/:id/lifecycle`): one
+  connected per-student view from admissions through alumni — stage cards
+  (Admissions, Enrollment, LMS Engagement, Library Activity, Financial
+  Standing, Alumni) plus the cross-system timeline fed by the ETL. Staff
+  access is FERPA-logged; students may view their own. The admin UI lives at
+  **Administration → Student Lifecycle** (`/admin/lifecycle?studentId=...`),
+  also reachable from Borrower Accounts.
+
+Apply migrations before first use: `npm run db:migrate` (adds migrations
+`014`–`021`). New tables are idempotent and safe to re-run.
 
 ### Authentication
 

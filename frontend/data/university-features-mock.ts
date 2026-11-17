@@ -220,6 +220,11 @@ export const FERPA_DIRECTORY_SETTINGS: FerpaDirectorySetting[] = [
   },
 ];
 
+/**
+ * Preset library lifecycles for the seed students. All numbers are derived
+ * from each student's `library` profile in mock-data (totalBorrowedAllTime,
+ * currentBorrowedCount, finesBalance, and their checked-out titles).
+ */
 const STUDENT_LIFECYCLES: Record<string, StudentLifecycle> = {
   "2024-042": {
     studentId: "2024-042",
@@ -228,117 +233,102 @@ const STUDENT_LIFECYCLES: Record<string, StudentLifecycle> = {
     programCode: "BSIT",
     yearLevel: "2nd Year",
     status: "Active",
-    currentStage: "LMS_ENGAGEMENT",
+    currentStage: "BORROWING",
     stages: [
       {
-        key: "ADMISSIONS",
-        label: "Admissions",
+        key: "MEMBERSHIP",
+        label: "Library Membership",
         status: "Completed",
-        date: "2025-06-12T09:00:00Z",
-        summary: "Admitted to BS Information Technology after entrance assessment.",
+        date: "2025-08-05T09:15:00Z",
+        summary:
+          "Library membership activated with the student ID; borrowing privileges enabled for BSIT.",
         metrics: [
-          { label: "Entrance Score", value: "84 / 100" },
-          { label: "Admission Year", value: "2025" },
+          { label: "Member Since", value: "2025" },
+          { label: "Status", value: "Active" },
         ],
       },
       {
-        key: "ENROLLMENT",
-        label: "Enrollment",
+        key: "REQUESTS",
+        label: "Borrowing Requests",
         status: "Completed",
-        date: "2025-08-05T09:00:00Z",
-        summary: "Officially enrolled with a 21-unit first semester study load.",
+        date: "2026-10-08T14:05:00Z",
+        summary:
+          "4 borrowing requests submitted; every request was approved and fulfilled at the circulation desk.",
         metrics: [
-          { label: "Year Level", value: "2nd Year" },
-          { label: "Study Load", value: "21 units" },
+          { label: "Requests Submitted", value: "4" },
+          { label: "Approved", value: "4" },
         ],
       },
       {
-        key: "LMS_ENGAGEMENT",
-        label: "LMS Engagement",
+        key: "BORROWING",
+        label: "Borrowing Activity",
         status: "Active",
-        date: "2026-08-18T09:00:00Z",
-        summary: "Active in 3 course shells with a 61% assignment completion rate.",
+        date: "2026-10-10T10:20:00Z",
+        summary:
+          "1 active loan — 'Data Structures and Algorithms in Java', due back Oct 31, 2026.",
         metrics: [
-          { label: "Completion", value: "61%" },
-          { label: "Weekly Logins", value: "5" },
-        ],
-      },
-      {
-        key: "LIBRARY_ACTIVITY",
-        label: "Library Activity",
-        status: "Active",
-        date: "2026-10-10T09:00:00Z",
-        summary: "1 active loan and 4 lifetime borrowings recorded by the library.",
-        metrics: [
-          { label: "Current Loans", value: "1" },
+          { label: "Active Loans", value: "1" },
           { label: "Lifetime Loans", value: "4" },
         ],
       },
       {
-        key: "FINANCIAL_STANDING",
-        label: "Financial Standing",
+        key: "FINES",
+        label: "Fines & Payments",
         status: "Upcoming",
         date: null,
-        summary: "Semestral tuition assessment is pending for the next billing cycle.",
-        metrics: [{ label: "Balance", value: "₱0.00" }],
+        summary:
+          "No fines on record — the fine ledger activates only when a loan goes overdue.",
+        metrics: [{ label: "Outstanding", value: "₱0.00" }],
       },
       {
-        key: "ALUMNI",
-        label: "Alumni",
-        status: "Upcoming",
-        date: null,
-        summary: "Alumni transition begins after degree conferral.",
-        metrics: [{ label: "Expected Graduation", value: "2029" }],
+        key: "STANDING",
+        label: "Current Standing",
+        status: "Active",
+        date: "2026-11-05T16:40:00Z",
+        summary:
+          "Good standing at the last semester audit — full borrowing privileges, no restrictions.",
+        metrics: [
+          { label: "Privileges", value: "Full" },
+          { label: "Restrictions", value: "None" },
+        ],
       },
     ],
     timeline: [
       {
         id: "life-2024-042-01",
-        stage: "ADMISSIONS",
-        sourceSystem: "SIS",
-        title: "Admission application submitted",
-        description: "Application and senior high school credentials received.",
-        occurredAt: "2025-05-02T08:30:00Z",
+        stage: "MEMBERSHIP",
+        sourceSystem: "LIBRARY",
+        title: "Library membership activated",
+        description:
+          "Student ID 2024-042 registered at the circulation desk; borrowing privileges enabled.",
+        occurredAt: "2025-08-05T09:15:00Z",
       },
       {
         id: "life-2024-042-02",
-        stage: "ADMISSIONS",
-        sourceSystem: "SIS",
-        title: "Notice of admission issued",
-        description: "Accepted into the BSIT program for AY 2025-2026.",
-        occurredAt: "2025-06-12T09:00:00Z",
+        stage: "REQUESTS",
+        sourceSystem: "LIBRARY",
+        title: "Request approved",
+        description:
+          "'Data Structures and Algorithms in Java' approved for pickup at the circulation desk.",
+        occurredAt: "2026-10-08T14:05:00Z",
       },
       {
         id: "life-2024-042-03",
-        stage: "ENROLLMENT",
-        sourceSystem: "SIS",
-        title: "Enrolled in 21 units",
-        description: "Registrar confirmed enrollment and activated the student ID.",
-        occurredAt: "2025-08-05T09:00:00Z",
-      },
-      {
-        id: "life-2024-042-04",
-        stage: "LMS_ENGAGEMENT",
-        sourceSystem: "LMS",
-        title: "LMS course shells provisioned",
-        description: "IT 201, IT 203, and IT 205 course shells activated.",
-        occurredAt: "2025-08-08T07:45:00Z",
-      },
-      {
-        id: "life-2024-042-05",
-        stage: "LIBRARY_ACTIVITY",
+        stage: "BORROWING",
         sourceSystem: "LIBRARY",
-        title: "First library loan recorded",
-        description: "Data Structures and Algorithms in Java borrowed.",
+        title: "Borrowed 'Data Structures and Algorithms in Java'",
+        description:
+          "3-week loan issued for IT 201 readings; due Oct 31, 2026.",
         occurredAt: "2026-10-10T10:20:00Z",
       },
       {
-        id: "life-2024-042-06",
-        stage: "LMS_ENGAGEMENT",
-        sourceSystem: "LMS",
-        title: "Assignment submission flagged at risk",
-        description: "Two missing submissions triggered an academic advising alert.",
-        occurredAt: "2026-11-02T16:10:00Z",
+        id: "life-2024-042-04",
+        stage: "STANDING",
+        sourceSystem: "LIBRARY",
+        title: "Standing verified at semester audit",
+        description:
+          "Account in good standing with full borrowing privileges and a zero fine balance.",
+        occurredAt: "2026-11-05T16:40:00Z",
       },
     ],
   },
@@ -349,112 +339,114 @@ const STUDENT_LIFECYCLES: Record<string, StudentLifecycle> = {
     programCode: "BSBA",
     yearLevel: "4th Year",
     status: "Active",
-    currentStage: "FINANCIAL_STANDING",
+    currentStage: "BORROWING",
     stages: [
       {
-        key: "ADMISSIONS",
-        label: "Admissions",
+        key: "MEMBERSHIP",
+        label: "Library Membership",
         status: "Completed",
-        date: "2023-06-09T09:00:00Z",
-        summary: "Admitted with merit recognition to BS Business Administration.",
+        date: "2023-08-07T09:30:00Z",
+        summary:
+          "Library membership activated during first-year enrollment and renewed each term since.",
         metrics: [
-          { label: "Entrance Score", value: "93 / 100" },
-          { label: "Admission Year", value: "2023" },
+          { label: "Member Since", value: "2023" },
+          { label: "Status", value: "Active" },
         ],
       },
       {
-        key: "ENROLLMENT",
-        label: "Enrollment",
+        key: "REQUESTS",
+        label: "Borrowing Requests",
         status: "Completed",
-        date: "2023-08-07T09:00:00Z",
-        summary: "Officially enrolled as a first-year BSBA student.",
+        date: "2026-10-14T13:10:00Z",
+        summary:
+          "15 borrowing requests submitted over four years; 14 approved and 1 declined for an in-repair copy.",
         metrics: [
-          { label: "Year Level", value: "4th Year" },
-          { label: "Study Load", value: "21 units" },
+          { label: "Requests Submitted", value: "15" },
+          { label: "Approved", value: "14" },
         ],
       },
       {
-        key: "LMS_ENGAGEMENT",
-        label: "LMS Engagement",
-        status: "Completed",
-        date: "2026-10-28T09:00:00Z",
-        summary: "94% assignment completion and 34 study hours recorded this month.",
-        metrics: [
-          { label: "Completion", value: "94%" },
-          { label: "Study Hours", value: "34" },
-        ],
-      },
-      {
-        key: "LIBRARY_ACTIVITY",
-        label: "Library Activity",
-        status: "Completed",
-        date: "2026-10-16T09:00:00Z",
-        summary: "14 lifetime borrowings with zero outstanding library fines.",
-        metrics: [
-          { label: "Lifetime Loans", value: "14" },
-          { label: "Fines", value: "₱0.00" },
-        ],
-      },
-      {
-        key: "FINANCIAL_STANDING",
-        label: "Financial Standing",
+        key: "BORROWING",
+        label: "Borrowing Activity",
         status: "Active",
-        date: "2026-11-04T09:00:00Z",
-        summary: "Graduation clearance audit in progress for the Class of 2027.",
+        date: "2026-10-16T11:30:00Z",
+        summary:
+          "1 active loan — 'Competitive Strategy: Techniques for Analyzing Industries', due Nov 6, 2026.",
         metrics: [
-          { label: "Balance", value: "₱0.00" },
-          { label: "Clearance", value: "In Review" },
+          { label: "Active Loans", value: "1" },
+          { label: "Lifetime Loans", value: "14" },
         ],
       },
       {
-        key: "ALUMNI",
-        label: "Alumni",
-        status: "Upcoming",
-        date: null,
-        summary: "Alumni CRM profile will be created after degree conferral.",
-        metrics: [{ label: "Expected Graduation", value: "2027" }],
+        key: "FINES",
+        label: "Fines & Payments",
+        status: "Active",
+        date: "2026-09-12T10:15:00Z",
+        summary:
+          "One ₱45.00 fine from a 3-day overdue return was paid in full; the ledger is clear again.",
+        metrics: [
+          { label: "Outstanding", value: "₱0.00" },
+          { label: "Paid to Date", value: "₱45.00" },
+        ],
+      },
+      {
+        key: "STANDING",
+        label: "Current Standing",
+        status: "Active",
+        date: "2026-11-05T16:40:00Z",
+        summary:
+          "Good standing — the settled fine did not affect borrowing privileges.",
+        metrics: [
+          { label: "Privileges", value: "Full" },
+          { label: "Restrictions", value: "None" },
+        ],
       },
     ],
     timeline: [
       {
         id: "life-2023-109-01",
-        stage: "ADMISSIONS",
-        sourceSystem: "SIS",
-        title: "Merit admission granted",
-        description: "Admitted to BSBA with Dean's List eligibility screening.",
-        occurredAt: "2023-06-09T09:00:00Z",
+        stage: "MEMBERSHIP",
+        sourceSystem: "LIBRARY",
+        title: "Library membership activated",
+        description:
+          "Student ID 2023-109 registered at the circulation desk; borrowing privileges enabled.",
+        occurredAt: "2023-08-07T09:30:00Z",
       },
       {
         id: "life-2023-109-02",
-        stage: "ENROLLMENT",
-        sourceSystem: "SIS",
-        title: "First-year enrollment completed",
-        description: "Registrar activated the student record and library privileges.",
-        occurredAt: "2023-08-07T09:00:00Z",
+        stage: "BORROWING",
+        sourceSystem: "LIBRARY",
+        title: "Returned 3 days overdue",
+        description:
+          "'Principles of Marketing' came back 3 days past due; a ₱45.00 fine was posted to the ledger.",
+        occurredAt: "2026-09-09T15:45:00Z",
       },
       {
         id: "life-2023-109-03",
-        stage: "LMS_ENGAGEMENT",
-        sourceSystem: "LMS",
-        title: "Dean's Lister standing posted",
-        description: "Term GPA of 3.42 verified in the LMS gradebook sync.",
-        occurredAt: "2025-01-15T10:00:00Z",
+        stage: "FINES",
+        sourceSystem: "LIBRARY",
+        title: "Fine paid ₱45.00",
+        description:
+          "Settled in cash at the circulation desk; the ledger balance returned to zero.",
+        occurredAt: "2026-09-12T10:15:00Z",
       },
       {
         id: "life-2023-109-04",
-        stage: "LIBRARY_ACTIVITY",
+        stage: "BORROWING",
         sourceSystem: "LIBRARY",
-        title: "Capstone research books borrowed",
-        description: "Three strategy titles checked out for capstone research.",
+        title: "Borrowed 'Competitive Strategy: Techniques for Analyzing Industries'",
+        description:
+          "Two-week capstone research loan; due Nov 6, 2026.",
         occurredAt: "2026-10-16T11:30:00Z",
       },
       {
         id: "life-2023-109-05",
-        stage: "FINANCIAL_STANDING",
-        sourceSystem: "FINANCE",
-        title: "Graduation clearance initiated",
-        description: "Tuition and library clearance audit opened by the registrar.",
-        occurredAt: "2026-11-04T09:00:00Z",
+        stage: "STANDING",
+        sourceSystem: "LIBRARY",
+        title: "Standing verified at semester audit",
+        description:
+          "Account in good standing with full borrowing privileges and a zero fine balance.",
+        occurredAt: "2026-11-05T16:40:00Z",
       },
     ],
   },
@@ -465,248 +457,291 @@ const STUDENT_LIFECYCLES: Record<string, StudentLifecycle> = {
     programCode: "BSIT",
     yearLevel: "4th Year",
     status: "Graduated",
-    currentStage: "ALUMNI",
+    currentStage: "STANDING",
     stages: [
       {
-        key: "ADMISSIONS",
-        label: "Admissions",
+        key: "MEMBERSHIP",
+        label: "Library Membership",
         status: "Completed",
-        date: "2022-06-10T09:00:00Z",
-        summary: "Admitted to BS Information Technology as an entrance scholar.",
+        date: "2022-08-08T09:30:00Z",
+        summary:
+          "Library membership activated in first year and archived after graduation clearance in 2026.",
         metrics: [
-          { label: "Entrance Score", value: "96 / 100" },
-          { label: "Admission Year", value: "2022" },
+          { label: "Member", value: "2022–2026" },
+          { label: "Status", value: "Archived" },
         ],
       },
       {
-        key: "ENROLLMENT",
-        label: "Enrollment",
+        key: "REQUESTS",
+        label: "Borrowing Requests",
         status: "Completed",
-        date: "2022-08-08T09:00:00Z",
-        summary: "Enrolled with a full 21-unit first semester load.",
+        date: "2026-03-05T10:20:00Z",
+        summary:
+          "33 borrowing requests over four years; 31 approved and fulfilled, 2 declined.",
         metrics: [
-          { label: "Year Level", value: "4th Year" },
-          { label: "Units Earned", value: "148" },
+          { label: "Requests Submitted", value: "33" },
+          { label: "Approved", value: "31" },
         ],
       },
       {
-        key: "LMS_ENGAGEMENT",
-        label: "LMS Engagement",
+        key: "BORROWING",
+        label: "Borrowing Activity",
         status: "Completed",
-        date: "2026-05-22T09:00:00Z",
-        summary: "Completed all capstone and practicum course requirements.",
+        date: "2026-03-29T10:05:00Z",
+        summary:
+          "31 lifetime loans, all returned. The final loan, 'Clean Architecture', came back 2 days early.",
         metrics: [
-          { label: "Completion", value: "100%" },
-          { label: "Final GPA", value: "3.75" },
+          { label: "Active Loans", value: "0" },
+          { label: "Lifetime Loans", value: "31" },
         ],
       },
       {
-        key: "LIBRARY_ACTIVITY",
-        label: "Library Activity",
+        key: "FINES",
+        label: "Fines & Payments",
         status: "Completed",
-        date: "2026-05-30T09:00:00Z",
-        summary: "Library clearance verified with zero outstanding loans or fines.",
+        date: "2026-03-29T10:05:00Z",
+        summary:
+          "₱120.00 in overdue fines settled across four years; the ledger closed at zero.",
         metrics: [
-          { label: "Lifetime Loans", value: "22" },
-          { label: "Fines", value: "₱0.00" },
+          { label: "Outstanding", value: "₱0.00" },
+          { label: "Paid to Date", value: "₱120.00" },
         ],
       },
       {
-        key: "FINANCIAL_STANDING",
-        label: "Financial Standing",
+        key: "STANDING",
+        label: "Current Standing",
         status: "Completed",
         date: "2026-06-04T09:00:00Z",
-        summary: "All tuition obligations settled before commencement.",
+        summary:
+          "Library clearance completed with zero outstanding loans or fines before commencement.",
         metrics: [
-          { label: "Balance", value: "₱0.00" },
-          { label: "Scholarship", value: "Cum Laude" },
-        ],
-      },
-      {
-        key: "ALUMNI",
-        label: "Alumni",
-        status: "Alumni",
-        date: "2026-06-18T09:00:00Z",
-        summary: "Degree conferred and alumni profile created in the CRM.",
-        metrics: [
-          { label: "Conferred", value: "Class of 2026" },
-          { label: "CRM Status", value: "Verified" },
+          { label: "Privileges", value: "Cleared" },
+          { label: "Restrictions", value: "None" },
         ],
       },
     ],
     timeline: [
       {
         id: "life-2022-031-01",
-        stage: "ADMISSIONS",
-        sourceSystem: "SIS",
-        title: "Entrance scholarship awarded",
-        description: "Full academic scholarship granted on admission.",
-        occurredAt: "2022-06-10T09:00:00Z",
+        stage: "MEMBERSHIP",
+        sourceSystem: "LIBRARY",
+        title: "Library membership activated",
+        description:
+          "Student ID 2022-031 registered at the circulation desk; borrowing privileges enabled.",
+        occurredAt: "2022-08-08T09:30:00Z",
       },
       {
         id: "life-2022-031-02",
-        stage: "ENROLLMENT",
-        sourceSystem: "SIS",
-        title: "First-year enrollment completed",
-        description: "BSIT study plan and adviser assignment confirmed.",
-        occurredAt: "2022-08-08T09:00:00Z",
+        stage: "BORROWING",
+        sourceSystem: "LIBRARY",
+        title: "Borrowed 'Clean Architecture: A Craftsman's Guide'",
+        description:
+          "Three-week loan for capstone reading; due Mar 31, 2026.",
+        occurredAt: "2026-03-10T13:20:00Z",
       },
       {
         id: "life-2022-031-03",
-        stage: "LMS_ENGAGEMENT",
-        sourceSystem: "LMS",
-        title: "Capstone defense passed",
-        description: "Final capstone project evaluated with distinction.",
-        occurredAt: "2026-05-22T14:00:00Z",
+        stage: "BORROWING",
+        sourceSystem: "LIBRARY",
+        title: "Returned 2 days early",
+        description:
+          "'Clean Architecture: A Craftsman's Guide' returned ahead of the due date; ledger stayed clear.",
+        occurredAt: "2026-03-29T10:05:00Z",
       },
       {
         id: "life-2022-031-04",
-        stage: "FINANCIAL_STANDING",
-        sourceSystem: "FINANCE",
-        title: "Financial clearance completed",
-        description: "Registrar confirmed zero tuition and library liability.",
+        stage: "STANDING",
+        sourceSystem: "LIBRARY",
+        title: "Library clearance completed",
+        description:
+          "Zero outstanding loans and fines verified before commencement.",
         occurredAt: "2026-06-04T09:00:00Z",
-      },
-      {
-        id: "life-2022-031-05",
-        stage: "ALUMNI",
-        sourceSystem: "ALUMNI_CRM",
-        title: "Alumni CRM profile created",
-        description: "Graduate record synced with conferral and employment data.",
-        occurredAt: "2026-06-18T09:00:00Z",
       },
     ],
   },
 };
 
+/**
+ * Builds a library-only lifecycle for any student without a preset, using the
+ * numbers from their `library` profile (lifetime loans, active loans, fines).
+ */
 function buildFallbackLifecycle(student: Student): StudentLifecycle {
-  const admissionDate = `${student.admissionYear}-06-12T09:00:00Z`;
-  const enrollmentDate = `${student.admissionYear}-08-05T09:00:00Z`;
-  const graduationYear = student.expectedGraduation;
   const isGraduated = student.status === "Graduated";
+  const totalLoans = student.library.totalBorrowedAllTime;
+  const activeLoans = student.library.currentBorrowedCount;
+  const outstanding = student.library.finesBalance;
+  const hasActivity = totalLoans > 0 || activeLoans > 0;
+  const firstBook = student.library.books[0];
+  const currentBook = firstBook && firstBook.status !== "Returned" ? firstBook : null;
+
+  const membershipDate = `${student.admissionYear}-08-05T09:15:00Z`;
+  const standingAuditDate = isGraduated
+    ? `${student.expectedGraduation}-06-04T09:00:00Z`
+    : "2026-11-05T16:40:00Z";
 
   const stages: LifecycleStageDetail[] = [
     {
-      key: "ADMISSIONS",
-      label: "Admissions",
+      key: "MEMBERSHIP",
+      label: "Library Membership",
       status: "Completed",
-      date: admissionDate,
-      summary: `Admitted to ${student.programName}.`,
+      date: membershipDate,
+      summary: `Library membership activated with student ID ${student.id}; borrowing privileges enabled for ${student.programCode}.`,
       metrics: [
-        { label: "Admission Year", value: String(student.admissionYear) },
-        { label: "Program", value: student.programCode },
+        { label: "Member Since", value: String(student.admissionYear) },
+        { label: "Status", value: isGraduated ? "Archived" : "Active" },
       ],
     },
     {
-      key: "ENROLLMENT",
-      label: "Enrollment",
-      status: "Completed",
-      date: enrollmentDate,
-      summary: `Officially enrolled as a ${student.yearLevel.toLowerCase()} student.`,
+      key: "REQUESTS",
+      label: "Borrowing Requests",
+      status: hasActivity ? "Completed" : "Upcoming",
+      date: hasActivity ? "2026-10-08T14:05:00Z" : null,
+      summary: hasActivity
+        ? `${totalLoans} borrowing requests submitted and approved into circulation loans.`
+        : "No borrowing requests yet — the request desk is open once membership is active.",
       metrics: [
-        { label: "Year Level", value: student.yearLevel },
+        { label: "Requests Submitted", value: String(totalLoans) },
         {
-          label: "Units Earned",
-          value: String(student.academicRecords.totalUnitsEarned),
+          label: "Approved",
+          value: String(
+            Math.min(totalLoans, student.library.returnedBooksCount + activeLoans)
+          ),
         },
       ],
     },
     {
-      key: "LMS_ENGAGEMENT",
-      label: "LMS Engagement",
+      key: "BORROWING",
+      label: "Borrowing Activity",
+      status:
+        activeLoans > 0 ? "Active" : totalLoans > 0 ? "Completed" : "Upcoming",
+      date:
+        activeLoans > 0
+          ? "2026-10-10T10:20:00Z"
+          : totalLoans > 0
+            ? isGraduated
+              ? `${student.expectedGraduation}-03-29T10:05:00Z`
+              : "2026-05-20T10:05:00Z"
+            : null,
+      summary:
+        activeLoans > 0
+          ? `${activeLoans} active loan${activeLoans === 1 ? "" : "s"} among ${totalLoans} lifetime borrowings.`
+          : totalLoans > 0
+            ? `${totalLoans} lifetime borrowings, all returned.`
+            : "No circulation activity yet — borrowing privileges are ready when needed.",
+      metrics: [
+        { label: "Active Loans", value: String(activeLoans) },
+        { label: "Lifetime Loans", value: String(totalLoans) },
+      ],
+    },
+    {
+      key: "FINES",
+      label: "Fines & Payments",
+      status: outstanding > 0 ? "Active" : hasActivity ? "Completed" : "Upcoming",
+      date: outstanding > 0 ? "2026-10-14T10:15:00Z" : hasActivity ? "2026-05-20T10:05:00Z" : null,
+      summary:
+        outstanding > 0
+          ? `₱${outstanding.toFixed(2)} accrued from overdue returns; settling the balance restores full privileges.`
+          : hasActivity
+            ? "No outstanding fines — the ledger settled at ₱0.00."
+            : "No fines on record — the ledger activates only when a loan goes overdue.",
+      metrics: [
+        { label: "Outstanding", value: `₱${outstanding.toFixed(2)}` },
+        { label: "Ledger", value: outstanding > 0 ? "With Balance" : "Clear" },
+      ],
+    },
+    {
+      key: "STANDING",
+      label: "Current Standing",
       status: isGraduated ? "Completed" : "Active",
-      date: isGraduated
-        ? `${graduationYear}-05-20T09:00:00Z`
-        : `${graduationYear - 1}-08-18T09:00:00Z`,
-      summary: `${student.lmsActivity.overallCompletionRate}% assignment completion across ${student.lmsActivity.courses.length} active course shells.`,
+      date: standingAuditDate,
+      summary: isGraduated
+        ? "Library clearance completed with zero outstanding loans or fines before commencement."
+        : outstanding > 0
+          ? "Borrowing privileges suspended until the fine balance is settled."
+          : "Account in good standing with full borrowing privileges.",
       metrics: [
         {
-          label: "Completion",
-          value: `${student.lmsActivity.overallCompletionRate}%`,
+          label: "Privileges",
+          value: isGraduated ? "Cleared" : outstanding > 0 ? "Suspended" : "Full",
         },
-        { label: "Weekly Logins", value: String(student.lmsActivity.weeklyLogins) },
+        { label: "Fine Balance", value: `₱${outstanding.toFixed(2)}` },
       ],
-    },
-    {
-      key: "LIBRARY_ACTIVITY",
-      label: "Library Activity",
-      status: isGraduated ? "Completed" : "Active",
-      date: isGraduated
-        ? `${graduationYear}-05-30T09:00:00Z`
-        : `${graduationYear - 1}-10-10T09:00:00Z`,
-      summary: `${student.library.totalBorrowedAllTime} lifetime borrowings with ${student.library.currentBorrowedCount} active loans.`,
-      metrics: [
-        { label: "Current Loans", value: String(student.library.currentBorrowedCount) },
-        { label: "Fines", value: `₱${student.library.finesBalance.toFixed(2)}` },
-      ],
-    },
-    {
-      key: "FINANCIAL_STANDING",
-      label: "Financial Standing",
-      status: isGraduated ? "Completed" : "Upcoming",
-      date: isGraduated ? `${graduationYear}-06-04T09:00:00Z` : null,
-      summary: isGraduated
-        ? "All tuition obligations settled before graduation."
-        : "Semestral tuition assessment is pending for the next billing cycle.",
-      metrics: [{ label: "Balance", value: "₱0.00" }],
-    },
-    {
-      key: "ALUMNI",
-      label: "Alumni",
-      status: isGraduated ? "Alumni" : "Upcoming",
-      date: isGraduated ? `${graduationYear}-06-18T09:00:00Z` : null,
-      summary: isGraduated
-        ? "Degree conferred and alumni profile created in the CRM."
-        : "Alumni transition begins after degree conferral.",
-      metrics: [{ label: "Expected Graduation", value: String(graduationYear) }],
     },
   ];
 
   const timeline: LifecycleTimelineEvent[] = [
     {
       id: `life-${student.id}-01`,
-      stage: "ADMISSIONS",
-      sourceSystem: "SIS",
-      title: "Admission application completed",
-      description: `Application received for ${student.programName}.`,
-      occurredAt: `${student.admissionYear}-05-02T08:30:00Z`,
-    },
-    {
-      id: `life-${student.id}-02`,
-      stage: "ENROLLMENT",
-      sourceSystem: "SIS",
-      title: "Enrollment confirmed by registrar",
-      description: "Student record activated and portal access provisioned.",
-      occurredAt: enrollmentDate,
-    },
-    {
-      id: `life-${student.id}-03`,
-      stage: "LMS_ENGAGEMENT",
-      sourceSystem: "LMS",
-      title: "LMS activity synchronized",
-      description: `${student.lmsActivity.overallCompletionRate}% assignment completion recorded.`,
-      occurredAt: `${graduationYear - 1}-08-18T09:00:00Z`,
-    },
-    {
-      id: `life-${student.id}-04`,
-      stage: "LIBRARY_ACTIVITY",
+      stage: "MEMBERSHIP",
       sourceSystem: "LIBRARY",
-      title: "Library circulation activity synced",
-      description: `${student.library.totalBorrowedAllTime} lifetime loans recorded.`,
-      occurredAt: `${graduationYear - 1}-10-10T09:00:00Z`,
+      title: "Library membership activated",
+      description: `Student ID ${student.id} registered at the circulation desk.`,
+      occurredAt: membershipDate,
     },
   ];
 
-  if (isGraduated) {
+  if (currentBook) {
     timeline.push({
-      id: `life-${student.id}-05`,
-      stage: "ALUMNI",
-      sourceSystem: "ALUMNI_CRM",
-      title: "Alumni profile created",
-      description: "Graduate record synchronized with conferral data.",
-      occurredAt: `${graduationYear}-06-18T09:00:00Z`,
+      id: `life-${student.id}-02`,
+      stage: "BORROWING",
+      sourceSystem: "LIBRARY",
+      title: `Borrowed '${currentBook.title}'`,
+      description: `Checked out from the ${currentBook.category} collection; due ${currentBook.dueDate}.`,
+      occurredAt: "2026-10-10T10:20:00Z",
+    });
+  } else if (firstBook) {
+    timeline.push({
+      id: `life-${student.id}-02`,
+      stage: "BORROWING",
+      sourceSystem: "LIBRARY",
+      title: `Returned '${firstBook.title}'`,
+      description: `Came back from the ${firstBook.category} collection on ${firstBook.returnedDate ?? firstBook.dueDate}.`,
+      occurredAt: "2026-05-20T10:05:00Z",
+    });
+  } else if (hasActivity) {
+    timeline.push({
+      id: `life-${student.id}-02`,
+      stage: "BORROWING",
+      sourceSystem: "LIBRARY",
+      title: "Circulation activity recorded",
+      description: `${totalLoans} lifetime loans recorded in the circulation system.`,
+      occurredAt: "2026-05-20T10:05:00Z",
     });
   }
+
+  if (outstanding > 0) {
+    timeline.push({
+      id: `life-${student.id}-03`,
+      stage: "FINES",
+      sourceSystem: "LIBRARY",
+      title: "Fine posted to the ledger",
+      description: `₱${outstanding.toFixed(2)} accrued on overdue loans; borrowing pauses until settled.`,
+      occurredAt: "2026-10-14T10:15:00Z",
+    });
+  }
+
+  timeline.push({
+    id: `life-${student.id}-04`,
+    stage: "STANDING",
+    sourceSystem: "LIBRARY",
+    title: isGraduated ? "Library clearance completed" : "Standing verified at semester audit",
+    description: isGraduated
+      ? "Zero outstanding loans and fines verified before commencement."
+      : outstanding > 0
+        ? "Privileges suspended pending fine settlement."
+        : "Account in good standing with full borrowing privileges.",
+    occurredAt: standingAuditDate,
+  });
+
+  const currentStage = outstanding > 0
+    ? "FINES"
+    : activeLoans > 0
+      ? "BORROWING"
+      : isGraduated
+        ? "STANDING"
+        : hasActivity
+          ? "STANDING"
+          : "MEMBERSHIP";
 
   return {
     studentId: student.id,
@@ -715,7 +750,7 @@ function buildFallbackLifecycle(student: Student): StudentLifecycle {
     programCode: student.programCode,
     yearLevel: student.yearLevel,
     status: student.status,
-    currentStage: isGraduated ? "ALUMNI" : "LMS_ENGAGEMENT",
+    currentStage,
     stages,
     timeline,
   };

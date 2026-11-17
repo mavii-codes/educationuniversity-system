@@ -3,6 +3,7 @@
 import React, { DragEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { BookCover } from "@/components/library/BookCover";
 import { LibraryBook, LibraryBookInput } from "@/types";
+import { dailyFineForBookPrice } from "@/lib/library-fines";
 
 interface LibraryBookFormProps {
   book: LibraryBook | null;
@@ -18,6 +19,7 @@ interface LibraryBookFormProps {
 function getInitialInput(book: LibraryBook | null): LibraryBookInput {
   return {
     isbn: book?.isbn ?? "",
+    bookPrice: book?.bookPrice ?? 0,
     title: book?.title ?? "",
     author: book?.author ?? "",
     publisher: book?.publisher ?? "",
@@ -179,6 +181,25 @@ export function LibraryBookForm({
             {textField("Category", "category", true)}
             {textField("Call number", "callNumber")}
             {textField("Shelf location", "location")}
+            <label className="block text-xs font-semibold text-slate-700">
+              Book price (PHP)
+              <input
+                type="number"
+                min="0.01"
+                max="99999999.99"
+                step="0.01"
+                required
+                value={form.bookPrice}
+                onChange={(event) =>
+                  update("bookPrice", Number(event.target.value))
+                }
+                className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 px-3 text-xs font-normal text-slate-900 focus:border-indigo-500 focus:outline-none"
+              />
+              <span className="mt-1 block font-normal text-slate-500">
+                Overdue fine: 1/20 of this price per calendar day (
+                PHP {dailyFineForBookPrice(form.bookPrice).toFixed(2)}/day).
+              </span>
+            </label>
             <label className="block text-xs font-semibold text-slate-700">
               Total copies
               <input

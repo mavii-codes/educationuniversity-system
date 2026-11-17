@@ -2,12 +2,19 @@ export type StudentStatus = "Active" | "Graduated" | "On Leave" | "Withdrawn";
 export type RiskLevel = "Low" | "Medium" | "High";
 export type DataSourceStatus = "Connected" | "Syncing" | "Warning" | "Disconnected" | "Planned";
 export type SyncLogStatus = "Successful" | "Warning" | "Failed";
-export type LifecycleStageKey =
-  | "admission"
-  | "enrollment"
-  | "academic-progress"
-  | "graduation"
-  | "alumni";
+/**
+ * Known aggregate cohort keys returned by GET /api/lifecycle.
+ * The union stays open (`string & {}`) so cohorts the backend adds later
+ * still type-check; the UI maps known keys to labels/icons and tidies the rest.
+ */
+export type LibraryCohortKey =
+  | "NO_ACTIVITY"
+  | "REQUESTS_PENDING"
+  | "ACTIVE_BORROWERS"
+  | "OUTSTANDING_FINES"
+  | "RESTRICTED";
+
+export type LifecycleStageKey = LibraryCohortKey | (string & {});
 
 export interface Program {
   id: string;
@@ -129,6 +136,14 @@ export interface Student {
     finesBalance: number;
     books: LibraryBookRecord[];
   };
+}
+
+export interface StudentListPage {
+  students: Student[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
 export interface LifecycleStage {
@@ -383,6 +398,7 @@ export type PortalAuthorizedRole = "Administrator" | "Librarian" | "Student";
 export interface LibraryBook {
   id: string;
   isbn: string;
+  bookPrice?: number;
   cover_url?: string | null;
   title: string;
   author: string;
@@ -430,6 +446,7 @@ export interface BorrowingTransaction {
   bookTitle: string;
   isbn: string;
   cover_url?: string | null;
+  bookPriceAtBorrow?: number | null;
   studentId: string;
   studentName: string;
   programCode: string;
@@ -466,6 +483,7 @@ export interface OverdueFineRecord {
   dueDate: string;
   daysOverdue: number;
   fineAmount: number;
+  fineRatePerDay?: number;
   paymentStatus: "Unpaid" | "Waived" | "Paid";
 }
 
@@ -519,6 +537,15 @@ export interface LibraryOverview {
   }[];
 }
 
+export type AuditLogCategory =
+  | "Authentication"
+  | "Library"
+  | "FERPA & Privacy"
+  | "Data Integration"
+  | "Administration"
+  | "Members"
+  | "System";
+
 export interface AuditLogRecord {
   id: string;
   timestamp: string;
@@ -529,6 +556,14 @@ export interface AuditLogRecord {
   status: "Success" | "Warning" | "Failure";
   ipAddress: string;
   details: string;
+  /** Human-readable action name (newer API versions; falls back to the raw code). */
+  actionLabel?: string;
+  /** Human-readable target name (newer API versions; falls back to the raw path). */
+  resourceLabel?: string;
+  /** Event category used for grouping, filtering, and badge coloring. */
+  category?: AuditLogCategory;
+  /** Short, non-duplicative detail (e.g. "HTTP 403", "12 records processed"). */
+  detailsExtra?: string;
 }
 
 // -------------------------------------------------------------
@@ -564,6 +599,7 @@ export interface BorrowingRequest {
 
 export interface LibraryBookInput {
   isbn: string;
+  bookPrice: number;
   title: string;
   author: string;
   publisher: string;
@@ -660,19 +696,21 @@ export interface FerpaDirectorySetting {
   updatedAt: string;
 }
 
-export type LifecycleStageDetailKey =
-  | "ADMISSIONS"
-  | "ENROLLMENT"
-  | "LMS_ENGAGEMENT"
-  | "LIBRARY_ACTIVITY"
-  | "FINANCIAL_STANDING"
-  | "ALUMNI";
+/**
+ * Per-student library lifecycle stage keys (GET /api/students/:id/lifecycle).
+ * Known keys are enumerated for autocomplete while the union stays open so
+ * unknown keys from the API still type-check and render defensively.
+ */
+export type StudentLibraryStageKey =
+  | "MEMBERSHIP"
+  | "REQUESTS"
+  | "BORROWING"
+  | "FINES"
+  | "STANDING";
 
-export type LifecycleStageDetailStatus =
-  | "Completed"
-  | "Active"
-  | "Upcoming"
-  | "Alumni";
+export type LifecycleStageDetailKey = StudentLibraryStageKey | (string & {});
+
+export type LifecycleStageDetailStatus = "Completed" | "Active" | "Upcoming";
 
 export interface LifecycleStageMetric {
   label: string;

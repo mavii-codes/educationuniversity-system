@@ -20,6 +20,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { useLibraryStore } from "@/lib/library-store";
 import { cn } from "@/lib/utils";
+import { dailyFineForLoanPrice } from "@/lib/library-fines";
 import { BookCover } from "@/components/library/BookCover";
 
 type BorrowingTab = "current" | "requests" | "reservations";
@@ -249,7 +250,11 @@ function BorrowingContent() {
                         <strong className="text-slate-900">{loan.status}</strong>
                         {isOverdue && (
                           <span className="text-rose-600 font-semibold ml-2">
-                            (Accruing ₱15.00 daily fine)
+                            (Accruing ₱
+                            {dailyFineForLoanPrice(
+                              loan.bookPriceAtBorrow
+                            ).toFixed(2)}{" "}
+                            daily fine)
                           </span>
                         )}
                       </p>

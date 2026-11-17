@@ -18,6 +18,10 @@ import {
 import { useAuth } from "@/lib/auth";
 import { useLibraryStore } from "@/lib/library-store";
 import { cn } from "@/lib/utils";
+import {
+  dailyFineForLoanPrice,
+  estimateOverdueFine,
+} from "@/lib/library-fines";
 
 export default function StudentFinesPage() {
   const { user } = useAuth();
@@ -154,7 +158,8 @@ export default function StudentFinesPage() {
               const now = new Date();
               const diffMs = now.getTime() - due.getTime();
               const days = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-              const fineEst = days * 15.0;
+              const dailyRate = dailyFineForLoanPrice(loan.bookPriceAtBorrow);
+              const fineEst = estimateOverdueFine(dailyRate, days);
 
               return (
                 <div
@@ -174,7 +179,8 @@ export default function StudentFinesPage() {
                       {days} day(s) overdue
                     </span>
                     <p className="text-[11px] text-slate-500">
-                      Estimated Accrued: ₱{fineEst.toFixed(2)} (₱15/day)
+                      Estimated Accrued: ₱{fineEst.toFixed(2)} (₱
+                      {dailyRate.toFixed(2)}/day)
                     </p>
                   </div>
                 </div>
@@ -191,7 +197,7 @@ export default function StudentFinesPage() {
             Library Fines Assessment Ledger
           </h3>
           <p className="text-xs text-slate-500">
-            Calculated under Institutional Library Circulation Policy (Rate: ₱15.00 / calendar day overdue)
+            Calculated using the book price at checkout: 1/20 of the price per overdue calendar day. Older loans without a price snapshot retain their previous rate.
           </p>
         </div>
 
@@ -240,7 +246,7 @@ export default function StudentFinesPage() {
                         {f.daysOverdue} days
                       </td>
                       <td className="px-6 py-4 text-slate-500">
-                        ₱15.00 / day
+                        {formatCurrency(f.fineRatePerDay ?? 15)} / day
                       </td>
                       <td className="px-6 py-4 font-bold text-rose-700">
                         {formatCurrency(f.fineAmount)}
@@ -271,4 +277,3 @@ export default function StudentFinesPage() {
     </div>
   );
 }
-
