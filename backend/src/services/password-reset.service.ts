@@ -4,8 +4,10 @@ import { env } from "../config/env";
 import { ApiError } from "../middleware/error.middleware";
 import * as authRepository from "../repositories/auth.repository";
 import { hashPassword } from "./auth.service";
+import { setDemoStudentPassword } from "./auth.service";
 
 const RESET_CODE_TTL_MS = 10 * 60 * 1000;
+const demoResetCodes = new Map<string, { codeHash: string; identifier: string; expiresAt: number }>();
 
 function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -30,13 +32,19 @@ function generateCode(): string {
   return crypto.randomInt(0, 1_000_000).toString().padStart(6, "0");
 }
 
-export async function requestPasswordReset(email: string): Promise<void> {
+export async function requestPasswordReset(email: string): Promise<{ demoCode?: string }> {
   if (!env.db.enabled) {
-    throw new ApiError(503, "Password reset requires the PostgreSQL database.");
+    const code = generateCode();
+    demoResetCodes.set(email.trim().toLowerCase(), {
+      codeHash: hashToken(code),
+      identifier: email.trim(),
+      expiresAt: Date.now() + RESET_CODE_TTL_MS,
+    });
+    return { demoCode: code };
   }
 
   const user = await authRepository.findUserByEmail(email);
-  if (!user || user.status !== "Active") return;
+  if (!user || user.status !== "Active") return {};
   if (!env.email.resendApiKey || !env.email.resendFromEmail) {
     throw new ApiError(503, "Password reset email is not configured.");
   }
@@ -60,11 +68,25 @@ export async function requestPasswordReset(email: string): Promise<void> {
     console.error("[University Library Backend] Resend delivery failed:", error.message);
     throw new ApiError(502, "Unable to send the password reset email right now.");
   }
+  return {};
 }
 
 export async function resetPassword(code: string, password: string): Promise<void> {
   if (!env.db.enabled) {
-    throw new ApiError(503, "Password reset requires the PostgreSQL database.");
+    for (const [identifier, entry] of demoResetCodes.entries()) {
+      if (entry.expiresAt < Date.now()) {
+        demoResetCodes.delete(identifier);
+        continue;
+      }
+      if (entry.codeHash !== hashToken(code)) continue;
+      if (!setDemoStudentPassword(entry.identifier, password)) {
+        demoResetCodes.delete(identifier);
+        throw new ApiError(400, "This verification code belongs to an unknown account.");
+      }
+      demoResetCodes.delete(identifier);
+      return;
+    }
+    throw new ApiError(400, "This verification code is invalid or has expired.");
   }
 
   const consumed = await authRepository.consumePasswordResetToken(

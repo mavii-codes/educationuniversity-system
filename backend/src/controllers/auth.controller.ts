@@ -126,10 +126,11 @@ export class AuthController {
         throw new ApiError(400, "Enter a valid email address.");
       }
 
-      await requestPasswordReset(parsed.data.email);
+      const result = await requestPasswordReset(parsed.data.email);
       res.status(202).json({
         message:
           "If an active account matches that email, a 6-digit verification code will be sent.",
+        ...(result.demoCode ? { demoCode: result.demoCode } : {}),
       });
     } catch (error) {
       next(error);

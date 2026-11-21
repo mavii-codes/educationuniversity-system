@@ -38,6 +38,19 @@ interface DemoStudentAccount {
 
 const demoStudentAccounts = new Map<string, DemoStudentAccount>();
 
+export function setDemoStudentPassword(identifier: string, password: string): boolean {
+  if (!identifier.trim()) return false;
+  const normalized = identifier.trim().toLowerCase();
+  const account = [...demoStudentAccounts.values()].find(
+    (item) =>
+      item.user.id.toLowerCase() === normalized ||
+      item.user.email.toLowerCase() === normalized
+  );
+  if (!account) return false;
+  account.password = password;
+  return true;
+}
+
 // Explicit allowlist of the real DB role strings (see db/migrations).
 const PORTAL_ROLE_BY_ACCESS_ROLE: Record<string, AuthorizedRole> = {
   "System Administrator": "Administrator",

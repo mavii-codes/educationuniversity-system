@@ -20,6 +20,7 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [demoCode, setDemoCode] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,13 +49,19 @@ export default function ForgotPasswordPage() {
         };
         throw new Error(body.message || "Unable to send the verification code right now.");
       }
+      const body = (await response.json().catch(() => ({}))) as {
+        demoCode?: string;
+      };
+      setDemoCode(body.demoCode || "");
       setSubmitted(true);
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to reach the server. Please try again."
-      );
+      const message =
+        requestError instanceof TypeError
+          ? "The password reset service is unavailable. Please try again shortly."
+          : requestError instanceof Error
+            ? requestError.message
+            : "Unable to reach the server. Please try again.";
+      setError(message);
     } finally {
       setIsSending(false);
     }
@@ -82,6 +89,16 @@ export default function ForgotPasswordPage() {
                 a 6-digit verification code has been sent. It expires in 10
                 minutes.
               </p>
+              {demoCode && (
+                <div className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50 p-3">
+                  <p className="text-xs font-semibold text-indigo-700">
+                    Demo verification code
+                  </p>
+                  <p className="mt-1 text-xl font-bold tracking-[0.35em] text-indigo-950">
+                    {demoCode}
+                  </p>
+                </div>
+              )}
               <Link
                 href="/reset-password"
                 className="mt-6 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
