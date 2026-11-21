@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { z } from "zod";
+import { env } from "../config/env";
 import { currentUser } from "../middleware/auth.middleware";
 import { ApiError } from "../middleware/error.middleware";
 import { adminService } from "../services/admin.service";
@@ -47,6 +48,84 @@ function isUniqueViolation(error: unknown): boolean {
     "code" in error &&
     error.code === "23505"
   );
+}
+
+function getDemoAuditLogs() {
+  const now = Date.now();
+  const demoEvents = [
+    {
+      id: "aud-demo-001",
+      offsetMinutes: 0,
+      actor: "Administrator",
+      actorRole: "System Administrator",
+      action: "auth.login_succeeded",
+      resource: "Admin Portal",
+      status: "Success",
+      ipAddress: "127.0.0.1",
+      details: "Administrator signed in successfully.",
+      category: "Authentication",
+    },
+    {
+      id: "aud-demo-002",
+      offsetMinutes: 18,
+      actor: "Library ETL Service",
+      actorRole: "System Service",
+      action: "library.etl_synced",
+      resource: "Library LMS Connector",
+      status: "Success",
+      ipAddress: "127.0.0.1",
+      details: "Catalog synchronization completed in demo mode.",
+      category: "Data Integration",
+    },
+    {
+      id: "aud-demo-003",
+      offsetMinutes: 45,
+      actor: "Dr. Helena Mendoza",
+      actorRole: "Library Staff",
+      action: "library.book_updated",
+      resource: "Library Catalog",
+      status: "Success",
+      ipAddress: "127.0.0.1",
+      details: "Library catalog record updated.",
+      category: "Library",
+    },
+    {
+      id: "aud-demo-004",
+      offsetMinutes: 120,
+      actor: "Administrator",
+      actorRole: "System Administrator",
+      action: "admin.settings_updated",
+      resource: "System Settings",
+      status: "Success",
+      ipAddress: "127.0.0.1",
+      details: "Institution library settings reviewed.",
+      category: "Administration",
+    },
+  ];
+
+  return demoEvents.map((event) => ({
+    id: event.id,
+    timestamp: new Date(now - event.offsetMinutes * 60_000).toISOString(),
+    actor: event.actor,
+    actorRole: event.actorRole,
+    action: event.action,
+    resource: event.resource,
+    status: event.status,
+    ipAddress: event.ipAddress,
+    details: event.details,
+    actionLabel: getAuditActionLabel(
+      event.action,
+      { ipAddress: event.ipAddress },
+      event.resource
+    ),
+    resourceLabel: getAuditResourceLabel(
+      event.resource,
+      undefined,
+      { ipAddress: event.ipAddress }
+    ),
+    category: event.category,
+    detailsExtra: event.details,
+  }));
 }
 
 export class AdminController {
@@ -192,6 +271,10 @@ export class AdminController {
 
   async getAuditLogs(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      if (!env.db.enabled) {
+        res.json(getDemoAuditLogs());
+        return;
+      }
       const rows = await findAuditLogs();
       res.json(
         rows.map((row) => ({

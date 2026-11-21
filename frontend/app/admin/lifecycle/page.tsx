@@ -26,6 +26,7 @@ import {
   Inbox,
   Library,
   PhilippinePeso,
+  Receipt,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -95,7 +96,7 @@ const STAGE_ICONS: Record<string, LucideIcon> = {
   MEMBERSHIP: IdCard,
   REQUESTS: Inbox,
   BORROWING: BookOpen,
-  FINES: PhilippinePeso,
+  FINES: Receipt,
   STANDING: ShieldCheck,
 };
 
@@ -115,7 +116,7 @@ const COHORT_STAGE_ICONS: Record<string, LucideIcon> = {
   NO_ACTIVITY: IdCard,
   REQUESTS_PENDING: Inbox,
   ACTIVE_BORROWERS: BookOpen,
-  OUTSTANDING_FINES: PhilippinePeso,
+  OUTSTANDING_FINES: Receipt,
   RESTRICTED: BookLock,
 };
 
@@ -150,14 +151,30 @@ const COHORT_ACCENTS: Record<string, { label: string; className: string }> = {
 /** Overview stat card icons matched on label; unknown labels fall back to a neutral icon. */
 const OVERVIEW_STAT_ICONS: Record<string, LucideIcon> = {
   "registered members": IdCard,
+  "library members": IdCard,
   "active borrowers": BookOpen,
   "loans in circulation": BookOpen,
   "outstanding fines": PhilippinePeso,
   "overdue loans": Clock,
 };
 
+/** Keyword fallbacks keep stat icons sensible when the API renames a metric. */
+const OVERVIEW_STAT_ICON_RULES: Array<{ pattern: RegExp; icon: LucideIcon }> = [
+  { pattern: /overdue|late|past due/, icon: Clock },
+  { pattern: /fine|fee|payment|balance|unsettled/, icon: PhilippinePeso },
+  { pattern: /borrower|borrowing/, icon: BookOpen },
+  { pattern: /loan|circulation|checkout|checked out/, icon: BookOpen },
+  { pattern: /member|card|registered/, icon: IdCard },
+];
+
 function overviewStatIcon(label: string): LucideIcon {
-  return OVERVIEW_STAT_ICONS[label.trim().toLowerCase()] ?? Activity;
+  const normalized = label.trim().toLowerCase();
+  const exact = OVERVIEW_STAT_ICONS[normalized];
+  if (exact) return exact;
+  const rule = OVERVIEW_STAT_ICON_RULES.find(({ pattern }) =>
+    pattern.test(normalized)
+  );
+  return rule?.icon ?? Activity;
 }
 
 const DETAIL_STATUS_STYLES: Record<
@@ -178,31 +195,24 @@ function detailStatusStyle(status: LifecycleStageDetail["status"]): string {
   return DETAIL_STATUS_STYLES[status] ?? NEUTRAL_STATUS_STYLE;
 }
 
-const COHORT_STAGE_STYLES: Record<LifecycleStage["status"], string> = {
-  completed:
-    "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20",
-  current: "bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-600/20",
-  upcoming:
-    "bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-500/15",
-};
-
-function cohortStageLabel(status: LifecycleStage["status"]): string {
-  if (status === "completed") return "Completed";
-  if (status === "current") return "Active";
-  return "Upcoming";
-}
-
 function cohortChip(stage: LifecycleStage): { label: string; className: string } {
   return (
     COHORT_ACCENTS[stage.key] ?? {
-      label: cohortStageLabel(stage.status),
-      className: COHORT_STAGE_STYLES[stage.status] ?? NEUTRAL_STATUS_STYLE,
+      label: tidyStageKey(stage.key),
+      className: NEUTRAL_STATUS_STYLE,
     }
   );
 }
 
 function formatStage(value: string): string {
   return STAGE_LABELS[value] ?? tidyStageKey(value);
+}
+
+/** Library events show a friendly source label; unexpected sources are tidied. */
+function formatSourceSystem(value: string): string {
+  if (!value) return "Library";
+  if (value.trim().toUpperCase() === "LIBRARY") return "Library";
+  return tidyStageKey(value);
 }
 
 /** Title-cases raw stage keys the same way the audit log tidies raw codes. */
@@ -694,7 +704,9 @@ function AdminLifecycleContent() {
                       <div className="flex items-start justify-between gap-2">
                         <span className="flex min-w-0 items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                           <CohortIcon className="h-3.5 w-3.5 shrink-0 text-indigo-500" />
-                          <span className="min-w-0 flex-1 break-words leading-snug">{stage.title}</span>
+                          <span className="min-w-0 flex-1 break-words leading-snug">
+                            {stage.title || tidyStageKey(stage.key)}
+                          </span>
                         </span>
                         <span
                           className={`max-w-[46%] break-words rounded-md px-1.5 py-0.5 text-[10px] font-semibold leading-snug ${chip.className}`}
@@ -731,8 +743,8 @@ function AdminLifecycleContent() {
               Student Roster
             </h3>
             <p className="mt-0.5 text-[11px] text-slate-500">
-              Browse students across every year level and section, then open a
-              unified lifecycle.
+              Browse students across every year level and section, then open
+              their complete library record.
             </p>
           </div>
           <span className="rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
@@ -967,11 +979,11 @@ function AdminLifecycleContent() {
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
               <h3 className="text-sm font-bold text-slate-900">
-                Per-Student Lifecycle Explorer
+                Per-Student Library Record
               </h3>
               <p className="mt-0.5 text-[11px] text-slate-500">
-                Select a student to inspect stage status, source metrics, and
-                cross-system timeline events.
+                Inspect the student&apos;s complete library record — membership,
+                requests, borrowing, fines, and standing.
               </p>
             </div>
 
@@ -1057,8 +1069,8 @@ function AdminLifecycleContent() {
               <Skeleton className="h-6 w-64" />
               <Skeleton className="mt-3 h-4 w-80" />
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-              {Array.from({ length: 6 }).map((_, index) => (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              {Array.from({ length: 5 }).map((_, index) => (
                 <div
                   key={index}
                   className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-card"
@@ -1095,7 +1107,7 @@ function AdminLifecycleContent() {
           <EmptyState
             icon={UserRound}
             title="Select a student"
-            description="Choose a student from the picker to explore their unified lifecycle stages and timeline."
+            description="Choose a student from the picker to explore their library membership, borrowing activity, fines, and standing."
           />
         ) : (
           <>
@@ -1134,51 +1146,57 @@ function AdminLifecycleContent() {
             </div>
 
             {/* Stage Cards */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-              {lifecycle.stages.map((stage) => (
-                <article
-                  key={stage.key}
-                  className={cn(
-                    "rounded-xl border bg-white p-4 shadow-card",
-                    stage.status === "Active"
-                      ? "border-indigo-200 ring-1 ring-indigo-100"
-                      : "border-slate-200/80"
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <h4 className="text-xs font-bold text-slate-900">
-                      {stage.label}
-                    </h4>
-                    <span
-                      className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${DETAIL_STATUS_STYLES[stage.status]}`}
-                    >
-                      {stage.status}
-                    </span>
-                  </div>
-                  <p className="mt-2 flex items-center gap-1 text-[10px] text-slate-400">
-                    <Clock className="h-3 w-3 shrink-0" />
-                    {formatDate(stage.date)}
-                  </p>
-                  <p className="mt-2 text-[11px] leading-relaxed text-slate-600">
-                    {stage.summary}
-                  </p>
-                  {stage.metrics.length > 0 && (
-                    <dl className="mt-3 space-y-1 border-t border-slate-100 pt-2">
-                      {stage.metrics.map((metric) => (
-                        <div
-                          key={metric.label}
-                          className="flex items-center justify-between gap-2 text-[10px]"
-                        >
-                          <dt className="text-slate-400">{metric.label}</dt>
-                          <dd className="font-semibold tabular-nums text-slate-700">
-                            {metric.value}
-                          </dd>
-                        </div>
-                      ))}
-                    </dl>
-                  )}
-                </article>
-              ))}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              {lifecycle.stages.map((stage) => {
+                const StageIcon = stageIcon(stage.key);
+                return (
+                  <article
+                    key={stage.key}
+                    className={cn(
+                      "rounded-xl border bg-white p-4 shadow-card",
+                      stage.status === "Active"
+                        ? "border-indigo-200 ring-1 ring-indigo-100"
+                        : "border-slate-200/80"
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="flex min-w-0 items-center gap-1.5 text-xs font-bold text-slate-900">
+                        <StageIcon className="h-3.5 w-3.5 shrink-0 text-indigo-500" />
+                        <span className="min-w-0 break-words">
+                          {stage.label || formatStage(stage.key)}
+                        </span>
+                      </h4>
+                      <span
+                        className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${detailStatusStyle(stage.status)}`}
+                      >
+                        {stage.status}
+                      </span>
+                    </div>
+                    <p className="mt-2 flex items-center gap-1 text-[10px] text-slate-400">
+                      <Clock className="h-3 w-3 shrink-0" />
+                      {formatDate(stage.date)}
+                    </p>
+                    <p className="mt-2 text-[11px] leading-relaxed text-slate-600">
+                      {stage.summary}
+                    </p>
+                    {stage.metrics.length > 0 && (
+                      <dl className="mt-3 space-y-1 border-t border-slate-100 pt-2">
+                        {stage.metrics.map((metric) => (
+                          <div
+                            key={metric.label}
+                            className="flex items-center justify-between gap-2 text-[10px]"
+                          >
+                            <dt className="text-slate-400">{metric.label}</dt>
+                            <dd className="font-semibold tabular-nums text-slate-700">
+                              {metric.value}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    )}
+                  </article>
+                );
+              })}
             </div>
 
             {/* Vertical Timeline */}
@@ -1186,10 +1204,10 @@ function AdminLifecycleContent() {
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">
-                    Lifecycle Timeline
+                    Library Activity Timeline
                   </h3>
                   <p className="mt-0.5 text-[11px] text-slate-500">
-                    Cross-system milestones recorded for this student
+                    Library circulation milestones recorded for this student
                   </p>
                 </div>
                 <span className="rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
@@ -1200,7 +1218,8 @@ function AdminLifecycleContent() {
 
               {orderedTimeline.length === 0 ? (
                 <p className="py-10 text-center text-sm text-slate-500">
-                  No lifecycle events have been recorded for this student yet.
+                  No library activity yet — borrowing, requests, and fine events
+                  will appear here.
                 </p>
               ) : (
                 <ol className="relative mt-5 space-y-5 border-l border-slate-200 pl-6">
@@ -1213,7 +1232,7 @@ function AdminLifecycleContent() {
                         </span>
                         <span className="inline-flex items-center gap-1 rounded border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-600">
                           <Database className="h-3 w-3 text-indigo-500" />
-                          {event.sourceSystem}
+                          {formatSourceSystem(event.sourceSystem)}
                         </span>
                         <span className="text-[10px] text-slate-400">
                           {formatDateTime(event.occurredAt)}

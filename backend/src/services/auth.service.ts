@@ -29,6 +29,15 @@ export interface AuthContext {
   name: string;
 }
 
+interface DemoStudentAccount {
+  user: authRepository.UserRow;
+  password: string;
+  programCode: string;
+  yearLevel: string;
+}
+
+const demoStudentAccounts = new Map<string, DemoStudentAccount>();
+
 // Explicit allowlist of the real DB role strings (see db/migrations).
 const PORTAL_ROLE_BY_ACCESS_ROLE: Record<string, AuthorizedRole> = {
   "System Administrator": "Administrator",
@@ -76,7 +85,44 @@ export async function registerStudent(input: {
   dbEnabled: boolean;
 }): Promise<SessionUser> {
   if (!input.dbEnabled) {
-    throw new ApiError(503, "Student registration requires the PostgreSQL database (DB_ENABLED=true).");
+    const studentId = input.studentId.trim();
+    const email = input.email.trim().toLowerCase();
+    const existing =
+      [...demoStudentAccounts.values()].find(
+        (account) =>
+          account.user.id === studentId ||
+          account.user.email.toLowerCase() === email
+      );
+    if (existing) {
+      throw new ApiError(
+        409,
+        "An account already exists for that email or student ID."
+      );
+    }
+
+    const user: authRepository.UserRow = {
+      id: studentId,
+      name: input.name.trim(),
+      email,
+      password_hash: "",
+      role: "Student",
+      department: input.programCode,
+      status: "Active",
+      mfa_enabled: false,
+      last_login_at: new Date(),
+    };
+    demoStudentAccounts.set(studentId, {
+      user,
+      password: input.password,
+      programCode: input.programCode,
+      yearLevel: input.yearLevel,
+    });
+    await safeAudit(user.id, "auth.student_registered", {
+      email,
+      programCode: input.programCode,
+      demoMode: true,
+    });
+    return toSessionUser(user);
   }
 
   const user = await authRepository.registerStudent({
@@ -233,7 +279,94 @@ export async function login(input: {
   dbEnabled: boolean;
 }): Promise<IssuedSession> {
   if (!input.dbEnabled) {
-    throw new ApiError(503, "Authentication requires the PostgreSQL database (DB_ENABLED=true).");
+    const identifier = input.identifier.trim().toLowerCase();
+    const demoAccounts: Array<{
+      identifier: string;
+      id: string;
+      name: string;
+      email: string;
+      password: string;
+      role: string;
+      department: string;
+    }> = [
+      {
+        identifier: "admin@university.edu",
+        id: "ADM-2026-001",
+        name: "Administrator",
+        email: "admin@university.edu",
+        password: env.seedAdminPassword,
+        role: "System Administrator",
+        department: "Office of Institutional Data & Systems",
+      },
+      {
+        identifier: "h.mendoza@university.edu",
+        id: "ADM-2026-002",
+        name: "Dr. Helena Mendoza",
+        email: "h.mendoza@university.edu",
+        password: env.seedLibraryStaffPassword,
+        role: "Library Staff",
+        department: "Library Services",
+      },
+    ];
+
+    const account = demoAccounts.find(
+      (item) =>
+        item.identifier === identifier ||
+        item.id.toLowerCase() === identifier
+    );
+
+    const registeredAccount = [...demoStudentAccounts.values()].find(
+      (item) =>
+        item.user.id.toLowerCase() === identifier ||
+        item.user.email.toLowerCase() === identifier
+    );
+
+    if (account) {
+      if (!account.password || input.password !== account.password) {
+        await safeAudit(null, "auth.login_failed", { ipAddress: input.ip });
+        throw new ApiError(401, "Invalid email or password.");
+      }
+    } else if (registeredAccount) {
+      if (input.password !== registeredAccount.password) {
+        await safeAudit(null, "auth.login_failed", { ipAddress: input.ip });
+        throw new ApiError(401, "Invalid email or password.");
+      }
+    } else {
+      await safeAudit(null, "auth.login_failed", { ipAddress: input.ip });
+      throw new ApiError(401, "Invalid email or password.");
+    }
+
+    const ttlMs =
+      (input.rememberMe ? env.auth.refreshTtlDaysRemember : env.auth.refreshTtlDays) *
+      24 *
+      60 *
+      60 *
+      1000;
+    const user: authRepository.UserRow = account
+      ? {
+          id: account.id,
+          name: account.name,
+          email: account.email,
+          password_hash: "",
+          role: account.role,
+          department: account.department,
+          status: "Active",
+          mfa_enabled: true,
+          last_login_at: new Date(),
+        }
+      : registeredAccount!.user;
+    await safeAudit(user.id, "auth.login_succeeded", {
+      role: user.role,
+      ipAddress: input.ip,
+      demoMode: true,
+    });
+    return {
+      accessToken: signAccessToken(user),
+      refreshToken: "",
+      csrfToken: crypto.randomBytes(24).toString("base64url"),
+      refreshTtlMs: ttlMs,
+      user: toSessionUser(user),
+    };
   }
 
   const identifier = input.identifier.trim();

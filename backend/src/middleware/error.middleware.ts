@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { env } from "../config/env";
+import { isDatabaseConnectionError } from "../config/database";
 
 export class ApiError extends Error {
   statusCode: number;
@@ -33,6 +34,19 @@ export function errorHandler(
   res: Response,
   _next: NextFunction
 ): void {
+  if (isDatabaseConnectionError(err)) {
+    console.error(
+      "[University Library Backend] Database connection unavailable:",
+      err.message
+    );
+    res.status(503).json({
+      success: false,
+      message:
+        "The library database is temporarily unavailable. Please try again shortly.",
+    });
+    return;
+  }
+
   const statusCode = resolveStatusCode(err);
   const isServerError = statusCode >= 500;
 

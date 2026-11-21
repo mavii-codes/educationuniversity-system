@@ -278,6 +278,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(sessionUser);
         return { ok: true, role: sessionUser.role };
       } catch (err) {
+        if (err instanceof Error) {
+          const message = err.message.toLowerCase();
+          if (
+            message.includes("connection terminated") ||
+            message.includes("connection timeout") ||
+            message.includes("database is temporarily unavailable") ||
+            message.includes("failed to fetch")
+          ) {
+            return {
+              ok: false,
+              error:
+                "The server is temporarily unable to connect to the library database. Please try again shortly.",
+            };
+          }
+        }
         return {
           ok: false,
           error:

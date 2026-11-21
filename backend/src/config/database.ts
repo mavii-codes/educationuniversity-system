@@ -101,3 +101,39 @@ export async function verifyDatabaseConnection(): Promise<string> {
   await activePool.query("SELECT 1");
   return "connected";
 }
+
+export function isDatabaseConnectionError(error: unknown): boolean {
+  if (!(error instanceof Error) && typeof error !== "object") return false;
+
+  const candidate = error as Error & { code?: unknown; message?: unknown };
+  const code = typeof candidate.code === "string" ? candidate.code : "";
+  const message =
+    typeof candidate.message === "string"
+      ? candidate.message
+      : error instanceof Error
+        ? error.message
+        : "";
+
+  if (
+    [
+      "08000",
+      "08001",
+      "08006",
+      "57P03",
+      "28P01",
+      "3D000",
+      "53300",
+      "ECONNREFUSED",
+      "ECONNRESET",
+      "ETIMEDOUT",
+      "ENETUNREACH",
+      "EHOSTUNREACH",
+    ].includes(code)
+  ) {
+    return true;
+  }
+
+  return /connection terminated|connection timeout|timed out|timeout expired|could not connect|failed to connect|database (?:is )?unavailable|socket hang up/i.test(
+    message
+  );
+}

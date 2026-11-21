@@ -386,12 +386,13 @@ paths:
   /students/{id}/lifecycle:
     get:
       tags: [Students]
-      summary: Unified per-student lifecycle (admissions → alumni)
+      summary: Library-only per-student lifecycle
       description: >
-        Aggregates admissions, enrollment, LMS engagement, library activity,
-        fines and alumni status for one student, plus the ETL-fed timeline.
-        Allowed for Administrator, Librarian (FERPA access is logged), or the
-        student themself.
+        Aggregates the student's library membership, borrowing requests and
+        reservations, borrowing activity, fines and payments, and current
+        standing, plus a timeline of real library circulation events. Allowed
+        for Administrator, Librarian (FERPA access is logged), or the student
+        themself.
       parameters:
         - in: path
           name: id
@@ -399,7 +400,7 @@ paths:
           schema: { type: string }
       responses:
         "200":
-          description: Unified student lifecycle
+          description: Library-only student lifecycle
           content:
             application/json:
               schema:
@@ -415,7 +416,7 @@ paths:
                       properties:
                         key: { type: string }
                         label: { type: string }
-                        status: { type: string, enum: [Completed, Active, Upcoming, Alumni] }
+                        status: { type: string, enum: [Completed, Active, Upcoming] }
                         date: { type: string, nullable: true }
                         summary: { type: string }
                         metrics:
@@ -585,10 +586,14 @@ paths:
   /lifecycle:
     get:
       tags: [Students]
-      summary: Student lifecycle stages
+      summary: Library lifecycle aggregate
+      description: >
+        Library-focused overview metrics (registered members, active borrowers,
+        lifetime loans, outstanding fines, overdue items) and borrower cohort
+        distribution for the admin Student Lifecycle page.
       responses:
         "200":
-          description: Lifecycle overview
+          description: Library lifecycle overview
   /analytics:
     get:
       tags: [Analytics]

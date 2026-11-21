@@ -260,18 +260,6 @@ const STUDENT_LIFECYCLES: Record<string, StudentLifecycle> = {
         ],
       },
       {
-        key: "BORROWING",
-        label: "Borrowing Activity",
-        status: "Active",
-        date: "2026-10-10T10:20:00Z",
-        summary:
-          "1 active loan — 'Data Structures and Algorithms in Java', due back Oct 31, 2026.",
-        metrics: [
-          { label: "Active Loans", value: "1" },
-          { label: "Lifetime Loans", value: "4" },
-        ],
-      },
-      {
         key: "FINES",
         label: "Fines & Payments",
         status: "Upcoming",
@@ -363,18 +351,6 @@ const STUDENT_LIFECYCLES: Record<string, StudentLifecycle> = {
         metrics: [
           { label: "Requests Submitted", value: "15" },
           { label: "Approved", value: "14" },
-        ],
-      },
-      {
-        key: "BORROWING",
-        label: "Borrowing Activity",
-        status: "Active",
-        date: "2026-10-16T11:30:00Z",
-        summary:
-          "1 active loan — 'Competitive Strategy: Techniques for Analyzing Industries', due Nov 6, 2026.",
-        metrics: [
-          { label: "Active Loans", value: "1" },
-          { label: "Lifetime Loans", value: "14" },
         ],
       },
       {
@@ -481,18 +457,6 @@ const STUDENT_LIFECYCLES: Record<string, StudentLifecycle> = {
         metrics: [
           { label: "Requests Submitted", value: "33" },
           { label: "Approved", value: "31" },
-        ],
-      },
-      {
-        key: "BORROWING",
-        label: "Borrowing Activity",
-        status: "Completed",
-        date: "2026-03-29T10:05:00Z",
-        summary:
-          "31 lifetime loans, all returned. The final loan, 'Clean Architecture', came back 2 days early.",
-        metrics: [
-          { label: "Active Loans", value: "0" },
-          { label: "Lifetime Loans", value: "31" },
         ],
       },
       {
@@ -607,30 +571,6 @@ function buildFallbackLifecycle(student: Student): StudentLifecycle {
             Math.min(totalLoans, student.library.returnedBooksCount + activeLoans)
           ),
         },
-      ],
-    },
-    {
-      key: "BORROWING",
-      label: "Borrowing Activity",
-      status:
-        activeLoans > 0 ? "Active" : totalLoans > 0 ? "Completed" : "Upcoming",
-      date:
-        activeLoans > 0
-          ? "2026-10-10T10:20:00Z"
-          : totalLoans > 0
-            ? isGraduated
-              ? `${student.expectedGraduation}-03-29T10:05:00Z`
-              : "2026-05-20T10:05:00Z"
-            : null,
-      summary:
-        activeLoans > 0
-          ? `${activeLoans} active loan${activeLoans === 1 ? "" : "s"} among ${totalLoans} lifetime borrowings.`
-          : totalLoans > 0
-            ? `${totalLoans} lifetime borrowings, all returned.`
-            : "No circulation activity yet — borrowing privileges are ready when needed.",
-      metrics: [
-        { label: "Active Loans", value: String(activeLoans) },
-        { label: "Lifetime Loans", value: String(totalLoans) },
       ],
     },
     {

@@ -45,8 +45,8 @@ function LibraryDataAlert() {
         <div className="flex items-start gap-2">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
           <p className="text-xs font-medium leading-5">
-            Library data couldn&apos;t be loaded from the server — some lists
-            may be empty or out of date.
+            We couldn&apos;t load the latest library data from the server.
+            Some information may be missing or outdated.
           </p>
         </div>
         <button

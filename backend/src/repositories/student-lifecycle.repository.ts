@@ -5,15 +5,9 @@ export type LifecycleStageKey =
   | "REQUESTS"
   | "BORROWING"
   | "FINES"
-  | "STANDING"
-  | "ADMISSIONS"
-  | "ENROLLMENT"
-  | "LMS_ENGAGEMENT"
-  | "LIBRARY_ACTIVITY"
-  | "FINANCIAL_STANDING"
-  | "ALUMNI";
+  | "STANDING";
 
-export type LifecycleStageStatus = "Completed" | "Active" | "Upcoming" | "Alumni";
+export type LifecycleStageStatus = "Completed" | "Active" | "Upcoming";
 
 export interface LifecycleStageMetric {
   label: string;

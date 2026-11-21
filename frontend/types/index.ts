@@ -728,7 +728,8 @@ export interface LifecycleStageDetail {
 
 export interface LifecycleTimelineEvent {
   id: string;
-  stage: string;
+  /** Library stage key; unknown keys stay allowed for forward compatibility. */
+  stage: LifecycleStageDetailKey;
   sourceSystem: string;
   title: string;
   description: string | null;
@@ -742,7 +743,7 @@ export interface StudentLifecycle {
   programCode: string;
   yearLevel: string;
   status: string;
-  currentStage: string;
+  currentStage: LifecycleStageDetailKey;
   stages: LifecycleStageDetail[];
   timeline: LifecycleTimelineEvent[];
 }

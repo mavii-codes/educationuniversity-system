@@ -1233,7 +1233,6 @@ export const STUDENTS: Student[] = [
 export const LIFECYCLE_OVERVIEW_STATS = [
   { label: "Registered Members", value: 5240, change: "+3.1% this term", description: "Students holding active library cards" },
   { label: "Active Borrowers", value: 3184, change: "60.7% of members", description: "Checked out at least one book this semester" },
-  { label: "Loans in Circulation", value: 1246, change: "94.1% on time", description: "Books currently checked out across all collections" },
   { label: "Outstanding Fines", value: 86, change: "₱4,215 unsettled", description: "Students with a balance on the fine ledger" },
   { label: "Overdue Loans", value: 37, change: "5+ days late", description: "Loans past their due date awaiting return" },
 ];

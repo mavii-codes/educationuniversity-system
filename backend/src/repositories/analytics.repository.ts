@@ -197,7 +197,6 @@ export async function findLifecycleOverviewStats(): Promise<
   const registeredMembers = Number(row?.registered_members ?? 0);
   const activeBorrowers = Number(row?.active_borrowers ?? 0);
   const itemsCurrentlyBorrowed = Number(row?.items_currently_borrowed ?? 0);
-  const lifetimeLoans = Number(row?.lifetime_loans ?? 0);
   const unpaidFineCount = Number(row?.unpaid_fine_count ?? 0);
   const outstandingFines = Number(row?.outstanding_fines_total ?? 0);
   const overdueItems = Number(row?.overdue_items ?? 0);
@@ -214,12 +213,6 @@ export async function findLifecycleOverviewStats(): Promise<
       value: activeBorrowers,
       change: `${itemsCurrentlyBorrowed} items currently on loan`,
       description: "Students currently holding one or more library items",
-    },
-    {
-      label: "Lifetime Loans",
-      value: lifetimeLoans,
-      change: "Library circulation on record",
-      description: "Library loans recorded across all borrowers",
     },
     {
       label: "Outstanding Fines (PHP)",
@@ -375,7 +368,6 @@ export async function findLifecycleStages(): Promise<LifecycleStageModel[]> {
       ],
       insights: [
         { label: "Items on Loan", value: String(itemsCurrentlyBorrowed) },
-        { label: "Lifetime Loans", value: String(lifetimeLoans) },
         { label: "Active Borrowers", value: String(activeBorrowers) },
       ],
     },

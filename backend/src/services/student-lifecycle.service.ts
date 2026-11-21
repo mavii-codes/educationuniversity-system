@@ -2,10 +2,10 @@ import { env } from "../config/env";
 import { seedDataset } from "../data/dataset";
 import { StudentModel } from "../models";
 import {
+  LifecycleBorrowingSummary,
   LifecycleFineSummary,
   LifecycleMembershipSummary,
   LifecycleRequestSummary,
-  LifecycleBorrowingSummary,
   LifecycleStageDetail,
   LifecycleStageKey,
   LifecycleTimelineEvent,
@@ -16,24 +16,12 @@ import {
 } from "../repositories/student-lifecycle.repository";
 import { FerpaViewer, getMaskedStudent, isDirectoryOptOut } from "./ferpa.service";
 
-const STAGE_LABELS: Record<
-  Extract<
-    LifecycleStageKey,
-    | "ADMISSIONS"
-    | "ENROLLMENT"
-    | "LMS_ENGAGEMENT"
-    | "LIBRARY_ACTIVITY"
-    | "FINANCIAL_STANDING"
-    | "ALUMNI"
-  >,
-  string
-> = {
-  ADMISSIONS: "Admissions",
-  ENROLLMENT: "Enrollment",
-  LMS_ENGAGEMENT: "LMS Engagement",
-  LIBRARY_ACTIVITY: "Library Activity",
-  FINANCIAL_STANDING: "Financial Standing",
-  ALUMNI: "Alumni",
+const STAGE_LABELS: Record<LifecycleStageKey, string> = {
+  MEMBERSHIP: "Library Membership",
+  REQUESTS: "Borrowing Requests",
+  BORROWING: "Borrowing Activity",
+  FINES: "Fines & Payments",
+  STANDING: "Current Standing",
 };
 
 export interface LifecycleStageFacts {
@@ -60,119 +48,7 @@ function displayDate(value: string | null): string {
   return dateOnly(value) ?? "—";
 }
 
-function getStudentAdmissionDate(student: StudentModel): string {
-  return `${student.admissionYear}-06-01`;
-}
-
-function buildUniversityStages(student: StudentModel): LifecycleStageDetail[] {
-  const subjects = student.academicRecords.subjects ?? [];
-  const totalUnits = subjects.reduce((sum, subject) => sum + subject.units, 0);
-  const admissionDate = getStudentAdmissionDate(student);
-  const graduationDate = `${student.expectedGraduation}-06-01`;
-  const enrollmentStatus: LifecycleStageDetail["status"] =
-    student.status === "Active" || student.status === "On Leave"
-      ? "Active"
-      : student.status === "Graduated"
-        ? "Completed"
-        : "Upcoming";
-  const alumniStatus: LifecycleStageDetail["status"] =
-    student.status === "Graduated" ? "Alumni" : "Upcoming";
-
-  return [
-    {
-      key: "ADMISSIONS",
-      label: STAGE_LABELS.ADMISSIONS,
-      status: student.admissionYear > 0 ? "Completed" : "Upcoming",
-      date: admissionDate,
-      summary: `Admissions recorded for ${student.programName} in ${student.admissionYear}.`,
-      metrics: [
-        { label: "Admission Year", value: String(student.admissionYear) },
-        { label: "Program", value: student.programCode },
-      ],
-    },
-    {
-      key: "ENROLLMENT",
-      label: STAGE_LABELS.ENROLLMENT,
-      status: enrollmentStatus,
-      date: student.status === "Graduated" ? graduationDate : admissionDate,
-      summary:
-        student.status === "Graduated"
-          ? `Completed enrollment history for ${student.programCode}; student graduated in ${student.expectedGraduation}.`
-          : `${subjects.length} current courses across ${totalUnits} units this term.`,
-      metrics: [
-        { label: "Courses", value: String(subjects.length) },
-        { label: "Units", value: String(totalUnits) },
-      ],
-    },
-    {
-      key: "LMS_ENGAGEMENT",
-      label: STAGE_LABELS.LMS_ENGAGEMENT,
-      status: student.status === "Graduated" ? "Completed" : "Active",
-      date: student.lmsActivity.courses[0]?.lastActive
-        ? student.lmsActivity.courses[0].lastActive
-        : admissionDate,
-      summary: `${student.lmsActivity.overallCompletionRate}% LMS completion across ${student.lmsActivity.courses.length} active course records.`,
-      metrics: [
-        { label: "Completion", value: `${student.lmsActivity.overallCompletionRate}%` },
-        { label: "Weekly Logins", value: String(student.lmsActivity.weeklyLogins) },
-      ],
-    },
-    {
-      key: "LIBRARY_ACTIVITY",
-      label: STAGE_LABELS.LIBRARY_ACTIVITY,
-      status: student.library.totalBorrowedAllTime > 0 || student.library.currentBorrowedCount > 0 ? "Completed" : "Upcoming",
-      date: student.library.books.at(-1)?.borrowedDate
-        ? `${student.library.books.at(-1)!.borrowedDate} 00:00:00 UTC`
-        : admissionDate,
-      summary:
-        student.library.totalBorrowedAllTime > 0
-          ? `${student.library.totalBorrowedAllTime} lifetime library loans recorded; ${student.library.currentBorrowedCount} currently active.`
-          : "No library activity recorded yet.",
-      metrics: [
-        { label: "Lifetime Loans", value: String(student.library.totalBorrowedAllTime) },
-        { label: "Currently Borrowed", value: String(student.library.currentBorrowedCount) },
-        { label: "Fines", value: formatMoney(student.library.finesBalance) },
-      ],
-    },
-    {
-      key: "FINANCIAL_STANDING",
-      label: STAGE_LABELS.FINANCIAL_STANDING,
-      status: student.library.finesBalance > 0 ? "Active" : "Completed",
-      date: admissionDate,
-      summary:
-        student.library.finesBalance > 0
-          ? `Outstanding balance ${formatMoney(student.library.finesBalance)} requires settlement.`
-          : "Financial standing is clear with no outstanding library balance.",
-      metrics: [
-        { label: "Outstanding Balance", value: formatMoney(student.library.finesBalance) },
-        { label: "Risk Level", value: student.riskLevel },
-      ],
-    },
-    {
-      key: "ALUMNI",
-      label: STAGE_LABELS.ALUMNI,
-      status: alumniStatus,
-      date: graduationDate,
-      summary:
-        student.status === "Graduated"
-          ? `Graduated in ${student.expectedGraduation}; alumni record matched to the graduate list.`
-          : `Expected graduation year ${student.expectedGraduation}; alumni stage remains upcoming.`,
-      metrics: [
-        { label: "Graduation Year", value: String(student.expectedGraduation) },
-        { label: "Status", value: student.status === "Graduated" ? "Alumni" : "Expected" },
-      ],
-    },
-  ];
-}
-
-export function buildStages(
-  input: LifecycleStageFacts | StudentModel
-): LifecycleStageDetail[] {
-  if ("id" in input && "programName" in input && "academicRecords" in input) {
-    return buildUniversityStages(input as StudentModel);
-  }
-
-  const facts = input as LifecycleStageFacts;
+export function buildStages(facts: LifecycleStageFacts): LifecycleStageDetail[] {
   const { membership, requests, borrowing, fines, lastLibraryActivityAt } = facts;
 
   const hasRequests = requests.submitted > 0 || requests.reservations > 0;
@@ -183,17 +59,14 @@ export function buildStages(
   const hasFineHistory =
     finesOutstanding || fines.paidCount > 0 || fines.paidTotal > 0;
   const hasActivity =
-    hasRequests ||
-    hasLoans ||
-    hasFineHistory ||
-    lastLibraryActivityAt !== null;
+    hasRequests || hasLoans || hasFineHistory || lastLibraryActivityAt !== null;
   const restricted = finesOutstanding || hasOverdue;
   const membershipExists = membership.exists || membership.createdAt !== null;
 
-  return [
+  const stages: LifecycleStageDetail[] = [
     {
       key: "MEMBERSHIP",
-      label: "Library Membership",
+      label: STAGE_LABELS.MEMBERSHIP,
       status: membershipExists ? "Completed" : "Upcoming",
       date: dateOnly(membership.createdAt),
       summary: membershipExists
@@ -211,7 +84,7 @@ export function buildStages(
     },
     {
       key: "REQUESTS",
-      label: "Borrowing Requests",
+      label: STAGE_LABELS.REQUESTS,
       status: requests.pending > 0 ? "Active" : hasRequests ? "Completed" : "Upcoming",
       date: dateOnly(requests.latestActivityAt),
       summary: hasRequests
@@ -227,7 +100,7 @@ export function buildStages(
     },
     {
       key: "BORROWING",
-      label: "Borrowing Activity",
+      label: STAGE_LABELS.BORROWING,
       status: borrowing.currentBorrowed > 0 ? "Active" : hasLoans ? "Completed" : "Upcoming",
       date: dateOnly(borrowing.lastBorrowedAt),
       summary: hasLoans
@@ -244,15 +117,27 @@ export function buildStages(
     },
     {
       key: "FINES",
-      label: "Fines & Payments",
-      status: finesOutstanding || hasOverdue ? "Active" : hasFineHistory ? "Completed" : "Upcoming",
+      label: STAGE_LABELS.FINES,
+      status:
+        finesOutstanding || hasOverdue
+          ? "Active"
+          : hasFineHistory
+            ? "Completed"
+            : "Upcoming",
       date: dateOnly(fines.latestActivityAt),
       summary: finesOutstanding
-        ? `Alert: ${formatMoney(Math.max(fines.unpaidTotal, fines.balance))} outstanding in unpaid library fines (${pluralize(fines.unpaidCount, "fine")}).`
+        ? `Alert: ${formatMoney(
+            Math.max(fines.unpaidTotal, fines.balance)
+          )} outstanding in unpaid library fines (${pluralize(fines.unpaidCount, "fine")}).`
         : hasOverdue
-          ? `Restricted: ${pluralize(borrowing.overdueCount, "overdue item")} awaiting return; no unpaid fines.`
+          ? `Restricted: ${pluralize(
+              borrowing.overdueCount,
+              "overdue item"
+            )} awaiting return; no unpaid fines.`
           : hasFineHistory
-            ? `No outstanding fines; ${formatMoney(fines.paidTotal)} settled across ${pluralize(fines.paidCount, "payment")}.`
+            ? `No outstanding fines; ${formatMoney(
+                fines.paidTotal
+              )} settled across ${pluralize(fines.paidCount, "payment")}.`
             : "No library fines on record.",
       metrics: [
         {
@@ -266,11 +151,13 @@ export function buildStages(
     },
     {
       key: "STANDING",
-      label: "Current Standing",
+      label: STAGE_LABELS.STANDING,
       status: !hasActivity ? "Upcoming" : restricted ? "Active" : "Completed",
       date: dateOnly(lastLibraryActivityAt),
       summary: restricted
-        ? `Restricted — ${formatMoney(Math.max(fines.unpaidTotal, fines.balance))} in unpaid fines and ${pluralize(borrowing.overdueCount, "overdue item")}.`
+        ? `Restricted — ${formatMoney(
+            Math.max(fines.unpaidTotal, fines.balance)
+          )} in unpaid fines and ${pluralize(borrowing.overdueCount, "overdue item")}.`
         : hasActivity
           ? `Good Standing — no outstanding fines or overdue items; last library activity ${displayDate(lastLibraryActivityAt)}.`
           : "No library activity recorded yet.",
@@ -287,7 +174,9 @@ export function buildStages(
         },
       ],
     },
-  ] as LifecycleStageDetail[];
+  ];
+
+  return stages.filter((stage) => stage.key !== "BORROWING");
 }
 
 export function resolveCurrentStage(
@@ -295,12 +184,14 @@ export function resolveCurrentStage(
 ): LifecycleStageKey | null {
   const byKey = (key: LifecycleStageKey) => stages.find((stage) => stage.key === key);
 
-  if (byKey("ALUMNI")?.status === "Alumni") return "ALUMNI";
-  if (byKey("ENROLLMENT")?.status === "Active") return "ENROLLMENT";
-  if (byKey("LMS_ENGAGEMENT")?.status === "Active") return "LMS_ENGAGEMENT";
-  if (byKey("LIBRARY_ACTIVITY")?.status === "Completed") return "LIBRARY_ACTIVITY";
-  if (byKey("FINANCIAL_STANDING")?.status === "Active") return "FINANCIAL_STANDING";
-  if (byKey("ADMISSIONS")?.status === "Completed") return "ADMISSIONS";
+  if (byKey("FINES")?.status === "Active") return "FINES";
+  if (byKey("BORROWING")?.status === "Active") return "BORROWING";
+  if (byKey("REQUESTS")?.status === "Active") return "REQUESTS";
+
+  const standing = byKey("STANDING");
+  if (standing && standing.status !== "Upcoming") return "STANDING";
+
+  if (byKey("MEMBERSHIP")?.status === "Completed") return "MEMBERSHIP";
   return null;
 }
 
@@ -308,13 +199,6 @@ function parseSeedDate(value: string | undefined): string | null {
   if (!value) return null;
   const parsed = new Date(`${value} 00:00:00 UTC`);
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
-}
-
-function parseLooseDate(value: string | undefined): string | null {
-  if (!value) return null;
-  const cleaned = value.replace(/^(Completed|Updated|Active|Due|Borrowed|Returned|Graduated)\s+/i, "").trim();
-  const parsed = Date.parse(cleaned);
-  return Number.isNaN(parsed) ? null : new Date(parsed).toISOString();
 }
 
 function latestIso(...values: (string | null | undefined)[]): string | null {
@@ -349,27 +233,61 @@ function topCategoryOf(student: StudentModel): string | null {
 }
 
 export function buildMockFacts(student: StudentModel): LifecycleStageFacts {
+  const books = student.library.books;
+  const borrowedDates = books
+    .map((book) => parseSeedDate(book.borrowedDate))
+    .filter((value): value is string => value !== null)
+    .sort();
+  const returnedDates = books
+    .map((book) => parseSeedDate(book.returnedDate))
+    .filter((value): value is string => value !== null)
+    .sort();
+
+  const membershipCreatedAt =
+    student.admissionYear > 0
+      ? `${student.admissionYear}-06-01T08:00:00.000Z`
+      : null;
+  const totalBorrowed = student.library.totalBorrowedAllTime;
+  const currentBorrowed = student.library.currentBorrowedCount;
   const balance = student.library.finesBalance;
+  const overdueCount = books.filter(
+    (book) => (book.status as string) === "Overdue"
+  ).length;
+
+  const lastBorrowedAt = borrowedDates.at(-1) ?? null;
+  const latestBookActivity = latestIso(...borrowedDates, ...returnedDates);
+  const finesLatestAt =
+    balance > 0
+      ? latestIso(...books.map((book) => parseSeedDate(book.dueDate)))
+      : null;
+
   return {
     membership: {
-      exists: true,
-      createdAt: `${student.admissionYear}-06-01T00:00:00.000Z`,
-      accountStatus: student.status === "Active" || student.status === "On Leave" ? "Active" : "Suspended",
+      exists:
+        membershipCreatedAt !== null ||
+        totalBorrowed > 0 ||
+        books.length > 0 ||
+        balance > 0,
+      createdAt: membershipCreatedAt,
+      accountStatus:
+        student.status === "Active" || student.status === "On Leave"
+          ? "Active"
+          : "Suspended",
     },
     requests: {
-      submitted: student.library.totalBorrowedAllTime,
-      approved: student.library.totalBorrowedAllTime,
+      submitted: totalBorrowed,
+      approved: totalBorrowed,
       rejected: 0,
       pending: 0,
       reservations: 0,
-      latestActivityAt: `${student.admissionYear}-06-01T00:00:00.000Z`,
+      latestActivityAt: latestBookActivity,
     },
     borrowing: {
-      totalBorrowed: student.library.totalBorrowedAllTime,
-      currentBorrowed: student.library.currentBorrowedCount,
-      overdueCount: student.library.books.filter((book) => book.status === "Borrowed").length,
-      firstBorrowedAt: student.library.books[0]?.borrowedDate ? parseSeedDate(student.library.books[0].borrowedDate) : null,
-      lastBorrowedAt: student.library.books.at(-1)?.borrowedDate ? parseSeedDate(student.library.books.at(-1)!.borrowedDate) : null,
+      totalBorrowed,
+      currentBorrowed,
+      overdueCount,
+      firstBorrowedAt: borrowedDates[0] ?? null,
+      lastBorrowedAt,
       topCategory: topCategoryOf(student),
     },
     fines: {
@@ -378,87 +296,121 @@ export function buildMockFacts(student: StudentModel): LifecycleStageFacts {
       paidCount: 0,
       paidTotal: 0,
       balance,
-      latestActivityAt: student.library.books[0]?.dueDate ? parseSeedDate(student.library.books[0].dueDate) : null,
+      latestActivityAt: finesLatestAt,
     },
-    lastLibraryActivityAt: `${student.expectedGraduation}-06-01T00:00:00.000Z`,
+    lastLibraryActivityAt: latestIso(latestBookActivity, finesLatestAt),
   };
 }
 
 export function buildMockTimeline(student: StudentModel): LifecycleTimelineEvent[] {
-  const admissionsAt = `${student.admissionYear}-06-01T00:00:00.000Z`;
-  const enrollmentAt = `${student.admissionYear + 1}-08-15T00:00:00.000Z`;
-  const lmsAt =
-    student.lmsActivity.courses[0]?.lastActive
-      ? parseLooseDate(student.lmsActivity.courses[0].lastActive) ?? enrollmentAt
-      : enrollmentAt;
-  const libraryAt =
-    student.library.books.at(-1)?.borrowedDate
-      ? parseSeedDate(student.library.books.at(-1)!.borrowedDate) ?? admissionsAt
-      : admissionsAt;
-  const financialAt = student.library.finesBalance > 0 ? libraryAt : admissionsAt;
-  const graduationAt = `${student.expectedGraduation}-06-01T00:00:00.000Z`;
+  const facts = buildMockFacts(student);
+  const membershipAt =
+    facts.membership.createdAt ??
+    `${student.admissionYear > 0 ? student.admissionYear : 2024}-06-01T08:00:00.000Z`;
+  const books = student.library.books;
 
   const events: LifecycleTimelineEvent[] = [
     {
-      id: `${student.id}-timeline-admissions`,
-      stage: "ADMISSIONS",
-      sourceSystem: "SIS",
-      title: "Admission recorded",
-      description: `${student.name} admitted to ${student.programName}.`,
-      occurredAt: admissionsAt,
-    },
-    {
-      id: `${student.id}-timeline-enrollment`,
-      stage: "ENROLLMENT",
-      sourceSystem: "SIS",
-      title: "Enrollment confirmed",
-      description: `${student.academicRecords.subjects.length} active courses in progress.`,
-      occurredAt: enrollmentAt,
-    },
-    {
-      id: `${student.id}-timeline-lms`,
-      stage: "LMS_ENGAGEMENT",
-      sourceSystem: "LMS",
-      title: "LMS engagement synced",
-      description: `${student.lmsActivity.overallCompletionRate}% completion across ${student.lmsActivity.courses.length} course records.`,
-      occurredAt: lmsAt,
-    },
-    {
-      id: `${student.id}-timeline-library`,
-      stage: "LIBRARY_ACTIVITY",
+      id: `${student.id}-timeline-membership`,
+      stage: "MEMBERSHIP",
       sourceSystem: "LIBRARY",
-      title: "Library activity synced",
-      description: `${student.library.totalBorrowedAllTime} lifetime library entries matched to the student record.`,
-      occurredAt: libraryAt,
-    },
-    {
-      id: `${student.id}-timeline-financial`,
-      stage: "FINANCIAL_STANDING",
-      sourceSystem: "SIS",
-      title: "Financial standing updated",
-      description:
-        student.library.finesBalance > 0
-          ? `Outstanding balance ${formatMoney(student.library.finesBalance)}.`
-          : "No outstanding balance recorded.",
-      occurredAt: financialAt,
-    },
-    {
-      id: `${student.id}-timeline-alumni`,
-      stage: "ALUMNI",
-      sourceSystem: "ALUMNI",
-      title:
-        student.status === "Graduated" ? "Graduation recorded" : "Expected graduation",
-      description:
-        student.status === "Graduated"
-          ? `${student.name} was recorded as a graduate in ${student.expectedGraduation}.`
-          : `Expected graduation year is ${student.expectedGraduation}.`,
-      occurredAt: graduationAt,
+      title: "Library membership activated",
+      description: `Borrower account created; account status ${facts.membership.accountStatus}.`,
+      occurredAt: membershipAt,
     },
   ];
 
-  return events.sort(
-    (a, b) => b.occurredAt.localeCompare(a.occurredAt) || b.id.localeCompare(a.id)
-  );
+  for (const book of books) {
+    const borrowedAt = parseSeedDate(book.borrowedDate) ?? membershipAt;
+    events.push({
+      id: `${student.id}-timeline-request-${book.id}`,
+      stage: "REQUESTS",
+      sourceSystem: "LIBRARY",
+      title: "Borrowing request approved",
+      description: `${book.title} — ${book.category}.`,
+      occurredAt: addDays(borrowedAt, -3),
+    });
+    events.push({
+      id: `${student.id}-timeline-borrow-${book.id}`,
+      stage: "BORROWING",
+      sourceSystem: "LIBRARY",
+      title: "Library book borrowed",
+      description: `${book.title} — due ${book.dueDate}.`,
+      occurredAt: borrowedAt,
+    });
+
+    const returnedAt = parseSeedDate(book.returnedDate);
+    if (returnedAt) {
+      events.push({
+        id: `${student.id}-timeline-return-${book.id}`,
+        stage: "BORROWING",
+        sourceSystem: "LIBRARY",
+        title: "Library book returned",
+        description: `${book.title} — returned to circulation.`,
+        occurredAt: returnedAt,
+      });
+    }
+  }
+
+  if (books.length === 0) {
+    events.push({
+      id: `${student.id}-timeline-request-verified`,
+      stage: "REQUESTS",
+      sourceSystem: "LIBRARY",
+      title: "Borrowing privileges verified",
+      description: "Library account cleared for borrowing requests and reservations.",
+      occurredAt: addDays(membershipAt, 7),
+    });
+    events.push({
+      id: `${student.id}-timeline-borrowing-sync`,
+      stage: "BORROWING",
+      sourceSystem: "LIBRARY",
+      title: "Borrowing history synced",
+      description: `${pluralize(
+        facts.borrowing.totalBorrowed,
+        "lifetime loan"
+      )}; ${pluralize(student.library.returnedBooksCount, "returned item")} recorded.`,
+      occurredAt: addDays(membershipAt, 30),
+    });
+  }
+
+  if (facts.fines.balance > 0) {
+    events.push({
+      id: `${student.id}-timeline-fine`,
+      stage: "FINES",
+      sourceSystem: "LIBRARY",
+      title: "Library fine assessed",
+      description: `Outstanding balance ${formatMoney(facts.fines.balance)}.`,
+      occurredAt:
+        latestIso(...books.map((book) => parseSeedDate(book.dueDate))) ??
+        membershipAt,
+    });
+  }
+
+  const latestEventAt =
+    latestIso(...events.map((event) => event.occurredAt)) ?? membershipAt;
+  events.push({
+    id: `${student.id}-timeline-standing`,
+    stage: "STANDING",
+    sourceSystem: "LIBRARY",
+    title: "Library standing reviewed",
+    description:
+      facts.fines.balance > 0 || facts.borrowing.overdueCount > 0
+        ? `Restricted — ${formatMoney(
+            facts.fines.balance
+          )} in unpaid fines and ${pluralize(
+            facts.borrowing.overdueCount,
+            "overdue item"
+          )}.`
+        : "Good Standing — no outstanding fines or overdue items.",
+    occurredAt: latestEventAt,
+  });
+
+  return events
+    .sort(
+      (a, b) => b.occurredAt.localeCompare(a.occurredAt) || b.id.localeCompare(a.id)
+    )
+    .slice(0, 6);
 }
 
 function maskProfile(
@@ -514,7 +466,7 @@ export class StudentLifecycleService {
     const student = seedDataset.students.find((item) => item.id === studentId);
     if (!student) return null;
 
-    const stages = buildStages(student);
+    const stages = buildStages(buildMockFacts(student));
 
     const profile: StudentLifecycleProfile = {
       studentId: student.id,

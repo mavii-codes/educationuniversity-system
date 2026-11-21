@@ -2597,12 +2597,6 @@
       "description": "Students currently holding one or more library items"
     },
     {
-      "label": "Lifetime Loans",
-      "value": 109,
-      "change": "Across 10 borrowers",
-      "description": "Library circulation transactions on record"
-    },
-    {
       "label": "Outstanding Fines (PHP)",
       "value": 0,
       "change": "0 unpaid fines",
@@ -2704,10 +2698,6 @@
         {
           "label": "Items on Loan",
           "value": "6"
-        },
-        {
-          "label": "Lifetime Loans",
-          "value": "109"
         },
         {
           "label": "Active Borrowers",
